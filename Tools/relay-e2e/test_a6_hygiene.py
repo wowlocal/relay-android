@@ -226,9 +226,13 @@ def scenario_settings(d, check, user):
         time.sleep(1.5)
         about1 = d.screen_texts()
         shot(d, "about")
-        for _ in range(4):
+        # Phone layouts need more scrolling than the tablet's right pane to reach the GPL notice.
+        about2 = []
+        for _ in range(14):
             swipe(d, right_pane=True)
-        about2 = d.screen_texts()
+            about2 += d.screen_texts()
+            if any("GNU General Public License" in t for t in about2):
+                break
         shot(d, "about-2")
         # The license list and the GPL notice name Telegram for Android on purpose (attribution).
         attribution = re.compile(r"Telegram for Android|GNU General Public License|trademark|Boost\.Regex", re.I)

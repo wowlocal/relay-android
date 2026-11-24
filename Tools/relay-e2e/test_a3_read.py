@@ -178,6 +178,8 @@ def main():
         for i in range(6):
             probe(town["id"], "unread in town square #%d\nsecond line\nthird line\nfourth line" % i)
         probe(dm_bob["id"], "unread in the DM")
+        # The firehose must open at its newest post, not at a first unread 11k posts back.
+        alice.call("POST", "/channels/members/me/view", {"channel_id": firehose["id"]})
 
         # Fresh app + login.
         if not args.no_install:
@@ -297,7 +299,7 @@ def main():
         check.ok("iOS channel shows the newest posts", len(hits) >= 2, "%d of %d" % (len(hits), len(ios_newest)))
         shot(d, "channel-ios")
 
-        # 4. Firehose paging.
+        # 4. Firehose paging (read before login, so the chat opens at its newest post).
         d.logcat_clear()
         open_chat(d, firehose["id"])
         t0 = time.time()
