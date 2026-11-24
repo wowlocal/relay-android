@@ -31958,6 +31958,11 @@ public class ChatActivity extends BaseFragment implements
                 icons.add(R.drawable.msg_calendar2);
             }
 
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay: no Telegram-only message actions (report, translate, stickers/GIFs, gifts, …).
+                org.telegram.relay.RelayFeatures.filterMessageOptions(options, items, icons);
+            }
+
             if (options.isEmpty() && optionsView == null) {
                 return false;
             }
@@ -37686,6 +37691,10 @@ public class ChatActivity extends BaseFragment implements
                     cell.resetPressedLink(-1);
                 }
             } else {
+                if (org.telegram.relay.ui.RelayLinks.openFromMessage(getParentActivity(), urlFinal)) {
+                    // Relay: a Mattermost link (permalink, channel, DM) opens in the app, no alert.
+                    return;
+                }
                 logSponsoredClicked(messageObject, false, false);
                 if (Browser.isGetPremiumUrl(urlFinal)) {
                     Browser.openUrl(getParentActivity(), urlFinal.contains("://") ? urlFinal : "https://" + urlFinal);

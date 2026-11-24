@@ -11718,6 +11718,7 @@
     <string name="RelayLogOutConfirmTitle">Log Out</string>
     <string name="RelayAboutTitle">About</string>
     <string name="RelayAboutVersion">Version</string>
+    <string name="RelayAboutBasedOn">Based on Telegram for Android %1$s</string>
     <string name="RelayAboutServerVersion">Mattermost</string>
     <string name="RelayAboutDescription">Relay is a client for Mattermost. It talks only to your Mattermost server.</string>
     <string name="RelayAboutLicenses">Open-Source Licenses</string>

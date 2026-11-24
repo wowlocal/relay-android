@@ -1559,6 +1559,16 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
 
     @SuppressLint("Range")
     private boolean handleIntent(Intent intent, boolean isNew, boolean restore, boolean fromPassword, Browser.Progress progress, boolean rebuildFragments, boolean openedTelegram) {
+        if (org.telegram.relay.RelayConfig.ENABLED && intent != null && Intent.ACTION_VIEW.equals(intent.getAction())
+                && org.telegram.relay.ui.RelayLinks.handleViewIntent(this, intent.getData())) {
+            // Relay: relay:// and Mattermost links go to RelayLinks; Telegram links (t.me, tg:) never
+            // reach Telegram's parsers (gifts, proxies, LinkManager, the t.me/tg: switch below).
+            intent.setAction(null);
+            if (progress != null) {
+                progress.end();
+            }
+            return false;
+        }
         if (GiftInfoBottomSheet.handleIntent(intent, progress)) {
             return true;
         }

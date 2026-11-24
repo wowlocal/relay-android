@@ -366,6 +366,16 @@ public class Browser {
         if (context == null || uri == null) {
             return;
         }
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: Mattermost links stay in the app, Telegram links (t.me, tg:, ton:) never open Telegram flows.
+            if (org.telegram.relay.ui.RelayLinks.interceptOpenUrl(context, uri)) {
+                if (inCaseLoading != null) {
+                    inCaseLoading.end();
+                }
+                return;
+            }
+            tryTelegraph = false;
+        }
         if (!keepWebAuthTokens) {
             uri = withoutWebAuthTokens(uri);
         }
@@ -758,6 +768,10 @@ public class Browser {
     }
 
     public static boolean isInternalUri(Uri uri, boolean all, boolean[] forceBrowser) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: no Telegram link is internal; Mattermost links are (they open in the app, no alert).
+            return uri != null && org.telegram.relay.ui.RelayLinks.parse(uri.toString()) != null;
+        }
         String host = AndroidUtilities.getHostAuthority(uri);
         host = host != null ? host.toLowerCase() : "";
 

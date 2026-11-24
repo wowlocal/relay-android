@@ -1143,6 +1143,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     }
 
     public String getVersionName() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: "Relay for Android v1.0.0 (1)" (RELAY_VERSION_*); upstream's version is in About.
+            return formatString(R.string.TelegramVersion, "v" + org.telegram.relay.ui.RelayAboutActivity.versionString());
+        }
         try {
             PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
             int code = pInfo.versionCode / 10;

@@ -15,7 +15,9 @@ import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.relay.account.RelaySession;
@@ -42,6 +44,7 @@ public class RelayAboutActivity extends UniversalFragment {
     private static final int ID_SERVER = 2;
     private static final int ID_SERVER_VERSION = 3;
     private static final int ID_SOURCE = 4;
+    private static final int ID_UPSTREAM = 5;
     private static final int ID_LICENSE_BASE = 100;
 
     /** Name, license, URL of the license or project. */
@@ -130,13 +133,19 @@ public class RelayAboutActivity extends UniversalFragment {
         return layout;
     }
 
+    /** Relay's own version, e.g. {@code 1.0.0 (1)} (gradle.properties RELAY_VERSION_NAME / RELAY_VERSION_CODE). */
     public static String versionString() {
+        return String.format(Locale.US, "%s (%d)", BuildConfig.RELAY_VERSION_NAME, BuildConfig.RELAY_VERSION_CODE);
+    }
+
+    /** The Telegram for Android release Relay is forked from, e.g. {@code 13.2.2 (7303)}. */
+    public static String upstreamVersionString() {
         try {
             PackageInfo info = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
-            return String.format(Locale.US, "%s (%d)", info.versionName, info.versionCode / 10);
+            return String.format(Locale.US, "%s (%d)", BuildConfig.UPSTREAM_VERSION_NAME, info.versionCode / 10);
         } catch (Exception e) {
             FileLog.e(e);
-            return "";
+            return BuildConfig.UPSTREAM_VERSION_NAME;
         }
     }
 
@@ -149,6 +158,7 @@ public class RelayAboutActivity extends UniversalFragment {
 
         final RelaySession session = RelaySessionStore.get(currentAccount);
         items.add(UItem.asButton(ID_VERSION, getString(R.string.RelayAboutVersion), versionString()));
+        items.add(UItem.asButton(ID_UPSTREAM, LocaleController.formatString(R.string.RelayAboutBasedOn, upstreamVersionString())));
         if (session != null) {
             items.add(UItem.asButton(ID_SERVER, getString(R.string.RelaySettingsServer), RelayAuth.displayHost(session.serverUrl)));
             if (!TextUtils.isEmpty(session.serverVersion)) {
@@ -174,7 +184,7 @@ public class RelayAboutActivity extends UniversalFragment {
                 AndroidUtilities.addToClipboard(session.serverUrl);
                 BulletinFactory.of(this).createSimpleBulletin(R.raw.copy, getString(R.string.RelayServerCopied)).show();
             }
-        } else if (item.id == ID_SOURCE) {
+        } else if (item.id == ID_SOURCE || item.id == ID_UPSTREAM) {
             Browser.openUrl(getParentActivity(), LIBRARIES[0][2]);
         } else if (item.id >= ID_LICENSE_BASE && item.id < ID_LICENSE_BASE + LIBRARIES.length) {
             Browser.openUrl(getParentActivity(), LIBRARIES[item.id - ID_LICENSE_BASE][2]);

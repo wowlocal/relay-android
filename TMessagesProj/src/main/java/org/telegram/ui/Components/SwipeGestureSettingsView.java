@@ -115,6 +115,11 @@ public class SwipeGestureSettingsView extends FrameLayout implements Theme.Color
         picker.setWrapSelectorWheel(true);
         picker.setFormatter(value -> strings[value]);
         picker.setOnValueChangedListener((picker, oldVal, newVal) -> {
+            if (!org.telegram.relay.RelayFeatures.CHAT_ARCHIVE && newVal == SWIPE_GESTURE_ARCHIVE) {
+                // Relay: "Archive" is skipped (no chat archive).
+                newVal = oldVal == SWIPE_GESTURE_READ ? SWIPE_GESTURE_MUTE : SWIPE_GESTURE_READ;
+                picker.setValue(newVal);
+            }
             swapIcons();
 
             SharedConfig.updateChatListSwipeSetting(newVal);

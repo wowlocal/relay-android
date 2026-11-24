@@ -161,6 +161,17 @@ public final class RelayDebug {
         Log.w(TAG, "DEBUG_REACT: message not found: " + text);
     }
 
+    /** Opens {@code url} the way an in-app link tap does ({@code Browser.openUrl}). */
+    public static void openUrl(String url) {
+        final android.app.Activity activity = org.telegram.ui.LaunchActivity.instance;
+        if (url == null || activity == null) {
+            Log.w(TAG, "DEBUG_OPEN_URL failed: needs --es url and a running UI");
+            return;
+        }
+        org.telegram.messenger.browser.Browser.openUrl(activity, url);
+        Log.i(TAG, "DEBUG_OPEN_URL done " + url);
+    }
+
     /** Opens a chat (optionally at a message) the way a notification tap does. */
     public static void openChat(long dialogId, int messageId) {
         if (dialogId == 0) {

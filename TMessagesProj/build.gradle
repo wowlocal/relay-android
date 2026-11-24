@@ -161,6 +161,11 @@ android {
 
         multiDexEnabled true
 
+        // Relay: its own version, shown in About and the settings footer (APP_VERSION_* are upstream's).
+        buildConfigField "String", "RELAY_VERSION_NAME", "\"" + RELAY_VERSION_NAME + "\""
+        buildConfigField "int", "RELAY_VERSION_CODE", RELAY_VERSION_CODE
+        buildConfigField "String", "UPSTREAM_VERSION_NAME", "\"" + APP_VERSION_NAME + "\""
+
         // Relay: build native code only for the ABIs in relay.abis (root build.gradle).
         if (rootProject.ext.relayAbis) {
             ndk {
