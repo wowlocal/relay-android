@@ -120,6 +120,26 @@ final class RelayFiles {
             imageSize.h = file.height;
             doc.attributes.add(imageSize);
         }
+        if (doc.mime_type.startsWith("video/")) {
+            // Shown as a video (inline player). Mattermost has no video dimensions/duration: the sender's
+            // are kept for files this app uploaded (kv video:<id>), else the bubble's default size.
+            TLRPC.TL_documentAttributeVideo video = new TLRPC.TL_documentAttributeVideo();
+            video.supports_streaming = true;
+            String known = account.db().kv("video:" + file.id);
+            if (known != null) {
+                String[] parts = known.split(",");
+                try {
+                    video.w = Integer.parseInt(parts[0]);
+                    video.h = Integer.parseInt(parts[1]);
+                    video.duration = Integer.parseInt(parts[2]);
+                } catch (Exception ignore) {
+                }
+            } else if (file.width > 0 && file.height > 0) {
+                video.w = file.width;
+                video.h = file.height;
+            }
+            doc.attributes.add(video);
+        }
         if (file.hasPreviewImage && file.width > 0 && file.height > 0) {
             int[] thumb = thumbnailSize(file.width, file.height);
             doc.thumbs.add(size("m", thumb[0], thumb[1], 0));

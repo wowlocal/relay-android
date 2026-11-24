@@ -8082,7 +8082,10 @@ public class AlertsCreator {
                     }
                 }
             }
-            if (myMessagesCount > 0 && hasNonDiceMessages && (user == null || !UserObject.isDeleted(user))) {
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay: Mattermost has no "delete for me"; a delete is always for everyone (no checkbox).
+                deleteForAll[0] = true;
+            } else if (myMessagesCount > 0 && hasNonDiceMessages && (user == null || !UserObject.isDeleted(user))) {
                 hasDeleteForAllCheck = true;
                 FrameLayout frameLayout = new FrameLayout(activity);
                 CheckBoxCell cell = new CheckBoxCell(activity, 1, resourcesProvider);

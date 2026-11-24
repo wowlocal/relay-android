@@ -226,6 +226,11 @@ public final class RelayAccount {
         statusFetchedAt.put(status.userId, System.currentTimeMillis());
     }
 
+    /** User ids with a cached presence. */
+    public List<String> knownStatusUserIds() {
+        return new ArrayList<>(statuses.keySet());
+    }
+
     /** User ids whose cached presence is online or do-not-disturb. */
     public List<String> onlineUserIds() {
         List<String> ids = new ArrayList<>();

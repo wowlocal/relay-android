@@ -69,6 +69,67 @@ public final class RelayDebug {
         }
     }
 
+    /**
+     * Sends local files through Telegram's own send path (FileUploadOperation → upload.saveFilePart →
+     * messages.sendMedia / uploadMedia + sendMultiMedia), as the attach menu would, without its picker UI.
+     * {@code kind}: {@code photo} (one or an album, grouped), {@code video}, {@code document}, {@code voice}
+     * (an Ogg/Opus file sent as a voice message, waveform from Telegram's own decoder).
+     */
+    public static void sendMedia(int account, long dialogId, String kind, java.util.List<String> paths, String caption) {
+        if (dialogId == 0 || paths.isEmpty()) {
+            Log.w(TAG, "DEBUG_SEND_MEDIA: no chat or files");
+            return;
+        }
+        org.telegram.messenger.AccountInstance instance = org.telegram.messenger.AccountInstance.getInstance(account);
+        switch (kind) {
+            case "document": {
+                java.util.ArrayList<String> list = new java.util.ArrayList<>(paths);
+                org.telegram.messenger.SendMessagesHelper.prepareSendingDocuments(instance, list, list, null, caption, null, dialogId,
+                        null, null, null, null, null, true, 0, null, null, 0, false, 0);
+                break;
+            }
+            case "voice": {
+                String path = paths.get(0);
+                java.io.File file = new java.io.File(path);
+                org.telegram.tgnet.TLRPC.TL_document doc = new org.telegram.tgnet.TLRPC.TL_document();
+                doc.file_reference = new byte[0];
+                doc.dc_id = Integer.MIN_VALUE;
+                doc.id = org.telegram.messenger.SharedConfig.getLastLocalId();
+                doc.user_id = org.telegram.messenger.UserConfig.getInstance(account).getClientUserId();
+                doc.mime_type = "audio/ogg";
+                doc.date = org.telegram.tgnet.ConnectionsManager.getInstance(account).getCurrentTime();
+                doc.size = (int) file.length();
+                org.telegram.tgnet.TLRPC.TL_documentAttributeAudio audio = new org.telegram.tgnet.TLRPC.TL_documentAttributeAudio();
+                audio.voice = true;
+                audio.duration = 3;
+                audio.waveform = org.telegram.messenger.MediaController.getWaveform(path);
+                if (audio.waveform != null) {
+                    audio.flags |= 4;
+                }
+                doc.attributes.add(audio);
+                org.telegram.messenger.SendMessagesHelper.getInstance(account).sendMessage(org.telegram.messenger.SendMessagesHelper.SendMessageParams.of(
+                        doc, null, path, dialogId, null, null, null, null, null, null, true, 0, 0, 0, null, null, false));
+                break;
+            }
+            default: {
+                java.util.ArrayList<org.telegram.messenger.SendMessagesHelper.SendingMediaInfo> media = new java.util.ArrayList<>();
+                for (int i = 0; i < paths.size(); i++) {
+                    org.telegram.messenger.SendMessagesHelper.SendingMediaInfo info = new org.telegram.messenger.SendMessagesHelper.SendingMediaInfo();
+                    info.path = paths.get(i);
+                    info.isVideo = "video".equals(kind);
+                    if (i == 0 && caption != null) {
+                        info.caption = caption;
+                    }
+                    media.add(info);
+                }
+                org.telegram.messenger.SendMessagesHelper.prepareSendingMedia(instance, media, dialogId, null, null, null, null,
+                        false, true, null, true, 0, 0, 0, false, null, null, 0, false, 0, 0, null);
+                break;
+            }
+        }
+        Log.i(TAG, "DEBUG_SEND_MEDIA ok kind=" + kind + " files=" + paths.size() + " dialog=" + dialogId);
+    }
+
     /** Opens a chat (optionally at a message) the way a notification tap does. */
     public static void openChat(long dialogId, int messageId) {
         if (dialogId == 0) {

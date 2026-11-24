@@ -115,6 +115,27 @@ final class RelayHandlers {
             return res;
         });
 
+        // MARK: write path (§7, A5): queued per account, answered when Mattermost has it
+        map.put(TLRPC.TL_messages_sendMessage.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendMessage((TLRPC.TL_messages_sendMessage) req));
+        map.put(TLRPC.TL_messages_sendMedia.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendMedia((TLRPC.TL_messages_sendMedia) req));
+        map.put(TLRPC.TL_messages_uploadMedia.class, (bridge, account, req) -> RelayWrite.of(bridge, account).uploadMedia((TLRPC.TL_messages_uploadMedia) req));
+        map.put(TLRPC.TL_messages_sendMultiMedia.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendMultiMedia((TLRPC.TL_messages_sendMultiMedia) req));
+        map.put(TLRPC.TL_messages_editMessage.class, (bridge, account, req) -> RelayWrite.of(bridge, account).editMessage((TLRPC.TL_messages_editMessage) req));
+        map.put(TLRPC.TL_messages_deleteMessages.class, (bridge, account, req) -> RelayWrite.of(bridge, account).deleteMessages((TLRPC.TL_messages_deleteMessages) req));
+        map.put(TLRPC.TL_channels_deleteMessages.class, (bridge, account, req) -> RelayWrite.of(bridge, account).deleteChannelMessages((TLRPC.TL_channels_deleteMessages) req));
+        map.put(TLRPC.TL_messages_sendReaction.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendReaction((TLRPC.TL_messages_sendReaction) req));
+        map.put(TLRPC.TL_messages_forwardMessages.class, (bridge, account, req) -> RelayWrite.of(bridge, account).forwardMessages((TLRPC.TL_messages_forwardMessages) req));
+        map.put(TLRPC.TL_messages_markDialogUnread.class, (bridge, account, req) -> RelayWrite.of(bridge, account).markDialogUnread((TLRPC.TL_messages_markDialogUnread) req));
+        // Upload parts are buffered on disk (transfer pool); the file goes to Mattermost with sendMedia/uploadMedia.
+        map.put(TLRPC.TL_upload_saveFilePart.class, (bridge, account, req) -> {
+            TLRPC.TL_upload_saveFilePart r = (TLRPC.TL_upload_saveFilePart) req;
+            return RelayUploads.savePart(bridge.account, r.file_id, r.file_part, r.bytes) ? new TLRPC.TL_boolTrue() : RelayTl.error(400, "FILE_PART_INVALID");
+        });
+        map.put(TLRPC.TL_upload_saveBigFilePart.class, (bridge, account, req) -> {
+            TLRPC.TL_upload_saveBigFilePart r = (TLRPC.TL_upload_saveBigFilePart) req;
+            return RelayUploads.savePart(bridge.account, r.file_id, r.file_part, r.bytes) ? new TLRPC.TL_boolTrue() : RelayTl.error(400, "FILE_PART_INVALID");
+        });
+
         // MARK: files (§8)
         map.put(TLRPC.TL_upload_getFile.class, (bridge, account, req) -> RelayReadPath.of(account).files.getFile((TLRPC.TL_upload_getFile) req));
 

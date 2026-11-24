@@ -49,6 +49,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_OPEN_CHAT = "org.relaychat.DEBUG_OPEN_CHAT";
     /** {@code --es op reconnect|reset|state}: drop the WebSocket (resumed / not resumed), or log the live state. */
     public static final String ACTION_WS = "org.relaychat.DEBUG_WS";
+    /** {@code --es channel <id> --es kind photo|video|document|voice --es paths a,b,c [--es caption …]}. */
+    public static final String ACTION_SEND_MEDIA = "org.relaychat.DEBUG_SEND_MEDIA";
 
     @Override
     public boolean onCreate() {
@@ -63,6 +65,7 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_DUMP_DIALOGS);
         filter.addAction(ACTION_OPEN_CHAT);
         filter.addAction(ACTION_WS);
+        filter.addAction(ACTION_SEND_MEDIA);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -70,6 +73,30 @@ public class RelayDebugHooks extends ContentProvider {
             context.getApplicationContext().registerReceiver(receiver, filter);
         }
         Log.i(TAG, "debug hooks registered");
+        // Latency probe for the e2e tests: when new / edited messages reach the UI thread. Posted, so it
+        // runs after Application.onCreate (providers are created before it).
+        new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                final int account = a;
+                org.telegram.messenger.NotificationCenter center = org.telegram.messenger.NotificationCenter.getInstance(a);
+                org.telegram.messenger.NotificationCenter.NotificationCenterDelegate observer = (id, acc, args) -> {
+                    StringBuilder ids = new StringBuilder();
+                    if (id == org.telegram.messenger.NotificationCenter.didReceiveNewMessages && args.length > 1 && args[1] instanceof java.util.ArrayList) {
+                        for (Object o : (java.util.ArrayList<?>) args[1]) {
+                            if (o instanceof org.telegram.messenger.MessageObject) {
+                                org.telegram.messenger.MessageObject m = (org.telegram.messenger.MessageObject) o;
+                                ids.append(m.getId()).append(':').append(clean(m.messageOwner != null ? m.messageOwner.message : "")).append(' ');
+                            }
+                        }
+                        Log.i(TAG, "UI newMessages dialog=" + args[0] + " " + ids);
+                    } else if (id == org.telegram.messenger.NotificationCenter.messageReceivedByServer && args.length > 1) {
+                        Log.i(TAG, "UI sent old=" + args[0] + " new=" + args[1]);
+                    }
+                };
+                center.addObserver(observer, org.telegram.messenger.NotificationCenter.didReceiveNewMessages);
+                center.addObserver(observer, org.telegram.messenger.NotificationCenter.messageReceivedByServer);
+            }
+        });
         return true;
     }
 
@@ -94,6 +121,18 @@ public class RelayDebugHooks extends ContentProvider {
                     long did = RelayHooks.dialogIdOfChannel(UserConfig.selectedAccount, channel);
                     AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.openChat(did, message));
                 }, "RelayDebugOpen").start();
+                return;
+            }
+            if (ACTION_SEND_MEDIA.equals(action)) {
+                String channel = intent.getStringExtra("channel");
+                String kind = intent.getStringExtra("kind");
+                String paths = intent.getStringExtra("paths");
+                String caption = intent.getStringExtra("caption");
+                new Thread(() -> {
+                    long did = RelayHooks.dialogIdOfChannel(UserConfig.selectedAccount, channel);
+                    java.util.List<String> list = java.util.Arrays.asList(paths != null ? paths.split(",") : new String[0]);
+                    AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.sendMedia(UserConfig.selectedAccount, did, kind != null ? kind : "photo", list, caption));
+                }, "RelayDebugSend").start();
                 return;
             }
             if (ACTION_WS.equals(action)) {

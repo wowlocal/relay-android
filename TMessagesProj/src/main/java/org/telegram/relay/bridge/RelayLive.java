@@ -72,6 +72,8 @@ final class RelayLive implements WebSocketListener {
     private static final long MAX_CATCH_UP_MS = 2L * 24 * 3600 * 1000;
     /** More changed posts than this in one channel: that channel is reloaded instead. */
     private static final int CHANNEL_CATCH_UP_LIMIT = 200;
+    /** Presence poll / housekeeping interval. */
+    private static final int TICK_MS = 15_000;
 
     private static final WeakHashMap<RelayAccount, RelayLive> instances = new WeakHashMap<>();
 
@@ -143,10 +145,10 @@ final class RelayLive implements WebSocketListener {
                     return;
                 }
                 bridge.post(RelayLive.this::tick);
-                Utilities.stageQueue.postRunnable(this, 60_000);
+                Utilities.stageQueue.postRunnable(this, TICK_MS);
             }
         };
-        Utilities.stageQueue.postRunnable(keepAlive, 60_000);
+        Utilities.stageQueue.postRunnable(keepAlive, TICK_MS);
         RelayConfig.log(TAG, "live: started account=" + account.account + " network=" + networkAvailable);
     }
 
@@ -439,24 +441,59 @@ final class RelayLive implements WebSocketListener {
         }
     }
 
-    /** Once a minute: refresh "online" so it does not expire, persist sync_at while idle. */
+    private int ticks;
+
+    /**
+     * Every {@link #TICK_MS}: Mattermost sends {@code status_change} only to the user whose status changed
+     * (11.x), so presence of the DM partners and the users seen so far (≤ 400) is polled, as iOS does, and
+     * changes become {@code updateUserStatus}; "online" is refreshed once a minute so it does not expire.
+     * Also persists {@code sync_at} while idle.
+     */
     private void tick() {
         noteSynced();
-        List<String> online = account.onlineUserIds();
-        online.remove(account.session.userId);
-        if (online.isEmpty()) {
+        if (!connected) {
             return;
         }
-        ArrayList<TLRPC.Update> list = new ArrayList<>();
-        RelayUpdates.Refs refs = new RelayUpdates.Refs();
-        for (String userId : online) {
-            TL_update.TL_updateUserStatus u = new TL_update.TL_updateUserStatus();
-            u.user_id = account.userTlId(userId);
-            u.status = RelayUsers.status(false, account.status(userId));
-            list.add(u);
-            refs.user(userId);
+        ticks++;
+        java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
+        try {
+            ids.addAll(path.directory.any().dmByUser.keySet());
+        } catch (MattermostException e) {
+            return;
         }
-        updates.deliver(list, refs);
+        ids.addAll(account.onlineUserIds());
+        ids.addAll(account.knownStatusUserIds());
+        ids.remove(account.session.userId);
+        List<String> list = new ArrayList<>(ids);
+        if (list.size() > 400) {
+            list = list.subList(0, 400);
+        }
+        List<UserStatus> fresh;
+        try {
+            fresh = account.client.userStatuses(list);
+        } catch (MattermostException e) {
+            RelayConfig.logError(TAG, "status poll", e);
+            return;
+        }
+        boolean refreshOnline = ticks % (60_000 / TICK_MS) == 0;
+        ArrayList<TLRPC.Update> updatesList = new ArrayList<>();
+        RelayUpdates.Refs refs = new RelayUpdates.Refs();
+        for (UserStatus status : fresh) {
+            UserStatus old = account.status(status.userId);
+            boolean changed = old == null || !old.status.equals(status.status);
+            account.putStatus(status);
+            boolean online = UserStatus.ONLINE.equals(status.status) || UserStatus.DND.equals(status.status);
+            if (changed || (online && refreshOnline)) {
+                TL_update.TL_updateUserStatus u = new TL_update.TL_updateUserStatus();
+                u.user_id = account.userTlId(status.userId);
+                u.status = RelayUsers.status(false, status);
+                updatesList.add(u);
+                refs.user(status.userId);
+            }
+        }
+        if (!updatesList.isEmpty()) {
+            updates.deliver(updatesList, refs);
+        }
     }
 
     // MARK: posts

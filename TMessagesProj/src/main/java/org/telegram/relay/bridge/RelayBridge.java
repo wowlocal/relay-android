@@ -109,6 +109,8 @@ public final class RelayBridge {
         final int connectionType;
         volatile boolean cancelled;
         int attempt;
+        /** Answered later by {@link Deferred#complete} (write queue). */
+        boolean deferred;
 
         Pending(int token, TLObject request, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, int flags, int connectionType) {
             this.token = token;
@@ -165,12 +167,54 @@ public final class RelayBridge {
         }
     }
 
+    /** Returned by a handler that answers later through {@link #defer()}. */
+    static final TLObject DEFERRED = new TLRPC.TL_boolFalse();
+
+    private final ThreadLocal<Pending> current = new ThreadLocal<>();
+
+    /** A request answered later (offline queue): complete it exactly once, from any thread. */
+    final class Deferred {
+        private final Pending pending;
+        private boolean done;
+
+        Deferred(Pending pending) {
+            this.pending = pending;
+        }
+
+        boolean isCancelled() {
+            return pending.cancelled;
+        }
+
+        synchronized void complete(TLObject response) {
+            if (done) {
+                return;
+            }
+            done = true;
+            try {
+                pending.request.freeResources();
+            } catch (Throwable ignore) {
+            }
+            deliver(pending, response);
+        }
+    }
+
+    /** Called by a handler (on the bridge executor) that will answer later; the handler then returns {@link #DEFERRED}. */
+    Deferred defer() {
+        Pending p = current.get();
+        if (p == null) {
+            throw new IllegalStateException("defer() outside a request handler");
+        }
+        p.deferred = true;
+        return new Deferred(p);
+    }
+
     private void run(Pending p) {
         if (p.cancelled) {
             return;
         }
         Class<?> type = p.request.getClass();
         TLObject response;
+        current.set(p);
         try {
             response = answer(p.request, type);
         } catch (MattermostException e) {
@@ -194,6 +238,11 @@ public final class RelayBridge {
         } catch (Throwable t) {
             RelayConfig.logError(TAG, RelayTl.methodName(type) + " handler crashed", t);
             response = RelayTl.error(500, "RELAY_INTERNAL");
+        } finally {
+            current.remove();
+        }
+        if (response == DEFERRED && p.deferred) {
+            return;
         }
         try {
             p.request.freeResources();

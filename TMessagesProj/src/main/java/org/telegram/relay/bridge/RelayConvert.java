@@ -182,6 +182,7 @@ final class RelayConvert {
         FileInfo file = layout.file(part);
         if (file != null) {
             m.media = files.media(file, date);
+            markVoice(post, layout, file, m.media);
             m.flags |= TLObject.FLAG_9;
             long grouped = layout.groupedId(part);
             if (grouped != 0) {
@@ -218,6 +219,44 @@ final class RelayConvert {
             }
         }
         return m;
+    }
+
+    /**
+     * Relay voice messages (iOS wire format, plan V1): a post with exactly one audio file and
+     * {@code props.relay_voice {v, duration, waveform}} is a voice message (Telegram's voice bubble);
+     * audio files without the marker stay files.
+     */
+    private static void markVoice(Post post, Layout layout, FileInfo file, TLRPC.MessageMedia media) {
+        if (layout.files.size() != 1 || post.props == null || !(media instanceof TLRPC.TL_messageMediaDocument) || media.document == null) {
+            return;
+        }
+        JsonElement raw = post.props.get("relay_voice");
+        if (raw == null || !raw.isJsonObject()) {
+            return;
+        }
+        String mime = file.mimeType == null ? "" : file.mimeType.toLowerCase(java.util.Locale.ROOT);
+        String ext = file.extension == null ? "" : file.extension.toLowerCase(java.util.Locale.ROOT);
+        if (!mime.startsWith("audio/") && !java.util.Arrays.asList("m4a", "ogg", "oga", "opus", "mp3", "wav", "aac").contains(ext)) {
+            return;
+        }
+        JsonObject marker = raw.getAsJsonObject();
+        TLRPC.TL_documentAttributeAudio audio = new TLRPC.TL_documentAttributeAudio();
+        audio.voice = true;
+        try {
+            audio.duration = marker.has("duration") ? marker.get("duration").getAsDouble() : 0;
+        } catch (Exception ignore) {
+        }
+        try {
+            if (marker.has("waveform") && marker.get("waveform").isJsonPrimitive()) {
+                audio.waveform = android.util.Base64.decode(marker.get("waveform").getAsString(), android.util.Base64.DEFAULT);
+                audio.flags |= TLObject.FLAG_2;
+            }
+        } catch (Exception ignore) {
+        }
+        if (mime.isEmpty() || mime.equals("application/octet-stream")) {
+            media.document.mime_type = ext.equals("m4a") ? "audio/mp4" : "audio/ogg";
+        }
+        media.document.attributes.add(audio);
     }
 
     // MARK: - Text
