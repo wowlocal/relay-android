@@ -77,7 +77,7 @@ The bridge's ID map handles both.
   `http://localhost:8065`, users alice/bob/carol/dave, passwords in its `.env`).
 - Devices reach it with `adb reverse tcp:8065 tcp:8065`, so the server URL is
   `http://localhost:8065` on the device too (cleartext allowed in debug builds).
-- Devices: emulator AVD `relay-pixel` (arm64, API 35) and the wired Samsung SM-A125F.
+- Devices: emulator AVD `ntsd-xplat-api35` (existing, arm64 API 35, serial emulator-5554) and the wired Samsung SM-A125F (R58R36F7VFD).
 - e2e harness: `tools/relay-e2e/` (Python): seeds via REST, drives the app through
   `adb shell` (am/input/uiautomator dump) and a debug broadcast receiver, asserts both
   sides.
