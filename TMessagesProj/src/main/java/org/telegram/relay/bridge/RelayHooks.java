@@ -63,4 +63,17 @@ public final class RelayHooks {
             return 0;
         }
     }
+
+    /** The Mattermost channel of a dialog (debug), or null. */
+    public static String channelIdOfDialog(int account, long dialogId) {
+        RelayAccount relayAccount = RelayAccount.get(account);
+        if (relayAccount == null) {
+            return null;
+        }
+        try {
+            return RelayReadPath.of(relayAccount).directory.channelIdOf(dialogId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

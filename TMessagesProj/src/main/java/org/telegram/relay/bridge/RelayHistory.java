@@ -349,12 +349,15 @@ final class RelayHistory {
             older.addAll(assignIds(channelId, newestFirst(page)));
         }
 
+        // Window positions relative to p (the first message below offset_id): newer.get(k) sits at p-1-k,
+        // older.get(j) at p+j. The window is [p+addOffset, p+addOffset+limit).
         List<Unit> result = new ArrayList<>(limit);
-        int newerTake = Math.min(newerWanted, newer.size());
-        for (int i = newerTake - 1; i >= 0; i--) {
-            result.add(newer.get(i));
-        }
         if (addOffset < 0) {
+            int kMax = Math.min(-addOffset - 1, newer.size() - 1);
+            int kMin = Math.max(0, -addOffset - limit);
+            for (int k = kMax; k >= kMin; k--) {
+                result.add(newer.get(k));
+            }
             result.addAll(slice(older, 0, olderWanted));
         } else {
             result.addAll(slice(older, olderSkip, limit));

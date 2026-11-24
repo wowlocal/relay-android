@@ -17439,6 +17439,16 @@ public class MessagesController extends BaseController implements NotificationCe
                             continue;
                         }
                     }
+                    if (org.telegram.relay.RelayConfig.ENABLED) {
+                        // Relay: like resetDialogs, derive the unread flag from the dialog's read state
+                        // (upstream leaves it false here, which shows own messages as read).
+                        for (int k = 0; k < res.dialogs.size(); k++) {
+                            TLRPC.Dialog pd = res.dialogs.get(k);
+                            if (pd.top_message == message.id && MessageObject.getDialogId(message) == DialogObject.getPeerDialogId(pd.peer)) {
+                                message.unread = (message.out ? pd.read_outbox_max_id : pd.read_inbox_max_id) < message.id;
+                            }
+                        }
+                    }
                     MessageObject messageObject = new MessageObject(currentAccount, message, usersDict, chatsDict, false, false);
                     newMessages.add(messageObject);
                     long did = messageObject.getDialogId();

@@ -15,6 +15,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.UserConfig;
 import org.telegram.relay.auth.RelayAuth;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.relay.bridge.RelayBridge;
@@ -30,6 +31,9 @@ import org.telegram.relay.bridge.RelayHooks;
  * adb shell am broadcast -a org.relaychat.DEBUG_DUMP_DIALOG --es channel &lt;mattermost channel id&gt;
  *     # writes files/relay-dialog.txt: the bridge's id map of that chat ("map" lines: local id, post id,
  *     # part, deleted), its islands, and the message ids the client has cached ("client" lines)
+ * adb shell am broadcast -a org.relaychat.DEBUG_DUMP_DIALOGS
+ *     # writes files/relay-dialogs.txt: the client's chat list as shown (TSV, see dumpDialogs)
+ * adb shell am broadcast -a org.relaychat.DEBUG_OPEN_CHAT --es channel &lt;mattermost channel id&gt; [--ei message &lt;id&gt;]
  * </pre>
  *
  * Results are logged with tag {@code RelayDebug}: {@code DEBUG_LOGIN ok account=…} or
@@ -40,6 +44,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_LOGIN = "org.relaychat.DEBUG_LOGIN";
     public static final String ACTION_DUMP = "org.relaychat.DEBUG_DUMP";
     public static final String ACTION_DUMP_DIALOG = "org.relaychat.DEBUG_DUMP_DIALOG";
+    public static final String ACTION_DUMP_DIALOGS = "org.relaychat.DEBUG_DUMP_DIALOGS";
+    public static final String ACTION_OPEN_CHAT = "org.relaychat.DEBUG_OPEN_CHAT";
 
     @Override
     public boolean onCreate() {
@@ -51,6 +57,8 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_LOGIN);
         filter.addAction(ACTION_DUMP);
         filter.addAction(ACTION_DUMP_DIALOG);
+        filter.addAction(ACTION_DUMP_DIALOGS);
+        filter.addAction(ACTION_OPEN_CHAT);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -69,6 +77,19 @@ public class RelayDebugHooks extends ContentProvider {
                 int account = UserConfig.selectedAccount;
                 Log.i(TAG, "DEBUG_DUMP account=" + account);
                 RelayBridge.get(account).logSummary();
+                return;
+            }
+            if (ACTION_DUMP_DIALOGS.equals(action)) {
+                AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.dumpDialogs(UserConfig.selectedAccount));
+                return;
+            }
+            if (ACTION_OPEN_CHAT.equals(action)) {
+                String channel = intent.getStringExtra("channel");
+                int message = intent.getIntExtra("message", 0);
+                new Thread(() -> {
+                    long did = RelayHooks.dialogIdOfChannel(UserConfig.selectedAccount, channel);
+                    AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.openChat(did, message));
+                }, "RelayDebugOpen").start();
                 return;
             }
             if (ACTION_DUMP_DIALOG.equals(action)) {
@@ -103,6 +124,11 @@ public class RelayDebugHooks extends ContentProvider {
             storage.getStorageQueue().postRunnable(() -> {
                 SQLiteCursor cursor = null;
                 try {
+                    cursor = storage.getDatabase().queryFinalized("SELECT unread_count, inbox_max, outbox_max, last_mid FROM dialogs WHERE did = " + finalDid);
+                    if (cursor.next()) {
+                        text.append("dialogrow\t").append(cursor.intValue(0)).append('\t').append(cursor.intValue(1)).append('\t').append(cursor.intValue(2)).append('\t').append(cursor.intValue(3)).append('\n');
+                    }
+                    cursor.dispose();
                     cursor = storage.getDatabase().queryFinalized("SELECT mid FROM messages_v2 WHERE uid = " + finalDid + " ORDER BY mid");
                     while (cursor.next()) {
                         text.append("client\t").append(cursor.intValue(0)).append('\n');

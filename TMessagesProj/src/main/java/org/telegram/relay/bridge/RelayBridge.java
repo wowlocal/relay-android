@@ -385,6 +385,9 @@ public final class RelayBridge {
         RelayConfig.log(TAG, "start account=" + account);
         ConnectionsManager.onConnectionStateChanged(ConnectionsManager.ConnectionStateConnected, account);
         Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).updateConfig(RelayServerConfig.build(account)));
+        // What native onSessionCreated did (CM:904): catch up once per session. On a cold start this is
+        // where the bridge notices server-side changes (RelayReadPath.needsReset → resetDialogs).
+        Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).getDifference(), 500);
         timerRunnable = new Runnable() {
             @Override
             public void run() {

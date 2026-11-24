@@ -55,7 +55,9 @@ boundary means the 25k-line controllers stay nearly untouched.
 | status / custom status | `userStatus*` / emoji status |
 
 Telegram's DM message ids are one account-wide sequence; supergroup ids are per channel.
-The bridge's ID map handles both.
+Relay uses **one `MessageIdAllocator` space per dialog, DMs included** (decided in A3): the client
+stores messages keyed `(mid, uid)`, so per-dialog ids are safe there. The few client paths that
+address DM messages by a bare id are made peer-aware in the bridge (see PROGRESS A3).
 
 ## Phases (each ends with integration tests against the local server)
 
