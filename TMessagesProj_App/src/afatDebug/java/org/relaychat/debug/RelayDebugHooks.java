@@ -20,6 +20,7 @@ import org.telegram.messenger.MessagesStorage;
 import org.telegram.SQLite.SQLiteCursor;
 import org.telegram.relay.bridge.RelayBridge;
 import org.telegram.relay.bridge.RelayHooks;
+import org.telegram.tgnet.TLRPC;
 
 /**
  * Debug-only test hooks for the e2e scripts (this source set is compiled into debug builds only).
@@ -46,6 +47,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_DUMP_DIALOG = "org.relaychat.DEBUG_DUMP_DIALOG";
     public static final String ACTION_DUMP_DIALOGS = "org.relaychat.DEBUG_DUMP_DIALOGS";
     public static final String ACTION_OPEN_CHAT = "org.relaychat.DEBUG_OPEN_CHAT";
+    /** {@code --es op reconnect|reset|state}: drop the WebSocket (resumed / not resumed), or log the live state. */
+    public static final String ACTION_WS = "org.relaychat.DEBUG_WS";
 
     @Override
     public boolean onCreate() {
@@ -59,6 +62,7 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_DUMP_DIALOG);
         filter.addAction(ACTION_DUMP_DIALOGS);
         filter.addAction(ACTION_OPEN_CHAT);
+        filter.addAction(ACTION_WS);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -90,6 +94,15 @@ public class RelayDebugHooks extends ContentProvider {
                     long did = RelayHooks.dialogIdOfChannel(UserConfig.selectedAccount, channel);
                     AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.openChat(did, message));
                 }, "RelayDebugOpen").start();
+                return;
+            }
+            if (ACTION_WS.equals(action)) {
+                String op = intent.getStringExtra("op");
+                int account = UserConfig.selectedAccount;
+                if ("reconnect".equals(op) || "reset".equals(op)) {
+                    RelayHooks.debugReconnect(account, "reconnect".equals(op));
+                }
+                Log.i(TAG, "DEBUG_WS ok " + op + " " + RelayHooks.debugLiveState(account));
                 return;
             }
             if (ACTION_DUMP_DIALOG.equals(action)) {
@@ -129,9 +142,25 @@ public class RelayDebugHooks extends ContentProvider {
                         text.append("dialogrow\t").append(cursor.intValue(0)).append('\t').append(cursor.intValue(1)).append('\t').append(cursor.intValue(2)).append('\t').append(cursor.intValue(3)).append('\n');
                     }
                     cursor.dispose();
-                    cursor = storage.getDatabase().queryFinalized("SELECT mid FROM messages_v2 WHERE uid = " + finalDid + " ORDER BY mid");
+                    cursor = storage.getDatabase().queryFinalized("SELECT mid, data FROM messages_v2 WHERE uid = " + finalDid + " ORDER BY mid");
                     while (cursor.next()) {
                         text.append("client\t").append(cursor.intValue(0)).append('\n');
+                        org.telegram.tgnet.NativeByteBuffer data = cursor.byteBufferValue(1);
+                        if (data != null) {
+                            try {
+                                TLRPC.Message m = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                                if (m != null) {
+                                    text.append("msg\t").append(cursor.intValue(0)).append('\t').append(clean(m.message))
+                                            .append('\t').append(m.edit_date).append('\t').append(reactions(m))
+                                            .append('\t').append(m.replies != null ? m.replies.replies : 0)
+                                            .append('\t').append(m.reply_to != null ? m.reply_to.reply_to_msg_id : 0)
+                                            .append('\t').append(m.media != null ? m.media.getClass().getSimpleName() : "")
+                                            .append('\t').append(m.out ? 1 : 0).append('\n');
+                                }
+                            } catch (Throwable ignore) {
+                            }
+                            data.reuse();
+                        }
                     }
                 } catch (Exception e) {
                     text.append("client query failed ").append(e).append('\n');
@@ -153,6 +182,24 @@ public class RelayDebugHooks extends ContentProvider {
                 Log.w(TAG, "DEBUG_DUMP_DIALOG failed: " + e);
             }
         }, "RelayDebugDump").start();
+    }
+
+    private static String clean(String text) {
+        return text == null ? "" : text.replace('\t', ' ').replace('\n', ' ');
+    }
+
+    private static String reactions(TLRPC.Message m) {
+        if (m.reactions == null || m.reactions.results == null) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        for (TLRPC.ReactionCount count : m.reactions.results) {
+            if (count.reaction instanceof TLRPC.TL_reactionEmoji) {
+                out.append(((TLRPC.TL_reactionEmoji) count.reaction).emoticon).append('=').append(count.count)
+                        .append(count.chosen_order != 0 ? "*" : "").append(' ');
+            }
+        }
+        return out.toString().trim();
     }
 
     private static void login(String server, String user, String password, String mfa) {

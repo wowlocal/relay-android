@@ -220,6 +220,23 @@ public final class RelayAccount {
         return statuses.get(mmUserId);
     }
 
+    /** A presence change from the WebSocket ({@code status_change}). */
+    public void putStatus(UserStatus status) {
+        statuses.put(status.userId, status);
+        statusFetchedAt.put(status.userId, System.currentTimeMillis());
+    }
+
+    /** User ids whose cached presence is online or do-not-disturb. */
+    public List<String> onlineUserIds() {
+        List<String> ids = new ArrayList<>();
+        for (UserStatus status : statuses.values()) {
+            if (UserStatus.ONLINE.equals(status.status) || UserStatus.DND.equals(status.status)) {
+                ids.add(status.userId);
+            }
+        }
+        return ids;
+    }
+
     /** The TL photo id of a user's current picture, or 0 when the user has none (letter avatar). */
     public long avatarPhotoId(User user) {
         if (user == null || isSynthetic(user.id) || user.lastPictureUpdate <= 0) {

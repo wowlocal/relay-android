@@ -132,6 +132,12 @@ public final class RelayBridge {
 
     private volatile boolean started;
     private Runnable timerRunnable;
+    /** The account's WebSocket / live path while started (A4). */
+    private volatile RelayLive live;
+
+    RelayLive live() {
+        return live;
+    }
 
     private RelayBridge(int account) {
         this.account = account;
@@ -383,11 +389,18 @@ public final class RelayBridge {
         }
         started = true;
         RelayConfig.log(TAG, "start account=" + account);
-        ConnectionsManager.onConnectionStateChanged(ConnectionsManager.ConnectionStateConnected, account);
         Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).updateConfig(RelayServerConfig.build(account)));
-        // What native onSessionCreated did (CM:904): catch up once per session. On a cold start this is
-        // where the bridge notices server-side changes (RelayReadPath.needsReset → resetDialogs).
+        // What native onSessionCreated did (CM:904): catch up once per session. The bridge answers after a
+        // REST catch-up since the last sync (RelayLive.catchUp), so a cold start shows what changed meanwhile.
         Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account).getDifference(), 500);
+        // A4: the WebSocket drives the connection state ("Connecting…" until it is up).
+        RelayAccount relayAccount = RelayAccount.get(account);
+        if (relayAccount != null) {
+            live = RelayLive.of(this, relayAccount);
+            live.start();
+        } else {
+            ConnectionsManager.onConnectionStateChanged(ConnectionsManager.ConnectionStateConnected, account);
+        }
         timerRunnable = new Runnable() {
             @Override
             public void run() {
@@ -417,6 +430,11 @@ public final class RelayBridge {
         }
         started = false;
         RelayConfig.log(TAG, "stop account=" + account);
+        RelayLive current = live;
+        live = null;
+        if (current != null) {
+            current.stop();
+        }
         if (timerRunnable != null) {
             Utilities.stageQueue.cancelRunnable(timerRunnable);
             timerRunnable = null;
@@ -429,6 +447,31 @@ public final class RelayBridge {
     }
 
     private volatile boolean sessionRejected;
+
+    /** Runs a task on the account's serial executor (WebSocket events, write queue), logging failures. */
+    void post(Runnable task) {
+        executor.execute(() -> {
+            try {
+                task.run();
+            } catch (Throwable t) {
+                RelayConfig.logError(TAG, "bridge task failed", t);
+            }
+        });
+    }
+
+    void postDelayed(Runnable task, long delayMs) {
+        executor.schedule(() -> {
+            try {
+                task.run();
+            } catch (Throwable t) {
+                RelayConfig.logError(TAG, "bridge task failed", t);
+            }
+        }, delayMs, TimeUnit.MILLISECONDS);
+    }
+
+    void sessionRejected() {
+        onSessionRejected();
+    }
 
     /** Mattermost answered 401 with our token: the session is gone (revoked or expired). */
     private void onSessionRejected() {

@@ -28,29 +28,27 @@ final class RelayHandlers {
     static void register(Map<Class<?>, Handler> map) {
         // MARK: updates (§6.4)
         map.put(TLRPC.TL_updates_getState.class, (bridge, account, req) -> bridge.currentState(account));
-        map.put(TLRPC.TL_updates_getDifference.class, (bridge, account, req) -> {
-            TLRPC.TL_updates_getDifference r = (TLRPC.TL_updates_getDifference) req;
-            int commonPts = account.db().pts(RelayDatabase.BOX_COMMON);
-            if (r.pts == commonPts && !RelayReadPath.of(account).needsReset()) {
-                TLRPC.TL_updates_differenceEmpty empty = new TLRPC.TL_updates_differenceEmpty();
-                empty.date = RelayStubs.now(bridge.account);
-                empty.seq = 0;
-                return empty;
+        map.put(TLRPC.TL_updates_getDifference.class, (bridge, account, req) ->
+                RelayLive.of(bridge, account).getDifference((TLRPC.TL_updates_getDifference) req));
+        map.put(TLRPC.TL_updates_getChannelDifference.class, (bridge, account, req) ->
+                RelayLive.of(bridge, account).getChannelDifference((TLRPC.TL_updates_getChannelDifference) req));
+        // Typing in the composer → WebSocket user_typing (parent_id for threads).
+        map.put(TLRPC.TL_messages_setTyping.class, (bridge, account, req) -> {
+            TLRPC.TL_messages_setTyping r = (TLRPC.TL_messages_setTyping) req;
+            if (r.action instanceof TLRPC.TL_sendMessageTypingAction) {
+                RelayReadPath path = RelayReadPath.of(account);
+                String channelId = path.directory.channelIdOf(r.peer);
+                String parentId = null;
+                if (channelId != null && r.top_msg_id != 0) {
+                    RelayHistory.Unit unit = path.history.unitAt(channelId, r.top_msg_id);
+                    if (unit != null) {
+                        org.telegram.relay.mattermost.model.Post post = unit.layout.post;
+                        parentId = post.isReply() ? post.rootId : post.id;
+                    }
+                }
+                RelayLive.of(bridge, account).sendTyping(channelId, parentId);
             }
-            // A2 keeps no update log yet: any gap re-lists the dialogs (resetDialogs).
-            TLRPC.TL_updates_differenceTooLong tooLong = new TLRPC.TL_updates_differenceTooLong();
-            tooLong.pts = commonPts;
-            return tooLong;
-        });
-        map.put(TLRPC.TL_updates_getChannelDifference.class, (bridge, account, req) -> {
-            TLRPC.TL_updates_getChannelDifference r = (TLRPC.TL_updates_getChannelDifference) req;
-            long channelId = r.channel != null ? r.channel.channel_id : 0;
-            TLRPC.TL_updates_channelDifferenceEmpty empty = new TLRPC.TL_updates_channelDifferenceEmpty();
-            empty.isFinal = true;
-            empty.pts = Math.max(r.pts, account.db().pts(RelayDatabase.channelBox(channelId)));
-            empty.timeout = 30;
-            empty.flags |= TLObject.FLAG_1;
-            return empty;
+            return new TLRPC.TL_boolTrue();
         });
 
         // MARK: chat list (§4)

@@ -37,6 +37,31 @@ public final class RelayHooks {
         return dialogId != null ? dialogId : 0;
     }
 
+    /**
+     * Private-chat deletes: Telegram's {@code updateDeleteMessages} carries bare ids (one account-wide id
+     * space), Relay's ids are per dialog. The bridge notes the dialog of every DM delete it hands out by
+     * its (unique) common pts; {@code MessagesController.processUpdateArray} reads it back so storage and
+     * the open chat delete in that dialog only.
+     */
+    private static final Map<Long, Long> dmDeletes = Collections.synchronizedMap(new java.util.LinkedHashMap<Long, Long>(64, 0.75f, false) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Long> eldest) {
+            return size() > 4096;
+        }
+    });
+
+    static void noteDmDelete(int account, int pts, long dialogId) {
+        dmDeletes.put(((long) account << 32) | (pts & 0xffffffffL), dialogId);
+    }
+
+    /** The private chat of a bridge {@code updateDeleteMessages} (by its pts), or 0 (Telegram's peer-less behaviour). */
+    public static long dmDeleteDialog(int account, int pts) {
+        if (!RelayConfig.ENABLED) {
+            return 0;
+        }
+        Long dialogId = dmDeletes.get(((long) account << 32) | (pts & 0xffffffffL));
+        return dialogId != null ? dialogId : 0;
+    }
     /** Debug dump of the bridge's id map for one dialog (see {@code RelayDebugHooks}). */
     public static String dumpDialog(int account, long dialogId) {
         RelayAccount relayAccount = RelayAccount.get(account);
@@ -48,6 +73,26 @@ public final class RelayHooks {
         } catch (Exception e) {
             return "dump failed: " + e;
         }
+    }
+
+    /** Debug: drops the account's WebSocket, resumed or not (a non-resumed reconnect forces a catch-up). */
+    public static void debugReconnect(int account, boolean resume) {
+        RelayLive live = RelayBridge.get(account).live();
+        if (live != null) {
+            live.debugReconnect(resume);
+        }
+    }
+
+    /** Debug: the live path's state in one line. */
+    public static String debugLiveState(int account) {
+        RelayAccount relayAccount = RelayAccount.get(account);
+        RelayLive live = RelayBridge.get(account).live();
+        if (relayAccount == null || live == null) {
+            return "live=none";
+        }
+        return "online=" + live.isOnline() + " network=" + live.networkAvailable + " catchUpNeeded=" + live.catchUpNeeded
+                + " pts=" + relayAccount.db().pts(org.telegram.relay.account.RelayDatabase.BOX_COMMON)
+                + " sync_at=" + relayAccount.db().kv(RelayLive.KV_SYNC_AT);
     }
 
     /** The bridge's dialog id for a Mattermost channel id (debug), or 0. */

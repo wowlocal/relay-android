@@ -219,6 +219,56 @@ public final class RelayDatabase extends SQLiteOpenHelper {
         getWritableDatabase().insertWithOnConflict("update_log", null, row, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    /** One logged update: its pts and its TL bytes. */
+    public static final class LoggedUpdate {
+        public final int pts;
+        public final int date;
+        public final byte[] data;
+
+        LoggedUpdate(int pts, int date, byte[] data) {
+            this.pts = pts;
+            this.date = date;
+            this.data = data;
+        }
+    }
+
+    /** Logged updates of a box with {@code pts > afterPts}, in pts order (at most {@code limit}). */
+    public java.util.List<LoggedUpdate> updateLogAfter(String box, int afterPts, int limit) {
+        java.util.List<LoggedUpdate> list = new java.util.ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT pts, date, data FROM update_log WHERE box = ? AND pts > ? ORDER BY pts LIMIT " + limit,
+                new String[]{box, Integer.toString(afterPts)})) {
+            while (c.moveToNext()) {
+                list.add(new LoggedUpdate(c.getInt(0), c.getInt(1), c.getBlob(2)));
+            }
+        }
+        return list;
+    }
+
+    /** The lowest logged pts of a box, or 0 when its log is empty. */
+    public int updateLogFirstPts(String box) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT MIN(pts) FROM update_log WHERE box = ?", new String[]{box})) {
+            return c.moveToFirst() && !c.isNull(0) ? c.getInt(0) : 0;
+        }
+    }
+
+    /** Channel boxes ({@code c<id>}) with a logged update dated {@code >= date}. */
+    public java.util.List<String> channelBoxesSince(int date) {
+        java.util.List<String> list = new java.util.ArrayList<>();
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT DISTINCT box FROM update_log WHERE box != ? AND date >= ?", new String[]{BOX_COMMON, Integer.toString(date)})) {
+            while (c.moveToNext()) {
+                list.add(c.getString(0));
+            }
+        }
+        return list;
+    }
+
+    /** Drops log entries older than {@code minDate}, keeping at most {@code keep} per box. */
+    public void pruneUpdateLog(int minDate, int keep) {
+        SQLiteDatabase db = getWritableDatabase();
+        db.execSQL("DELETE FROM update_log WHERE date < ?", new Object[]{minDate});
+        db.execSQL("DELETE FROM update_log WHERE rowid IN (SELECT l.rowid FROM update_log l WHERE (SELECT COUNT(*) FROM update_log n WHERE n.box = l.box AND n.pts > l.pts) >= ?)", new Object[]{keep});
+    }
+
     // MARK: - Lifecycle
 
     /** Closes and deletes the database files (logout). */

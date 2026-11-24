@@ -394,7 +394,7 @@ final class RelayConvert {
     // MARK: - Reactions
 
     /** Mattermost reactions → {@code messageReactions} (counts; {@code chosen_order} for the user's own). Read-only in A3. */
-    private TLRPC.TL_messageReactions reactions(Post post) {
+    TLRPC.TL_messageReactions reactions(Post post) {
         List<Reaction> list = post.getReactions();
         if (list.isEmpty()) {
             return null;

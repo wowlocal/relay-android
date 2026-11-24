@@ -27141,7 +27141,8 @@ public class ChatActivity extends BaseFragment implements
             } else {
                 return;
             }
-        } else if (channelId != 0) {
+        } else if (channelId != 0 && !(org.telegram.relay.RelayConfig.ENABLED && channelId == -dialog_id)) {
+            // Relay: a private chat's deletes arrive with -dialogId (per-dialog message ids).
             return;
         }
         if (replyingMessageObject != null && markAsDeletedMessages.contains(replyingMessageObject.getId())) {

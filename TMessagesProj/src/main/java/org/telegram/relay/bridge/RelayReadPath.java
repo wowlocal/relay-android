@@ -40,7 +40,6 @@ final class RelayReadPath {
     static final int DIALOG_PAGE = 20;
     /** Posts on each side of the first unread one when the unread run is longer than {@link #DIALOG_PAGE}. */
     static final int UNREAD_CONTEXT = 20;
-    private static final String KV_FINGERPRINT = "dialogs_fingerprint";
 
     private static final WeakHashMap<RelayAccount, RelayReadPath> instances = new WeakHashMap<>();
     private static final ExecutorService http = Executors.newFixedThreadPool(6, r -> new Thread(r, "RelayHttp"));
@@ -60,7 +59,10 @@ final class RelayReadPath {
     final RelayFiles files;
     final RelayHistory history;
     final RelayConvert convert;
-    private volatile boolean firstDifferenceAnswered;
+    /** Chats the client has a dialog for (megagroups need {@code updateChannel} first); null = unknown (pre-A4 state). */
+    private Set<String> known;
+    private final Set<Long> tooLongChannels = java.util.Collections.synchronizedSet(new java.util.HashSet<Long>());
+    private static final String KV_KNOWN = "known_channels";
 
     private RelayReadPath(RelayAccount account) {
         this.account = account;
@@ -254,6 +256,11 @@ final class RelayReadPath {
         RelayDirectory.Snapshot snapshot = directory.get(5_000);
         Set<String> users = new LinkedHashSet<>();
         List<DialogRow> all = rows(snapshot, snapshot.channels.values(), users);
+        List<String> listed = new ArrayList<>();
+        for (DialogRow row : all) {
+            listed.add(row.channel.id);
+        }
+        noteKnown(listed);
         List<DialogRow> candidates = new ArrayList<>();
         for (DialogRow row : all) {
             if (!(req.exclude_pinned && row.pinned)) {
@@ -286,7 +293,6 @@ final class RelayReadPath {
             res = new TLRPC.TL_messages_dialogs();
         }
         fill(res, page, users);
-        account.db().putKv(KV_FINGERPRINT, fingerprint(snapshot));
         return res;
     }
 
@@ -295,6 +301,11 @@ final class RelayReadPath {
         RelayDirectory.Snapshot snapshot = directory.get(5_000);
         Set<String> users = new LinkedHashSet<>();
         List<DialogRow> rows = rows(snapshot, channels, users);
+        List<String> listed = new ArrayList<>();
+        for (DialogRow row : rows) {
+            listed.add(row.channel.id);
+        }
+        noteKnown(listed);
         TLRPC.TL_messages_peerDialogs res = new TLRPC.TL_messages_peerDialogs();
         for (DialogRow row : rows) {
             if (pinnedOnly) {
@@ -379,44 +390,85 @@ final class RelayReadPath {
         return res;
     }
 
-    /** What the chat list shows, for the cold-start check: a change since the last list means resetDialogs. */
-    static String fingerprint(RelayDirectory.Snapshot snapshot) {
-        StringBuilder text = new StringBuilder();
-        for (Team team : snapshot.teams) {
-            text.append(team.id).append(';');
+    // MARK: - Known chats (A4)
+
+    private synchronized Set<String> knownSet() {
+        if (known == null) {
+            String stored = account.db().kv(KV_KNOWN);
+            if (stored != null) {
+                known = new LinkedHashSet<>();
+                for (String id : stored.split(",")) {
+                    if (!id.isEmpty()) {
+                        known.add(id);
+                    }
+                }
+            }
         }
-        for (Channel channel : RelayDirectory.sortedChannels(snapshot)) {
-            ChannelMember member = snapshot.members.get(channel.id);
-            text.append(channel.id).append(':').append(channel.lastPostAt).append(':').append(channel.totalMsgCount)
-                    .append(':').append(member != null ? member.msgCount + ":" + member.mentionCount + ":" + member.isMuted() : "-")
-                    .append(':').append(snapshot.favorites.contains(channel.id)).append(';');
-        }
-        return Long.toHexString(RelayUsers.accessHash(text.toString())) + "-" + snapshot.channels.size();
+        return known;
     }
 
-    /**
-     * The first {@code getDifference} of a process: if the server changed since the chat list was last
-     * built (new posts, reads on other devices, favourites), answer {@code differenceTooLong} so the
-     * client re-lists the dialogs (resetDialogs). A4 replaces this with a real update log.
-     */
-    boolean needsReset() {
-        if (firstDifferenceAnswered) {
-            return false;
+    /** True when the client has (or is getting) a dialog for the chat. */
+    synchronized boolean isKnown(String channelId) {
+        Set<String> set = knownSet();
+        return set == null || set.contains(channelId);
+    }
+
+    synchronized List<String> knownChannels() {
+        Set<String> set = knownSet();
+        return set == null ? new ArrayList<String>() : new ArrayList<>(set);
+    }
+
+    synchronized void noteKnown(Collection<String> channelIds) {
+        Set<String> set = knownSet();
+        if (set == null) {
+            set = known = new LinkedHashSet<>();
         }
-        firstDifferenceAnswered = true;
-        try {
-            String stored = account.db().kv(KV_FINGERPRINT);
-            if (stored == null) {
-                return false;
-            }
-            String current = fingerprint(directory.get(0));
-            boolean changed = !stored.equals(current);
-            RelayConfig.log(TAG, "cold start: chat list " + (changed ? "changed, resetting dialogs" : "unchanged"));
-            return changed;
-        } catch (Exception e) {
-            RelayConfig.logError(TAG, "cold start check", e);
-            return false;
+        if (set.addAll(channelIds)) {
+            account.db().putKv(KV_KNOWN, android.text.TextUtils.join(",", set));
         }
+    }
+
+    synchronized void forgetKnown(String channelId) {
+        Set<String> set = knownSet();
+        if (set != null && set.remove(channelId)) {
+            account.db().putKv(KV_KNOWN, android.text.TextUtils.join(",", set));
+        }
+    }
+
+    /** A channel whose catch-up was too large: its next getChannelDifference is answered "too long". */
+    void markTooLong(long channelTlId) {
+        tooLongChannels.add(channelTlId);
+    }
+
+    boolean consumeTooLong(long channelTlId) {
+        return tooLongChannels.remove(channelTlId);
+    }
+
+    /** {@code channelDifferenceTooLong} for one megagroup: its dialog and newest message (new or reloaded chat). */
+    TLObject channelTooLong(Channel channel) throws Exception {
+        RelayDirectory.Snapshot snapshot = directory.get(5_000);
+        Set<String> users = new LinkedHashSet<>();
+        List<DialogRow> rows = rows(snapshot, Collections.singletonList(channel), users);
+        TLRPC.TL_updates_channelDifferenceTooLong res = new TLRPC.TL_updates_channelDifferenceTooLong();
+        res.isFinal = true;
+        res.timeout = 30;
+        res.flags |= TLObject.FLAG_1;
+        if (rows.isEmpty()) {
+            TLRPC.TL_dialog d = new TLRPC.TL_dialog();
+            d.peer = directory.peer(channel);
+            d.read_outbox_max_id = 1;
+            d.notify_settings = notifySettings(snapshot.members.get(channel.id));
+            d.pts = account.db().pts(RelayDatabase.channelBox(-directory.dialogId(channel)));
+            d.flags |= TLObject.FLAG_0;
+            res.dialog = d;
+        } else {
+            res.dialog = rows.get(0).dialog;
+            res.messages.add(rows.get(0).top);
+        }
+        res.chats.add(directory.tlChannel(channel));
+        res.users.addAll(users(users));
+        noteKnown(Collections.singletonList(channel.id));
+        return res;
     }
 
     // MARK: - History (§5)
@@ -510,11 +562,6 @@ final class RelayReadPath {
         }
         account.client.viewChannel(channelId);
         directory.invalidate();
-        try {
-            account.db().putKv(KV_FINGERPRINT, fingerprint(directory.get(0)));
-        } catch (MattermostException e) {
-            RelayConfig.logError(TAG, "directory refresh after view", e);
-        }
         RelayConfig.log(TAG, "viewed " + channelId);
     }
 

@@ -9385,7 +9385,7 @@ public class MessagesController extends BaseController implements NotificationCe
                     for (int a = 0; a < messages.size(); a++) {
                         Integer id = messages.get(a);
                         MessageObject obj = dialogMessagesByIds.get(id);
-                        if (obj != null) {
+                        if (obj != null && (!org.telegram.relay.RelayConfig.ENABLED || obj.getDialogId() == dialogId)) { // Relay: per-dialog ids
                             obj.deleted = true;
                         }
                     }
@@ -9511,10 +9511,12 @@ public class MessagesController extends BaseController implements NotificationCe
             if (taskRequest instanceof TLRPC.TL_messages_deleteMessages) {
                 req = (TLRPC.TL_messages_deleteMessages) taskRequest;
                 newTaskId = taskId;
+                org.telegram.relay.bridge.RelayHooks.tagDialog(req, dialogId); // Relay: per-dialog ids
             } else {
                 req = new TLRPC.TL_messages_deleteMessages();
                 req.id = toSend;
                 req.revoke = forAll;
+                org.telegram.relay.bridge.RelayHooks.tagDialog(req, dialogId); // Relay: per-dialog ids
 
                 NativeByteBuffer data = null;
                 try {
@@ -18912,10 +18914,12 @@ public class MessagesController extends BaseController implements NotificationCe
                 if (deletedMessages == null) {
                     deletedMessages = new LongSparseArray<>();
                 }
-                ArrayList<Integer> arrayList = deletedMessages.get(0);
+                // Relay: message ids are per dialog; the bridge names the private chat of each delete (by pts).
+                long deleteDialogId = org.telegram.relay.bridge.RelayHooks.dmDeleteDialog(currentAccount, update.pts);
+                ArrayList<Integer> arrayList = deletedMessages.get(deleteDialogId);
                 if (arrayList == null) {
                     arrayList = new ArrayList<>();
-                    deletedMessages.put(0, arrayList);
+                    deletedMessages.put(deleteDialogId, arrayList);
                 }
                 arrayList.addAll(update.messages);
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteQuickReplyMessages) {
