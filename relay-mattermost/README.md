@@ -4,7 +4,8 @@ Pure-Java Mattermost client library for Relay for Android (phase A1 of `docs/rel
 It is a port of the iOS `MattermostKit` (REST, WebSocket, models) and of the message-id allocator
 from `MattermostSyncCore`. The TL bridge (`org.telegram.relay.bridge`) will sit on top of it.
 
-- Package `org.telegram.relay.mattermost` (models in `.model`, WebSocket in `.ws`, id allocator in `.ids`).
+- Package `org.telegram.relay.mattermost` (models in `.model`, WebSocket in `.ws`, id allocator in `.ids`,
+  markdown ⇄ entities in `.text`).
 - Dependencies are only what the app already ships: `gson 2.11.0` and `nv-websocket-client 2.14`.
   HTTP goes through `HttpURLConnection`.
 - The sources are plain Java 8-style code. They avoid every API that minSdk 23 lacks without
@@ -95,6 +96,72 @@ bridge will add a SQLite one.
 - When an id gap is exhausted, a minimal renumber window is chosen. The allocator returns it as a
   `RenumberPlan` (the renumber signal).
 
+### Text (`text.MarkdownToEntities`, `text.EntitiesToMarkdown`)
+
+This is a port of the iOS `MattermostMarkdown` (`MattermostSyncCore/Markdown`). For the same input,
+the parse output matches iOS, except that blocks which render to nothing are left out. The outgoing
+direction adds quotes, headings, emphasis that wraps exactly a code span, and a literal mode. Entities are neutral `TextEntity` values: a type, an offset and a
+length in UTF-16 units (as Telegram's are), plus a url, user id, username, language, name, target id
+or level where the type needs one. The bridge maps them onto `TLRPC.MessageEntity`.
+
+**Incoming: `MarkdownToEntities.convert(message, options)`**
+
+- **Inline.** The parser follows CommonMark's delimiter rules, so `snake_case` and URLs with
+  underscores stay text. It handles:
+  - `**bold**`/`__bold__`, `*italic*`/`_italic_` and `~~strike~~`;
+  - code spans, `[text](url)` and `![alt](url)` (the URL is sanitized);
+  - `<autolinks>`, and bare `https://`/`http://`/`ftp://`/`www.` URLs and emails;
+  - `@mentions`, `@channel`/`@here`/`@all`, `~channel` links and `#hashtags`;
+  - backslash escapes, and emoticons such as `:)`, which turn into emoji;
+  - optionally, `$inline latex$`, shown as code.
+- **Blocks.** Headings become `HEADING` plus `BOLD`. Fenced and indented code becomes `PRE`, with the
+  language mapped to Prism's names (`CodeLanguage`). Nested quotes flatten into one `BLOCKQUOTE`.
+  Lists get `• ◦ ‣` bullets, `1.` numbers and `☐/☑` task boxes, and continuation lines are indented
+  with en spaces. Tables of up to 30 characters become an aligned `pre` block with the language
+  `table`; wider ones become one record per row. Rules become `———`. A block that renders to
+  nothing is left out.
+- **Emoji.** `EmojiTable` holds 1,908 emoji plus 1,580 skin tone variants, generated from the iOS
+  table, which comes from emoji-datasource 16 (`tools/gen_emoji_table.py`). A shortcode that is not
+  in the table keeps its `:name:` text and gets a `CUSTOM_EMOJI` entity.
+- **Options.** The parser can render emoticons (default on) and inline LaTeX (default off).
+  It also takes what it knows about the server:
+  - `setUsers(username → id)`: a mention of a known user gets the user id. A known name that ends
+    in `.`, `_` or `-` keeps that character.
+  - `setChannels(name → id)`: a `~name` that is not a known channel stays text.
+  - `setCustomEmoji(name → id)`: custom emoji get their emoji id.
+  - `setCurrentUsername`: the user's own mentions and `@channel/@here/@all` are marked
+    `isHighlight()`, and `FormattedText.hasHighlight()` reports them.
+- Mattermost has no spoiler or underline syntax, so the parser never produces either.
+
+**Outgoing: `EntitiesToMarkdown.convert(text, entities, options)`**
+
+- **Formatting.** Bold, italic, strike, code, pre, text links, quotes and whole-line headings become
+  markdown. Markdown only nests, so crossing entities are split. Whitespace stays outside the
+  delimiters.
+- **Mentions and emoji.** A mention becomes `@username`. For a mention by id, the
+  `UsernameResolver` supplies the username. A named custom emoji becomes `:name:`. Other entities are
+  dropped, and their text stays.
+- **Plain text.** By default plain text passes through unescaped, as on iOS, because Mattermost users
+  type markdown.
+- **Literal mode.** `setEscapeLiterals(true)` backslash-escapes exactly the characters the parser
+  would read as markdown:
+  - emphasis characters, brackets and backticks;
+  - line-start `#`, `>`, `-`, `1.` and rules;
+  - table delimiter rows, emoticons and built-in shortcodes.
+
+  URLs, emails, mentions, channel links, hashtags and custom emoji stay live. Use this mode for
+  text the user did not type, such as an edit of a rendered post or a forward. In this mode
+  `convert(serialize(text, entities))` gives back the same text and entities.
+- **Known gaps** (whitespace that markdown normalizes):
+  - Leading and trailing spaces on a line, leading tabs, runs of blank lines, and leading or
+    trailing newlines are not kept.
+  - The en-space indents of rendered nested lists fall in that group, so a parsed post reaches a
+    fixpoint after one round trip rather than immediately.
+  - A code span cannot hold a newline.
+  - A quote that ends mid-line, or a code block that starts mid-line, gets a line break.
+  - Two quotes on adjacent lines merge into one.
+  - When an entity boundary falls inside a URL, the URL can absorb the delimiter.
+
 ## Tests
 
 ```sh
@@ -126,6 +193,18 @@ exists, build outputs go to `/Volumes/X5/relay-android/build/relay-mattermost`.
   - many posts in one millisecond or one second, and 2013 imports;
   - gap exhaustion, tombstones and post parts;
   - the randomized property simulation (`SIM_STATS=1` prints the operation counts).
+- **Text tests** (`text.MarkdownToEntitiesTest`, `text.EntitiesToMarkdownTest`) port every iOS
+  `MarkdownTests` case. They add the context options, literal-mode escaping and these property
+  tests:
+  - 5,000 random markdown inputs: every range is valid;
+  - 1,000 iOS-style composer round trips;
+  - 20,000 literal-mode round trips of words full of markdown syntax;
+  - 5,000 multi-line round trips with code blocks and quotes;
+  - 5,000 parse → markdown → parse fixpoints.
+- **Markdown live test** (`live.MarkdownLiveTest`) converts every post in alice's channels, about
+  12,500, along with attachment texts and channel headers. It checks that no conversion throws,
+  that every range is in bounds and on a code point boundary, and that literal markdown reaches a
+  fixpoint.
 - **Live tests** (`live.MattermostLiveTest`) run against the local dev server `http://localhost:8065`.
   They log in as alice and bob and cover:
   - teams and channels;
