@@ -384,6 +384,8 @@ def main():
         check.ok("profile: presence (%s)" % status, any(want_status in t for t in texts), str(texts[:6]))
         shot(d, "profile")
 
+        session1, _ = summary_counts(d)
+
         # 8. Cold start with server-side changes.
         random_links = by_name["random-links"]
         d.force_stop()
@@ -404,6 +406,9 @@ def main():
 
         summary, _ = summary_counts(d)
         with open(os.path.join(relaye2e.SCREENS, "a3-unhandled.txt"), "w") as f:
+            f.write("# Session 1: login, chat list, DM, channels, firehose, reply jump, media, profile\n")
+            f.write(session1)
+            f.write("\n# Session 2: cold start after a server-side change\n")
             f.write(summary)
         check.ok("no crash", not d.crashes(), "\n".join(d.crashes()[:5]))
         print("NUMBERS dialogs=%d firehose_pages=%d firehose_messages=%d avg_page_ms=%.0f login_to_list_s=%.1f scroll_s=%.1f"

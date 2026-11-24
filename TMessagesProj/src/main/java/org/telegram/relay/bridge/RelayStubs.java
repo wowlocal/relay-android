@@ -162,6 +162,12 @@ final class RelayStubs {
             s.settings = new TLRPC.TL_peerSettings();
             return s;
         });
+        // Reaction refresh for visible messages (polled while scrolling): reactions come with history in A3, live in A4.
+        map.put(TLRPC.TL_messages_getMessagesReactions.class, (req, account) -> {
+            TLRPC.TL_updates updates = new TLRPC.TL_updates();
+            updates.date = now(account);
+            return updates;
+        });
         map.put(TLRPC.TL_channels_getParticipants.class, (req, account) -> new TLRPC.TL_channels_channelParticipants()); // members list: A7
     }
 }
