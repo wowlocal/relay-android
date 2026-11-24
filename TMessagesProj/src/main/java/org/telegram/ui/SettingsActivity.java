@@ -267,7 +267,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             @Override
             public void onItemClick(int id) {
                 if (id == -1) {
-                    if (hasMainTabs) {
+                    if (hasMainTabs && !org.telegram.relay.RelayFeatures.QR_LOGIN) {
+                        // Relay: no profile QR code (no t.me links); the button is hidden on the main tab.
+                    } else if (hasMainTabs) {
                         // no back on the main tab: the left button opens the QR code (with the search open, the action bar closes it instead)
                         final Bundle args = new Bundle();
                         args.putLong("user_id", getUserConfig().getClientUserId());
@@ -318,7 +320,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 listView.adapter.update(true);
             }
         };
-        search.loadFaqWebPage();
+        if (org.telegram.relay.RelayFeatures.TG_SUPPORT) {
+            search.loadFaqWebPage();
+        }
 
         listView = new UniversalRecyclerView(this, this::fillItems, this::onClick, this::onLongClick);
         listView.setCaptureSectionsDecoratorAllowed(true);
@@ -529,12 +533,27 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         avatarView.setForUserOrChat(user, avatarDrawable);
         titleView.setText(UserObject.getUserName(user));
         final StringBuilder sb = new StringBuilder();
-        if (user != null) {
-            sb.append(PhoneFormat.getInstance().format("+" + user.phone));
-        }
-        final String username = UserObject.getPublicUsername(user);
-        if (username != null) {
-            sb.append(" • @").append(username);
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: "@username • email" (Mattermost has no phone numbers).
+            final String username = UserObject.getPublicUsername(user);
+            if (username != null) {
+                sb.append("@").append(username);
+            }
+            final String email = org.telegram.relay.ui.RelaySettings.selfEmail(currentAccount);
+            if (!TextUtils.isEmpty(email)) {
+                if (sb.length() > 0) {
+                    sb.append(" • ");
+                }
+                sb.append(email);
+            }
+        } else {
+            if (user != null) {
+                sb.append(PhoneFormat.getInstance().format("+" + user.phone));
+            }
+            final String username = UserObject.getPublicUsername(user);
+            if (username != null) {
+                sb.append(" • @").append(username);
+            }
         }
         subtitleView.setText(sb);
 
@@ -795,6 +814,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(UItem.asShadow(null));
         }
 
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            fillRelayItems(items);
+            return;
+        }
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
         items.add(SettingCell.Factory.of(3, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_privacy, getString(R.string.SettingsPrivacySecurity), getString(R.string.SettingsPrivacySecurityInfo)));
@@ -861,6 +884,84 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(UItem.asCustomShadow(versionView));
     }
 
+    private static final int RELAY_ID_SERVER = 40;
+    private static final int RELAY_ID_ABOUT = 41;
+    private static final int RELAY_ID_LOGOUT = 42;
+    private static final int RELAY_ID_PASSCODE = 43;
+
+    /**
+     * Relay: the settings list. Mattermost account (server), the local app settings that work
+     * without Telegram (appearance, notifications, data, devices, power saving, language, passcode),
+     * About and Log Out. Telegram-only rows (Premium, Stars, Business, gifts, wallet, folders
+     * editing, privacy rules, Telegram support and FAQ) are not shown.
+     */
+    private void fillRelayItems(ArrayList<UItem> items) {
+        final org.telegram.relay.account.RelaySession session = org.telegram.relay.account.RelaySessionStore.get(currentAccount);
+        if (session != null) {
+            items.add(SettingCell.Factory.of(RELAY_ID_SERVER, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.menu_website, getString(R.string.RelaySettingsServer), org.telegram.relay.auth.RelayAuth.displayHost(session.serverUrl)));
+            items.add(UItem.asShadow(null));
+        }
+        items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
+        items.add(SettingCell.Factory.of(5, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.settings_sounds, getString(R.string.SettingsNotifications), getString(R.string.SettingsNotificationsInfo)));
+        items.add(SettingCell.Factory.of(6, IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom, R.drawable.settings_data, getString(R.string.SettingsData), getString(R.string.SettingsDataInfo)));
+        items.add(SettingCell.Factory.of(RELAY_ID_PASSCODE, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_privacy, getString(R.string.Passcode)));
+        if (org.telegram.relay.RelayFeatures.FOLDER_EDITING) {
+            items.add(SettingCell.Factory.of(7, IconBackgroundColors.BLUE_ALT.top, IconBackgroundColors.BLUE_ALT.bottom, R.drawable.settings_folders, getString(R.string.SettingsFolders), getString(R.string.SettingsFoldersInfo)));
+        }
+        items.add(SettingCell.Factory.of(8, IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom, R.drawable.settings_devices, getString(R.string.SettingsDevices), getString(R.string.SettingsDevicesInfo)));
+        items.add(SettingCell.Factory.of(9, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.settings_power, getString(R.string.SettingsPowerSaving), getString(R.string.SettingsPowerSavingInfo)));
+        items.add(SettingCell.Factory.of(10, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.settings_language, getString(R.string.SettingsLanguage), LocaleController.getCurrentLanguageName()));
+        items.add(UItem.asShadow(null));
+
+        items.add(SettingCell.Factory.of(RELAY_ID_ABOUT, IconBackgroundColors.BLUE_LIGHT.top, IconBackgroundColors.BLUE_LIGHT.bottom, R.drawable.settings_faq, getString(R.string.RelaySettingsAbout)));
+        items.add(SettingCell.Factory.of(RELAY_ID_LOGOUT, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.leave, getString(R.string.LogOutTitle)));
+
+        if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
+            items.add(UItem.asShadow(null));
+            items.add(UItem.asHeader(getString(R.string.SettingsDebug)));
+            items.add(SettingCell.Factory.of(20, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLogs)));
+            items.add(SettingCell.Factory.of(21, 0xFF55CA47, 0xFF27B434, 0, getString(R.string.DebugSendLastLogs)));
+            items.add(SettingCell.Factory.of(22, 0xFFF45255, 0xFFDF3955, 0, getString(R.string.DebugClearLogs)));
+        }
+
+        items.add(UItem.asCustomShadow(versionView));
+    }
+
+    private void onRelayClick(int id) {
+        switch (id) {
+            case RELAY_ID_SERVER: {
+                final org.telegram.relay.account.RelaySession session = org.telegram.relay.account.RelaySessionStore.get(currentAccount);
+                if (session != null) {
+                    AndroidUtilities.addToClipboard(session.serverUrl);
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.copy, getString(R.string.RelayServerCopied)).show();
+                }
+                break;
+            }
+            case RELAY_ID_ABOUT:
+                presentSettingFragment(new org.telegram.relay.ui.RelayAboutActivity());
+                break;
+            case RELAY_ID_PASSCODE:
+                presentSettingFragment(PasscodeActivity.determineOpenFragment());
+                break;
+            case RELAY_ID_LOGOUT: {
+                final org.telegram.relay.account.RelaySession session = org.telegram.relay.account.RelaySessionStore.get(currentAccount);
+                final String host = session != null ? org.telegram.relay.auth.RelayAuth.displayHost(session.serverUrl) : getString(R.string.AppName);
+                AlertDialog dialog = new AlertDialog.Builder(getContext(), resourceProvider)
+                    .setTitle(getString(R.string.RelayLogOutConfirmTitle))
+                    .setMessage(formatString(R.string.RelayLogOutConfirm, host))
+                    .setPositiveButton(getString(R.string.LogOut), (d, w) -> MessagesController.getInstance(currentAccount).performLogout(1))
+                    .setNegativeButton(getString(R.string.Cancel), null)
+                    .create();
+                showDialog(dialog);
+                TextView button = (TextView) dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+                if (button != null) {
+                    button.setTextColor(getThemedColor(Theme.key_text_RedBold));
+                }
+                break;
+            }
+        }
+    }
+
     private void presentSettingFragment(BaseFragment fragment) {
         if (AndroidUtilities.isTablet() && LaunchActivity.instance != null && LaunchActivity.instance.getRightActionBarLayout() != null) {
             final INavigationLayout layout = LaunchActivity.instance.getRightActionBarLayout();
@@ -914,6 +1015,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             if (item.object != null) {
                 search.addRecent(item.object);
             }
+            return;
+        }
+        if (item.id >= RELAY_ID_SERVER && item.id <= RELAY_ID_PASSCODE) {
+            onRelayClick(item.id);
             return;
         }
         switch (item.id) {
@@ -1759,6 +1864,14 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         // the main tab has no back: the left button is the QR code, turning into back while the search is open
         // (the bar swaps the icons inside the glass circle, so the title does not move)
         final boolean back = simpleActionBar.isSearchFieldVisible();
+        if (!org.telegram.relay.RelayFeatures.QR_LOGIN) {
+            if (back != leftButtonIsBack || simpleActionBar.getBackButtonDrawable() != null && !back) {
+                leftButtonIsBack = back;
+                simpleActionBar.setBackButtonImage(back ? R.drawable.ic_ab_back : 0);
+                simpleActionBar.setBackButtonContentDescription(getString(R.string.AccDescrGoBack));
+            }
+            return;
+        }
         if (back != leftButtonIsBack) {
             leftButtonIsBack = back;
             simpleActionBar.setBackButtonImageAnimated(back ? R.drawable.ic_ab_back : R.drawable.outline_header_qr_24);

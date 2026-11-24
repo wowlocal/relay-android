@@ -545,6 +545,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
 //                    section--;
 //                }
                 if ((!onlyUsers || inviteViaLink != 0) && section == 0) {
+                    row += listViewAdapter.relaySkippedTopRows();
                     if (needPhonebook) {
                         if (row == 0) {
                             if (MessagesController.getInstance(currentAccount).isFrozen()) {
@@ -759,7 +760,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
             }
         });
 
-        if (!createSecretChat && !returnAsResult) {
+        if (org.telegram.relay.RelayFeatures.PHONE_CONTACTS && !createSecretChat && !returnAsResult) {
             floatingButton = new FragmentFloatingButton(context, resourceProvider);
             contentView.addView(floatingButton, FragmentFloatingButton.createDefaultLayoutParams());
             floatingButton.setOnClickListener(v -> {
@@ -1074,7 +1075,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
     @Override
     public void onBecomeFullyVisible() {
         super.onBecomeFullyVisible();
-        if (checkPermission && Build.VERSION.SDK_INT >= 23) {
+        if (checkPermission && org.telegram.relay.RelayFeatures.PHONE_CONTACTS && Build.VERSION.SDK_INT >= 23) {
             Activity activity = getParentActivity();
             if (activity != null) {
                 checkPermission = false;

@@ -181,15 +181,20 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
         notificationsSectionRow = rowCount++;
         privateRow = rowCount++;
         groupRow = rowCount++;
-        channelsRow = rowCount++;
-        storiesRow = rowCount++;
+        // Relay: no broadcast channels, stories, Telegram calls or phone contacts.
+        channelsRow = org.telegram.relay.RelayFeatures.CHANNELS ? rowCount++ : -1;
+        storiesRow = org.telegram.relay.RelayFeatures.STORIES ? rowCount++ : -1;
         reactionsRow = rowCount++;
         notificationsSection2Row = rowCount++;
 
-        callsSectionRow = rowCount++;
-        callsVibrateRow = rowCount++;
-        callsRingtoneRow = rowCount++;
-        eventsSection2Row = rowCount++;
+        if (org.telegram.relay.RelayFeatures.TG_CALLS) {
+            callsSectionRow = rowCount++;
+            callsVibrateRow = rowCount++;
+            callsRingtoneRow = rowCount++;
+            eventsSection2Row = rowCount++;
+        } else {
+            callsSectionRow = callsVibrateRow = callsRingtoneRow = eventsSection2Row = -1;
+        }
 
         badgeNumberSection = rowCount++;
         badgeNumberShowRow = rowCount++;
@@ -210,7 +215,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
         callsSection2Row = rowCount++;
 
         eventsSectionRow = rowCount++;
-        contactJoinedRow = rowCount++;
+        contactJoinedRow = org.telegram.relay.RelayFeatures.PHONE_CONTACTS ? rowCount++ : -1;
         pinnedMessageRow = rowCount++;
         otherSection2Row = rowCount++;
 

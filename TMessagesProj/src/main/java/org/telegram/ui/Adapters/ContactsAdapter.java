@@ -190,6 +190,15 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
         }
     }
 
+    /**
+     * Relay: the Contacts tab (phone-book mode) hides its first two rows, Invite Friends (SMS
+     * invites) and Recent Calls. Section 0 positions are shifted by this amount.
+     */
+    public int relaySkippedTopRows() {
+        return (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS || !org.telegram.relay.RelayFeatures.TG_CALLS)
+            && needPhonebook && !isAdmin && onlyUsers == 0 && !isEmptyWithMainTabs ? 2 : 0;
+    }
+
     public Object getItem(int section, int position) {
         if (isEmptyWithMainTabs && section == 1 && position > 1) {
             final int index = position - 2;
@@ -268,7 +277,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 if (isAdmin) {
                     return row < 1;
                 } else if (needPhonebook) {
-                    return row < 2;
+                    return row + relaySkippedTopRows() < 2;
                 } else {
                     return row < 3;
                 }
@@ -368,7 +377,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 if (isAdmin) {
                     return (includeSearch ? 1 : 0) + 3;
                 } else if (needPhonebook) {
-                    return (includeSearch ? 1 : 0) + 4;
+                    return (includeSearch ? 1 : 0) + 4 - relaySkippedTopRows();
                 } else {
                     return (includeSearch ? 1 : 0) + 4;
                 }
@@ -544,6 +553,9 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
             if (position == 0) return;
             position--;
         }
+        if (section == 0) {
+            position += relaySkippedTopRows();
+        }
         switch (holder.getItemViewType()) {
             case EMPTY_CELL:
                 holder.itemView.setPadding(0, dp(!hasPhonebook ? 96 : 25), 0, dp(18));
@@ -645,6 +657,9 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
         if (section == 0 && includeSearch) {
             if (position == 0) return SEARCH_CELL;
             position--;
+        }
+        if (section == 0) {
+            position += relaySkippedTopRows();
         }
         if (isEmptyWithMainTabs) {
             if (section == 0) {

@@ -289,6 +289,8 @@ public class EmojiView extends FrameLayout implements
     }
 
     public void setAllow(boolean allowEmoji, boolean allowStickers, boolean allowGifs, boolean animated) {
+        allowStickers &= org.telegram.relay.RelayFeatures.STICKERS;
+        allowGifs &= org.telegram.relay.RelayFeatures.GIFS;
         currentTabs.clear();
         for (int i = 0; i < allTabs.size(); i++) {
             if (allTabs.get(i).type == TAB_EMOJI && allowEmoji) {
@@ -1576,6 +1578,9 @@ public class EmojiView extends FrameLayout implements
 
     public EmojiView(BaseFragment fragment, boolean needAnimatedEmoji, boolean needStickers, boolean needGif, final Context context, boolean needSearch, final TLRPC.ChatFull chatFull, ViewGroup parentView, boolean shouldDrawBackground, Theme.ResourcesProvider resourcesProvider, boolean frozenAtStart, boolean glassDesign) {
         super(context);
+        // Relay: emoji only; no sticker store / trending sets, no GIF search bot.
+        needStickers &= org.telegram.relay.RelayFeatures.STICKERS;
+        needGif &= org.telegram.relay.RelayFeatures.GIFS;
         this.shouldDrawBackground = shouldDrawBackground;
         this.fragment = fragment;
         this.allowAnimatedEmoji = needAnimatedEmoji;

@@ -89,8 +89,9 @@ public class LogoutActivity extends BaseFragment {
             passcodeRow = -1;
         }
         cacheRow = rowCount++;
-        phoneRow = rowCount++;
-        supportRow = rowCount++;
+        // Relay: no phone number to change, no Telegram support chat.
+        phoneRow = org.telegram.relay.RelayFeatures.PHONE_CONTACTS ? rowCount++ : -1;
+        supportRow = org.telegram.relay.RelayFeatures.TG_SUPPORT ? rowCount++ : -1;
         alternativeSectionRow = rowCount++;
         logoutRow = rowCount++;
         logoutSectionRow = rowCount++;

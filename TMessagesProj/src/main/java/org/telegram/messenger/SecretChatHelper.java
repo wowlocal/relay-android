@@ -1939,7 +1939,7 @@ public class SecretChatHelper extends BaseController {
     }
 
     public void startSecretChat(Context context, TLRPC.User user) {
-        if (user == null || context == null) {
+        if (!org.telegram.relay.RelayFeatures.SECRET_CHATS || user == null || context == null) {
             return;
         }
         if (getMessagesController().isFrozen()) {

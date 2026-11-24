@@ -79,6 +79,10 @@ public class ActionIntroActivity extends BaseFragment implements LocationControl
 
     @ActionType
     private final int currentType;
+
+    public int getActionType() {
+        return currentType;
+    }
     private boolean flickerButton;
 
     private String currentGroupCreateAddress;

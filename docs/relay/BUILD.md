@@ -116,7 +116,14 @@ With neither property set, the build behaves as upstream does: all four ABIs, in
   An x86_64 emulator image needs `--abis x86_64` (or `all`).
 - `BuildVars.isBetaApp()` checks for the package `org.telegram.messenger.beta`, which no longer
   matches. Debug builds therefore act like the regular app, not "Telegram Beta". This is harmless for now.
-- The App name/icon is still Telegram Beta (`@string/AppNameBeta`); branding is A6.
+- App name: `AppName` = "Relay", `AppNameBeta` = "Relay Debug" (debug manifest label), in every
+  `values*/strings.xml`. Relay strings must live in `values/strings.xml`: Telegram's
+  `TelegramStringsTask` (buildSrc) builds the string table `LocaleController` reads from that file
+  only, so a string in another values file shows as `LOC_ERR:null`.
+- Icons (A6): `Tools/relay-icons/make_icons.py` turns the iOS `Relay.icon` artwork into the adaptive
+  launcher layers (`mipmap-*/relay_icon_background`, `relay_icon_monochrome`), legacy
+  `ic_launcher*.png`, the status-bar `notification.webp` and the Android 12 splash `relay_splash.png`
+  (needs Pillow, see the script header).
 - Telegram's welcome screen talks to Telegram DCs on "Start Messaging"; A2 replaces that.
 - `assembleAfatDebug` is the only debug variant: the `variantFilter` drops `bundleAfat` for
   non-release builds.

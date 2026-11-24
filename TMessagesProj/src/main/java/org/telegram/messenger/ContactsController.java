@@ -387,6 +387,10 @@ public class ContactsController extends BaseController {
     }
 
     public void checkAppAccount() {
+        if (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
+            // Relay: no Android system account and no phone-book sync.
+            return;
+        }
         systemAccount = null;
         Utilities.globalQueue.postRunnable(() -> {
             AccountManager am = AccountManager.get(ApplicationLoader.applicationContext);
@@ -464,6 +468,9 @@ public class ContactsController extends BaseController {
     }
 
     public void checkContacts() {
+        if (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
+            return;
+        }
         Utilities.globalQueue.postRunnable(() -> {
             if (checkContactsInternal()) {
                 if (BuildVars.LOGS_ENABLED) {
@@ -475,6 +482,9 @@ public class ContactsController extends BaseController {
     }
 
     public void forceImportContacts() {
+        if (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
+            return;
+        }
         Utilities.globalQueue.postRunnable(() -> {
             if (BuildVars.LOGS_ENABLED) {
                 FileLog.d("force import contacts");

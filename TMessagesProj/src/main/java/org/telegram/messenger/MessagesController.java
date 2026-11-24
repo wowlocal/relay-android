@@ -737,13 +737,13 @@ public class MessagesController extends BaseController implements NotificationCe
     public boolean starsLocked;
 
     public boolean starsPurchaseAvailable() {
-        return !starsLocked;
+        return org.telegram.relay.RelayFeatures.STARS_PAYMENTS && !starsLocked;
     }
     public boolean premiumFeaturesBlocked() {
-        return premiumLocked && !getUserConfig().isPremium();
+        return !org.telegram.relay.RelayFeatures.PREMIUM || premiumLocked && !getUserConfig().isPremium();
     }
     public boolean premiumPurchaseBlocked() {
-        return premiumLocked;
+        return !org.telegram.relay.RelayFeatures.PREMIUM || premiumLocked;
     }
 
     public List<String> directPaymentsCurrency = new ArrayList<>();
@@ -925,7 +925,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isPremiumUser(TLRPC.User currentUser) {
-        return currentUser != null && currentUser.premium && !isSupportUser(currentUser);
+        return org.telegram.relay.RelayFeatures.PREMIUM && currentUser != null && currentUser.premium && !isSupportUser(currentUser);
     }
 
     public boolean didPressTranscribeButtonEnough() {
@@ -23810,6 +23810,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean storiesEnabled() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return false;
+        }
         switch (storiesPosting) {
             case "premium":
                 return getUserConfig().isPremium();
@@ -24465,6 +24468,9 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isSponsoredDisabled() {
+        if (!org.telegram.relay.RelayFeatures.SPONSORED) {
+            return true;
+        }
         TLRPC.UserFull userFull = getUserFull(getUserConfig().getClientUserId());
         if (userFull == null) return false;
         return !userFull.sponsored_enabled;
