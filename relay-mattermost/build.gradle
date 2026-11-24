@@ -1,0 +1,83 @@
+// relay-mattermost: pure-Java Mattermost client for Relay for Android.
+//
+// Run from this directory (never from the Android root project):
+//   GRADLE_USER_HOME=/Volumes/X5/relay-android/gradle-home ./gradlew test
+//
+// The Android app later adds src/main/java as a source dir, so the sources only use
+// APIs available on Android minSdk 23 without core library desugaring.
+
+plugins {
+    id 'java-library'
+}
+
+group = 'org.telegram.relay'
+version = '0.1'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+// Build outputs on the fast external disk when it is mounted (shared with the Android build).
+def externalBuildRoot = file('/Volumes/X5/relay-android/build')
+if (externalBuildRoot.isDirectory()) {
+    layout.buildDirectory = new File(externalBuildRoot, 'relay-mattermost')
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Same versions the Android app ships.
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.neovisionaries:nv-websocket-client:2.14'
+
+    testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation']
+}
+
+test {
+    useJUnit()
+    // Live tests read these; they skip themselves when the server is down.
+    ['RELAY_MM_URL', 'RELAY_MM_PASSWORD', 'RELAY_MM_ENV_FILE', 'RELAY_MM_LIVE', 'SIM_STATS'].each { name ->
+        def value = System.getenv(name)
+        if (value != null) {
+            environment name, value
+        }
+    }
+    // -PskipLive excludes the live integration tests entirely.
+    if (project.hasProperty('skipLive')) {
+        exclude '**/live/**'
+    }
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+        showStandardStreams = project.hasProperty('verboseTests')
+    }
+    maxHeapSize = '1g'
+}
+
+// Only the live integration tests.
+tasks.register('liveTest', Test) {
+    description = 'Runs the live integration tests against the local Mattermost dev server.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnit()
+    include '**/live/**'
+    ['RELAY_MM_URL', 'RELAY_MM_PASSWORD', 'RELAY_MM_ENV_FILE', 'RELAY_MM_LIVE', 'SIM_STATS'].each { name ->
+        def value = System.getenv(name)
+        if (value != null) {
+            environment name, value
+        }
+    }
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        exceptionFormat 'full'
+    }
+}

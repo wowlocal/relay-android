@@ -1,0 +1,2 @@
+// Standalone build: the Android app compiles src/main/java directly as a source dir.
+rootProject.name = 'relay-mattermost'
