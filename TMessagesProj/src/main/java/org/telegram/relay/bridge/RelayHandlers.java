@@ -31,7 +31,7 @@ final class RelayHandlers {
         map.put(TLRPC.TL_updates_getDifference.class, (bridge, account, req) -> {
             TLRPC.TL_updates_getDifference r = (TLRPC.TL_updates_getDifference) req;
             int commonPts = account.db().pts(RelayDatabase.BOX_COMMON);
-            if (r.pts == commonPts) {
+            if (r.pts == commonPts && !RelayReadPath.of(account).needsReset()) {
                 TLRPC.TL_updates_differenceEmpty empty = new TLRPC.TL_updates_differenceEmpty();
                 empty.date = RelayStubs.now(bridge.account);
                 empty.seq = 0;
@@ -54,40 +54,50 @@ final class RelayHandlers {
         });
 
         // MARK: chat list (§4)
-        map.put(TLRPC.TL_messages_getDialogs.class, (bridge, account, req) -> new TLRPC.TL_messages_dialogs());
-        map.put(TLRPC.TL_messages_getPinnedDialogs.class, (bridge, account, req) -> {
-            TLRPC.TL_messages_peerDialogs res = new TLRPC.TL_messages_peerDialogs();
-            res.state = bridge.currentState(account);
-            return res;
+        map.put(TLRPC.TL_messages_getDialogs.class, (bridge, account, req) -> RelayReadPath.of(account).getDialogs((TLRPC.TL_messages_getDialogs) req));
+        map.put(TLRPC.TL_messages_getPinnedDialogs.class, (bridge, account, req) -> RelayReadPath.of(account).getPinnedDialogs(bridge, (TLRPC.TL_messages_getPinnedDialogs) req));
+        map.put(TLRPC.TL_messages_getPeerDialogs.class, (bridge, account, req) -> RelayReadPath.of(account).getPeerDialogs(bridge, (TLRPC.TL_messages_getPeerDialogs) req));
+        map.put(TLRPC.TL_messages_getDialogFilters.class, (bridge, account, req) -> RelayReadPath.of(account).getDialogFilters());
+        map.put(TLRPC.TL_channels_getChannels.class, (bridge, account, req) -> RelayReadPath.of(account).getChannels((TLRPC.TL_channels_getChannels) req));
+        map.put(TLRPC.TL_messages_getChats.class, (bridge, account, req) -> new TLRPC.TL_messages_chats());
+        map.put(TLRPC.TL_channels_getFullChannel.class, (bridge, account, req) -> RelayReadPath.of(account).getFullChannel((TLRPC.TL_channels_getFullChannel) req));
+
+        // MARK: history (§5)
+        map.put(TLRPC.TL_messages_getHistory.class, (bridge, account, req) -> RelayReadPath.of(account).getHistory((TLRPC.TL_messages_getHistory) req));
+        map.put(TLRPC.TL_channels_getMessages.class, (bridge, account, req) -> {
+            TLRPC.TL_channels_getMessages r = (TLRPC.TL_channels_getMessages) req;
+            RelayReadPath path = RelayReadPath.of(account);
+            return path.getMessages(account.db().mmId(RelayDatabase.KIND_CHANNEL, r.channel.channel_id), r.id);
         });
-        map.put(TLRPC.TL_messages_getPeerDialogs.class, (bridge, account, req) -> {
-            TLRPC.TL_messages_peerDialogs res = new TLRPC.TL_messages_peerDialogs();
-            res.state = bridge.currentState(account);
-            return res;
+        map.put(TLRPC.TL_messages_getMessages.class, (bridge, account, req) -> {
+            // Private-chat ids are per dialog in Relay (one allocator per chat): the caller tags the
+            // request with its dialog (RelayHooks.tagDialog); untagged lookups answer messageEmpty.
+            TLRPC.TL_messages_getMessages r = (TLRPC.TL_messages_getMessages) req;
+            RelayReadPath path = RelayReadPath.of(account);
+            long dialogId = RelayHooks.taggedDialog(req);
+            return path.getMessages(dialogId != 0 ? path.directory.channelIdOf(dialogId) : null, r.id);
         });
-        map.put(TLRPC.TL_messages_getDialogFilters.class, (bridge, account, req) -> {
-            TLRPC.TL_messages_dialogFilters res = new TLRPC.TL_messages_dialogFilters();
-            res.filters.add(new TLRPC.TL_dialogFilterDefault());
+        map.put(TLRPC.TL_messages_getUnreadMentions.class, (bridge, account, req) -> RelayReadPath.of(account).unreadMentions((TLRPC.TL_messages_getUnreadMentions) req));
+        map.put(TLRPC.TL_messages_getOnlines.class, (bridge, account, req) -> new TLRPC.TL_chatOnlines());
+
+        // MARK: read state (§5.6)
+        map.put(TLRPC.TL_channels_readHistory.class, (bridge, account, req) -> {
+            TLRPC.TL_channels_readHistory r = (TLRPC.TL_channels_readHistory) req;
+            RelayReadPath.of(account).markRead(account.db().mmId(RelayDatabase.KIND_CHANNEL, r.channel.channel_id));
+            return new TLRPC.TL_boolTrue();
+        });
+        map.put(TLRPC.TL_messages_readHistory.class, (bridge, account, req) -> {
+            TLRPC.TL_messages_readHistory r = (TLRPC.TL_messages_readHistory) req;
+            RelayReadPath path = RelayReadPath.of(account);
+            path.markRead(path.directory.channelIdOf(r.peer));
+            TLRPC.TL_messages_affectedMessages res = new TLRPC.TL_messages_affectedMessages();
+            res.pts = account.db().pts(RelayDatabase.BOX_COMMON);
+            res.pts_count = 0;
             return res;
         });
 
         // MARK: users
-        map.put(TLRPC.TL_users_getFullUser.class, (bridge, account, req) -> {
-            TLRPC.TL_users_getFullUser r = (TLRPC.TL_users_getFullUser) req;
-            TLRPC.TL_user user = resolveUser(account, r.id);
-            if (user == null) {
-                return RelayTl.error(400, "USER_ID_INVALID");
-            }
-            TLRPC.TL_userFull full = new TLRPC.TL_userFull();
-            full.id = user.id;
-            full.settings = new TLRPC.TL_peerSettings();
-            full.notify_settings = RelayStubs.notifySettings();
-            full.common_chats_count = 0;
-            TLRPC.TL_users_userFull res = new TLRPC.TL_users_userFull();
-            res.full_user = full;
-            res.users.add(user);
-            return res;
-        });
+        map.put(TLRPC.TL_users_getFullUser.class, (bridge, account, req) -> RelayReadPath.of(account).getFullUser((TLRPC.TL_users_getFullUser) req));
         map.put(TLRPC.TL_users_getUsers.class, (bridge, account, req) -> {
             TLRPC.TL_users_getUsers r = (TLRPC.TL_users_getUsers) req;
             ArrayList<TLObject> users = new ArrayList<>();
@@ -99,11 +109,16 @@ final class RelayHandlers {
             }
             return new RelayTl.RawVector(users);
         });
+        map.put(TLRPC.TL_photos_getUserPhotos.class, (bridge, account, req) -> RelayReadPath.of(account).getUserPhotos((TLRPC.TL_photos_getUserPhotos) req));
+        map.put(TLRPC.TL_contacts_resolveUsername.class, (bridge, account, req) -> RelayReadPath.of(account).resolveUsername((TLRPC.TL_contacts_resolveUsername) req));
         map.put(TLRPC.TL_contacts_getContacts.class, (bridge, account, req) -> {
             TLRPC.TL_contacts_contacts res = new TLRPC.TL_contacts_contacts();
             res.saved_count = 0;
             return res;
         });
+
+        // MARK: files (§8)
+        map.put(TLRPC.TL_upload_getFile.class, (bridge, account, req) -> RelayReadPath.of(account).files.getFile((TLRPC.TL_upload_getFile) req));
 
         // MARK: config
         map.put(TLRPC.TL_help_getAppConfig.class, (bridge, account, req) -> RelayAppConfig.answer((TLRPC.TL_help_getAppConfig) req));

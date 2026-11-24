@@ -188,4 +188,18 @@ public final class SqliteMessageIdStore implements MessageIdStore {
             db.endTransaction();
         }
     }
+
+    // MARK: - Bridge queries (not part of MessageIdStore)
+
+    /** The entry with exactly this local id (tombstones included), or null. */
+    public MessageIdEntry entryByLocalId(String channelId, int localId) {
+        try (Cursor c = database.getReadableDatabase().rawQuery("SELECT " + COLS + " FROM msg_ids WHERE channel = ? AND local_id = ?", new String[]{channelId, Integer.toString(localId)})) {
+            return c.moveToFirst() ? entry(c) : null;
+        }
+    }
+
+    /** Every entry of a channel in local id order (debug dumps). */
+    public List<MessageIdEntry> allEntries(String channelId) {
+        return read(database.getReadableDatabase().rawQuery("SELECT " + COLS + " FROM msg_ids WHERE channel = ? ORDER BY local_id", new String[]{channelId}));
+    }
 }

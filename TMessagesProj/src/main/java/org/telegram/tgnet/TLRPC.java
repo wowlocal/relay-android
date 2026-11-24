@@ -59629,6 +59629,9 @@ public class TLRPC {
             if (ApplicationLoader.isAndroidTestEnvironment()) {
                 return;
             }
+            if (stream instanceof org.telegram.relay.bridge.RelayTl.WireData) {
+                return; // Relay: bridge answers are wire format; attachPath is local-DB only.
+            }
 
             if (this instanceof TL_message_secret || this instanceof TL_message_secret_layer72) {
                 String path = attachPath != null ? attachPath : "";

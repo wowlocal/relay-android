@@ -255,6 +255,9 @@ public final class RelayBridge {
         TLRPC.TL_error error = null;
         if (response instanceof TLRPC.TL_error) {
             error = (TLRPC.TL_error) response;
+        } else if (response instanceof TLRPC.TL_upload_file) {
+            // Bytes live in a NativeByteBuffer, which SerializedData cannot carry; built fresh per chunk, never aliased.
+            parsed = response;
         } else if (response != null) {
             try {
                 parsed = RelayTl.roundTrip(p.request, response);

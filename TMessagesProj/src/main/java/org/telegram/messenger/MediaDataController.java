@@ -6124,6 +6124,7 @@ public class MediaDataController extends BaseController {
                 } else {
                     TLRPC.TL_messages_getMessages req = new TLRPC.TL_messages_getMessages();
                     req.id = midsCopy;
+                    org.telegram.relay.bridge.RelayHooks.tagDialog(req, dialogId); // Relay: per-dialog ids
                     getConnectionsManager().sendRequest(req, (response, error) -> {
                         boolean ok = false;
                         if (error == null) {
@@ -6636,6 +6637,7 @@ public class MediaDataController extends BaseController {
                                             } else {
                                                 TLRPC.TL_messages_getMessages reqInner = new TLRPC.TL_messages_getMessages();
                                                 reqInner.id = req.id;
+                                                org.telegram.relay.bridge.RelayHooks.tagDialog(reqInner, dialogId); // Relay: per-dialog ids
                                                 req2 = reqInner;
                                             }
                                             getConnectionsManager().sendRequest(req2, (response2, error2) -> {
@@ -6718,6 +6720,7 @@ public class MediaDataController extends BaseController {
                                 Timer.Task t6 = Timer.start(logLogger, "loadReplyMessagesForMessages: load messages");
                                 TLRPC.TL_messages_getMessages req = new TLRPC.TL_messages_getMessages();
                                 req.id = dialogReplyMessagesIds.valueAt(a);
+                                org.telegram.relay.bridge.RelayHooks.tagDialog(req, dialogId); // Relay: per-dialog ids
                                 int reqId = getConnectionsManager().sendRequest(req, (response, error) -> {
                                     Timer.done(t6);
                                     if (error == null) {

@@ -29,8 +29,10 @@ public final class RelayDatabase extends SQLiteOpenHelper {
     public static final String KIND_CHANNEL = "channel";
     public static final String KIND_TEAM = "team";
     public static final String KIND_FILE = "file";
+    /** A user's profile picture version, keyed {@code <userId>:<last_picture_update>}: the TL photo id of the avatar. */
+    public static final String KIND_AVATAR = "avatar";
 
-    private static final int VERSION = 1;
+    private static final int VERSION = 2;
 
     /**
      * First TL id per kind. User and channel ids stay far below 2^48 and above Telegram's special
@@ -44,6 +46,10 @@ public final class RelayDatabase extends SQLiteOpenHelper {
                 return 2_000_000_001L;
             case KIND_TEAM:
                 return 2L;
+            case KIND_FILE:
+                return 5_000_000_001L;
+            case KIND_AVATAR:
+                return 7_000_000_001L;
             default:
                 return 1L;
         }
@@ -81,11 +87,34 @@ public final class RelayDatabase extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE msg_tombstones (channel TEXT NOT NULL, post_id TEXT NOT NULL, PRIMARY KEY (channel, post_id))");
         db.execSQL("CREATE TABLE pts (box TEXT PRIMARY KEY, pts INTEGER NOT NULL)");
         db.execSQL("CREATE TABLE update_log (box TEXT NOT NULL, pts INTEGER NOT NULL, date INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (box, pts))");
+        createV2(db);
+    }
+
+    /** v2 (A3): small key/value state (dialog fingerprint, CRT flag). */
+    private static void createV2(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // v1 only.
+        if (oldVersion < 2) {
+            createV2(db);
+        }
+    }
+
+    // MARK: - Key/value
+
+    public String kv(String key) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT v FROM kv WHERE k = ?", new String[]{key})) {
+            return c.moveToFirst() ? c.getString(0) : null;
+        }
+    }
+
+    public void putKv(String key, String value) {
+        ContentValues row = new ContentValues();
+        row.put("k", key);
+        row.put("v", value);
+        getWritableDatabase().insertWithOnConflict("kv", null, row, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     // MARK: - Id map

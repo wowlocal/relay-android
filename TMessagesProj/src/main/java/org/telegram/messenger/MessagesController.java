@@ -7873,6 +7873,7 @@ public class MessagesController extends BaseController implements NotificationCe
         } else {
             TLRPC.TL_messages_getMessages req = new TLRPC.TL_messages_getMessages();
             req.id = result;
+            org.telegram.relay.bridge.RelayHooks.tagDialog(req, dialogId); // Relay: per-dialog ids
             request = req;
         }
         ArrayList<Integer> arrayList = reloadingMessages.get(dialogId);

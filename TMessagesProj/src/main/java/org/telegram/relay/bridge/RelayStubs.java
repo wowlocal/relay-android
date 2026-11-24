@@ -151,5 +151,17 @@ final class RelayStubs {
         // Group B: conditional.
         map.put(TLRPC.TL_help_getAppUpdate.class, (req, account) -> new TLRPC.TL_help_noAppUpdate());
         map.put(TLRPC.TL_messages_getSuggestedDialogFilters.class, emptyVector);
+
+        // Chat screen side calls (A3): empty answers until the feature is backed by Mattermost.
+        Stub emptyMessages = (req, account) -> new TLRPC.TL_messages_messages();
+        map.put(TLRPC.TL_messages_search.class, emptyMessages);           // pinned bar, shared media (A7)
+        map.put(TLRPC.TL_messages_getScheduledHistory.class, emptyMessages);
+        map.put(TLRPC.TL_messages_getSponsoredMessages.class, (req, account) -> new TLRPC.TL_messages_sponsoredMessagesEmpty());
+        map.put(TLRPC.TL_messages_getPeerSettings.class, (req, account) -> {
+            TLRPC.TL_messages_peerSettings s = new TLRPC.TL_messages_peerSettings();
+            s.settings = new TLRPC.TL_peerSettings();
+            return s;
+        });
+        map.put(TLRPC.TL_channels_getParticipants.class, (req, account) -> new TLRPC.TL_channels_channelParticipants()); // members list: A7
     }
 }

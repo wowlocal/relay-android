@@ -63,8 +63,15 @@ public final class RelayTl {
         return error;
     }
 
+    /**
+     * A stream for wire-format answers: {@code TLRPC.Message.writeAttachPath} (a local-database field
+     * appended after every message) is skipped for it, as the server never sends one.
+     */
+    public static final class WireData extends SerializedData {
+    }
+
     public static byte[] serialize(TLObject object) {
-        SerializedData out = new SerializedData();
+        SerializedData out = new WireData();
         object.serializeToStream(out);
         byte[] bytes = out.toByteArray();
         out.cleanup();
