@@ -800,7 +800,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
         ttlRow = -1;
         ttlDivideRow = -1;
 
-        if (currentType == 0 && getMessagesController().qrLoginCamera) {
+        if (org.telegram.relay.RelayFeatures.QR_LOGIN && currentType == 0 && getMessagesController().qrLoginCamera) {
             qrCodeRow = rowCount++;
             qrCodeDividerRow = rowCount++;
         }

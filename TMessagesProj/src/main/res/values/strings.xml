@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="AppName">Telegram</string>
-    <string name="AppNameBeta">Telegram Beta</string>
+    <string name="AppName">Relay</string>
+    <string name="AppNameBeta">Relay Debug</string>
     <string name="LanguageName">English</string>
     <string name="English">English</string>
     <string name="LanguageNameInEnglish">English</string>
@@ -173,7 +173,7 @@
     <string name="NoResultFoundFor">No results found for \"%s\".</string>
     <string name="NoResultFoundForTag">No results found for %s</string>
     <string name="NoResultFoundFor2">There were no results for \"%s\".\nTry a new search.</string>
-    <string name="NoChats">Welcome to Telegram</string>
+    <string name="NoChats">Welcome to Relay</string>
     <string name="RecentlyViewed">Recently viewed</string>
     <string name="RecentlyViewedHide">HIDE</string>
     <string name="NoChatsHelp">Start messaging by tapping the pencil button in the bottom right corner.</string>
@@ -335,7 +335,7 @@
     <string name="Superscript">Superscript</string>
     <string name="Regular">Regular</string>
     <string name="FormattedDate">Date</string>
-    <string name="ContactsPermissionAlert">**Telegram** needs access to your contacts so that you can connect with your friends across all your devices. Your contacts will be continuously synced with Telegram\'s heavily encrypted cloud servers.</string>
+    <string name="ContactsPermissionAlert">**Relay** needs access to your contacts so that you can connect with your friends across all your devices. Your contacts will be continuously synced with Relay\'s heavily encrypted cloud servers.</string>
     <string name="ContactsPermissionAlertNotNow">Not now</string>
     <string name="ContactsPermissionAlertContinue">Continue</string>
     <string name="NotificationsPermissionAlertTitle">Turn on notifications</string>
@@ -345,7 +345,7 @@
     <string name="NotificationsPermissionAlert3">Mute specific chats and types of chats</string>
     <string name="NotificationsPermissionContinue">Continue</string>
     <string name="NotificationsPermissionSettings">Open Settings</string>
-    <string name="YourContacts">Your contacts on Telegram</string>
+    <string name="YourContacts">Your contacts on Relay</string>
     <string name="ConnectingYourContacts">Connecting your contacts...</string>
     <string name="ArchiveHintHeader1">This is your Archive</string>
     <string name="ArchiveHintText1">Chats with enabled notifications get unarchived when new messages arrive.</string>
@@ -1925,7 +1925,7 @@
     <string name="NoContactsYet2Invite">Invite Friends ></string>
 
     <string name="NoContactsYet3">Add Contacts</string>
-    <string name="NoContactsYet3Sub">You have no contacts on Telegram yet. How about adding them?</string>
+    <string name="NoContactsYet3Sub">People you talk to on Relay will appear here.</string>
 
     <string name="NewContactAlertTitle">New contact</string>
     <string name="NewContactAlertMessage">Phone number **%1$s** is not in your contacts list. Do you want to add it?</string>
@@ -2504,7 +2504,7 @@
     <string name="NotificationsService">Keep-Alive Service</string>
     <string name="NotificationsServiceInfo">Relaunch app when shut down. Enable for reliable notifications.</string>
     <string name="NotificationsServiceConnection">Background Connection</string>
-    <string name="NotificationsServiceConnectionInfo">Keep a low impact background connection to Telegram for reliable notifications.</string>
+    <string name="NotificationsServiceConnectionInfo">Keep a low impact background connection to Relay for reliable notifications.</string>
     <string name="SortBy">Sort By</string>
     <string name="ImportContacts">Import Contacts</string>
     <string name="SortFirstName">First name</string>
@@ -2634,7 +2634,7 @@
     <string name="DirectShareInfo">Show recent chats in Android share menu</string>
     <string name="Emoji">Emoji</string>
     <string name="LargeEmoji">Large Emoji</string>
-    <string name="TelegramVersion">Telegram for Android %1$s</string>
+    <string name="TelegramVersion">Relay for Android %1$s</string>
     <string name="DebugMenu">Debug Menu</string>
     <string name="DebugMenuLongPress">Long press again for debug menu</string>
     <string name="DebugSendLogs">Send Logs</string>
@@ -2739,14 +2739,14 @@
     <string name="ClearSelectedCache">Clear Selected</string>
     <string name="ClearCacheInfo">Free up disk space on your device; your media will stay in the cloud.</string>
     <string name="ClearingCache">Clearing cache…</string>
-    <string name="ClearingCacheDescription">Please keep this window open while Telegram is clearing your cache.</string>
+    <string name="ClearingCacheDescription">Please keep this window open while Relay is clearing your cache.</string>
     <string name="ChangePhoneNumber">Change Phone Number</string>
     <string name="ChangePhoneNumberInfo">Move your account, chats and media to a new number.</string>
     <string name="ChangePhoneNumberSuccessWithPhone">Your phone number has been successfully changed to %1$s.</string>
     <string name="ContactSupport">Contact Support</string>
     <string name="ContactSupportInfo">Tell us about any issues; logging out doesn\'t usually help.</string>
     <string name="LogOutTitle">Log Out</string>
-    <string name="LogOutInfo">Logging out deactivates all Secret Chats.</string>
+    <string name="LogOutInfo">Logging out ends this session on your Mattermost server.</string>
     <string name="SearchInSettings">Search Settings and FAQ</string>
     <string name="SettingsRecent">Recent searches</string>
     <string name="SettingsFaqSearchTitle">Frequently asked questions</string>
@@ -2768,7 +2768,7 @@
     <string name="AuthAnotherClientInfo2">Run Telegram Desktop to get the QR code.</string>
     <string name="AuthAnotherClientInfo3">Scan the QR code to connect your account.</string>
     <string name="AuthAnotherClientUrl">This code can be used to allow someone to log in to your Telegram account.\n\nTo confirm Telegram login, please go to Settings &gt; Devices &gt; Scan QR and scan the code.</string>
-    <string name="QRCodePermissionNoCameraWithHint">**Telegram** needs camera access so that you can scan QR codes. Tap Settings -> Permissions, and turn **Camera** on.</string>
+    <string name="QRCodePermissionNoCameraWithHint">**Relay** needs camera access so that you can scan QR codes. Tap Settings -> Permissions, and turn **Camera** on.</string>
     <string name="SetProfilePhoto">Set Profile Photo</string>
     <string name="AppUpdate">Update Telegram</string>
     <string name="AppUpdateBeta">Update Telegram Beta</string>
@@ -3138,7 +3138,7 @@
     <string name="PasscodeSwitchToPIN">Switch to PIN</string>
     <string name="PasscodesDoNotMatchTryAgain">Passcodes don\'t match. Please try again.</string>
     <string name="EnterYourPasscode">Enter your passcode</string>
-    <string name="EnterYourPasscodeInfo">Please enter your current Telegram passcode to manage this option.</string>
+    <string name="EnterYourPasscodeInfo">Please enter your current Relay passcode to manage this option.</string>
     <string name="ForgotPasscode">Forgot passcode?</string>
     <string name="ForgotPasscodeInfo">If you forgot your passcode, you\'ll need to delete and reinstall the app.\n\nAll secret chats will be lost.</string>
     <string name="PasscodeScreenHint">Tap a lock icon on the chats page to lock and unlock the app.</string>
@@ -3156,7 +3156,7 @@
     <string name="ScreenCaptureHeader">App Content in Task Switcher</string>
     <string name="ScreenCaptureShowContent">Show Content</string>
     <string name="ScreenCaptureInfo">If disabled, you won\'t be able to take screenshots in the app but chat content will be hidden in the task switcher.</string>
-    <string name="ScreenCaptureAlert">This will hide the contents of your chats or chat list from the task switcher, but you will not be able to take screenshots on Telegram.\n\nYou may need to restart the app for this to take effect.</string>
+    <string name="ScreenCaptureAlert">This will hide the contents of your chats or chat list from the task switcher, but you will not be able to take screenshots on Relay.\n\nYou may need to restart the app for this to take effect.</string>
     <string name="TooManyTries">Too many tries.\nPlease try again in %1$s.</string>
     <!--media view-->
     <string name="January">January</string>
@@ -3556,10 +3556,10 @@
     <string name="StorageUsage">Storage Usage</string>
     <string name="StorageCleared">Storage Cleared</string>
     <string name="StorageUsageCalculating">Calculating cache size...</string>
-    <string name="StorageUsageTelegram">Telegram uses %s of your device storage.</string>
-    <string name="StorageUsageTelegramLess">Telegram uses %s of your device storage.</string>
-    <string name="StorageCleared2">All media can be re-downloaded from the Telegram cloud if you need it again.</string>
-    <string name="StorageUsageInfo">All media will stay in the Telegram cloud and can be re-downloaded if you need it again.</string>
+    <string name="StorageUsageTelegram">Relay uses %s of your device storage.</string>
+    <string name="StorageUsageTelegramLess">Relay uses %s of your device storage.</string>
+    <string name="StorageCleared2">All media can be re-downloaded from your Mattermost server if you need it again.</string>
+    <string name="StorageUsageInfo">All media will stay on your Mattermost server and can be re-downloaded if you need it again.</string>
     <string name="NetworkUsage">Data Usage</string>
     <string name="StoragePath">Storage Path</string>
     <string name="NetworkUsageAllTab">All</string>
@@ -3965,7 +3965,7 @@
     <string name="StopLoadingTitle">Stop loading?</string>
     <string name="StopLoading">Do you want to cancel loading?</string>
     <string name="UpdateTelegram">Update Telegram</string>
-    <string name="UpdateAppAlert">Sorry, your Telegram app is out of date and can\'t handle this request. Please update Telegram.</string>
+    <string name="UpdateAppAlert">Sorry, your Relay app is out of date and can\'t handle this request. Please update Relay.</string>
     <string name="InvalidPhoneNumber">Invalid phone number. Please check the number and try again.</string>
     <string name="PleaseLoginPassport">Please log in to your Telegram account to use Telegram Passport.</string>
     <string name="BannedPhoneNumber">This phone number is banned.</string>
@@ -4007,7 +4007,7 @@
     <string name="SendMessagesToText">Do you want to send this message to **%1$s**?</string>
     <string name="SendGameToText">Do you want to share this game to **%1$s**?</string>
     <string name="SendContactToText">Do you want to send this contact to **%1$s**?</string>
-    <string name="AreYouSureLogout">Are you sure you want to log out?\n\nThis will cancel all your Secret Chats.\n\nYou can use Telegram on all your devices at once and use several accounts in the same app.</string>
+    <string name="AreYouSureLogout">Are you sure you want to log out?\n\nYou can use several Mattermost accounts in the same app.</string>
     <string name="AreYouSureLogoutGrams">Are you sure you want to log out?\n\nThis will cancel all your Secret Chats and **delete wallet backups holding %s**. Without their recovery phrases, you\'ll lose access to these funds.\n\nYou can use Telegram on all your devices at once and use several accounts in the same app.</string>
     <string name="DeleteFewChatsTitle">Delete %1$s</string>
     <string name="ClearFewChatsTitle">Clear %1$s</string>
@@ -4121,26 +4121,26 @@
     <string name="TosUpdateDecline">We\'re very sorry, but this means we must part ways here. Unlike others, we don\'t use your data for ad targeting or other commercial purposes. Telegram only stores the information it needs to function as a feature-rich cloud service. You can adjust how we use your data (e.g., delete synced contacts) in Privacy &amp; Security settings.\n\nBut if you\'re generally not OK with Telegram\'s modest needs, it won\'t be possible for us to provide this service. You can deactivate your account now — or look around some more and deactivate it later if you feel you\'re not happy with the way we use your data.</string>
     <string name="TosDeclineDeleteAccount">Warning, this will irreversibly delete your Telegram account along with all the data you store in the Telegram cloud.\n\nImportant: You can Cancel now and export your data before deleting your account instead of losing it all. (To do this, open the latest version of Telegram Desktop and go to Settings &gt; Export Telegram Data.)</string>
     <!--permissions-->
-    <string name="PermissionStorageWithHint">**Telegram** needs storage access so you can send and save photos, videos, music and other media. Tap Settings -> Permissions, and turn **Files and media** on.</string>
-    <string name="PermissionNoAudioWithHint">**Telegram** needs microphone access so that you can send voice messages. Tap Settings -> Permissions, and turn **Microphone** on.</string>
-    <string name="PermissionNoBluetoothWithHint">**Telegram** needs bluetooth access to record video from your headset microphone. Tap Settings -> Permissions, and turn **Bluetooth** on.</string>
-    <string name="PermissionNoAudioVideoWithHint">**Telegram** needs microphone access so that you can send voice messages. Tap Settings -> Permissions, and turn **Microphone** on. </string>
-    <string name="PermissionNoCameraWithHint">**Telegram** needs camera access so that you can take photos and videos. Tap Settings -> Permissions, and turn **Camera** on.</string>
-    <string name="PermissionNoCameraMicVideo">**Telegram** needs camera and microphone access so that you can send video messages. Tap Settings -> Permissions, and turn **Microphone** and **Camera** on.</string>
-    <string name="PermissionNoLocation">Telegram needs access to your location so that you can share it with your friends.</string>
-    <string name="PermissionNoLocationStory">Telegram needs access to your location so that you can add your current weather widget to a story.</string>
-    <string name="PermissionNoLocationFriends">**Telegram** needs access to location so that you can share it with your friends. Tap Settings -> Permissions, and turn **Location** on.</string>
-    <string name="PermissionNoLocationNavigation">**Telegram** needs access to location so that you can get directions. Tap Settings -> Permissions, and turn **Location** on.</string>
-    <string name="PermissionNoContactsSharing">**Telegram** needs access to contacts so that you can share them with your friends. Tap Settings -> Permissions, and turn **Contacts** on.</string>
-    <string name="PermissionNoContactsSaving">**Telegram** needs access to contacts to save them on your phone. Tap Settings -> Permissions, and turn **Contacts** on.</string>
-    <string name="PermissionNoStorageAvatar">**Telegram** needs storage access so you can upload profile picture. Tap Settings -> Permissions, and turn **Files and media** on.</string>
-    <string name="PermissionNoAudioStorageStory">**Telegram** needs access to music files to upload with your story. Tap Settings -> Permissions, and turn **Music and Audio** on.</string>
-    <string name="PermissionDrawAboveOtherApps">Telegram needs access to draw above other apps to play videos in Picture-in-Picture mode.</string>
-    <string name="PermissionDrawAboveOtherAppsGroupCall">Overlay mode lets you use push-to-talk and see who is talking even when you are outside of Telegram.</string>
+    <string name="PermissionStorageWithHint">**Relay** needs storage access so you can send and save photos, videos, music and other media. Tap Settings -> Permissions, and turn **Files and media** on.</string>
+    <string name="PermissionNoAudioWithHint">**Relay** needs microphone access so that you can send voice messages. Tap Settings -> Permissions, and turn **Microphone** on.</string>
+    <string name="PermissionNoBluetoothWithHint">**Relay** needs bluetooth access to record video from your headset microphone. Tap Settings -> Permissions, and turn **Bluetooth** on.</string>
+    <string name="PermissionNoAudioVideoWithHint">**Relay** needs microphone access so that you can send voice messages. Tap Settings -> Permissions, and turn **Microphone** on. </string>
+    <string name="PermissionNoCameraWithHint">**Relay** needs camera access so that you can take photos and videos. Tap Settings -> Permissions, and turn **Camera** on.</string>
+    <string name="PermissionNoCameraMicVideo">**Relay** needs camera and microphone access so that you can send video messages. Tap Settings -> Permissions, and turn **Microphone** and **Camera** on.</string>
+    <string name="PermissionNoLocation">Relay needs access to your location so that you can share it with your friends.</string>
+    <string name="PermissionNoLocationStory">Relay needs access to your location so that you can add your current weather widget to a story.</string>
+    <string name="PermissionNoLocationFriends">**Relay** needs access to location so that you can share it with your friends. Tap Settings -> Permissions, and turn **Location** on.</string>
+    <string name="PermissionNoLocationNavigation">**Relay** needs access to location so that you can get directions. Tap Settings -> Permissions, and turn **Location** on.</string>
+    <string name="PermissionNoContactsSharing">**Relay** needs access to contacts so that you can share them with your friends. Tap Settings -> Permissions, and turn **Contacts** on.</string>
+    <string name="PermissionNoContactsSaving">**Relay** needs access to contacts to save them on your phone. Tap Settings -> Permissions, and turn **Contacts** on.</string>
+    <string name="PermissionNoStorageAvatar">**Relay** needs storage access so you can upload profile picture. Tap Settings -> Permissions, and turn **Files and media** on.</string>
+    <string name="PermissionNoAudioStorageStory">**Relay** needs access to music files to upload with your story. Tap Settings -> Permissions, and turn **Music and Audio** on.</string>
+    <string name="PermissionDrawAboveOtherApps">Relay needs access to draw above other apps to play videos in Picture-in-Picture mode.</string>
+    <string name="PermissionDrawAboveOtherAppsGroupCall">Overlay mode lets you use push-to-talk and see who is talking even when you are outside of Relay.</string>
     <string name="PermissionOpenSettings">SETTINGS</string>
-    <string name="PermissionXiaomiLockscreen">Please allow Telegram to be shown on the lock screen so that calls can work properly.</string>
-    <string name="PermissionFSILockscreen">Please allow Telegram to be shown on the lock screen so that calls can work properly.</string>
-    <string name="PermissionBackgroundLocation">To share your live location in this chat, Telegram needs access to your location all the time, including while the app is in the background.\n\nWe will access your location only for the duration you choose, and you can stop sharing it any time. We won\'t use your location for any purpose other than sharing it in this chat.</string>
+    <string name="PermissionXiaomiLockscreen">Please allow Relay to be shown on the lock screen so that calls can work properly.</string>
+    <string name="PermissionFSILockscreen">Please allow Relay to be shown on the lock screen so that calls can work properly.</string>
+    <string name="PermissionBackgroundLocation">To share your live location in this chat, Relay needs access to your location all the time, including while the app is in the background.\n\nWe will access your location only for the duration you choose, and you can stop sharing it any time. We won\'t use your location for any purpose other than sharing it in this chat.</string>
     <string name="PermissionDrawAboveOtherAppsTitle">Picture-in-Picture</string>
     <string name="PermissionDrawAboveOtherAppsGroupCallTitle">Voice Chat Overlay</string>
     <!--charts-->
@@ -4306,7 +4306,7 @@
     <string name="VoipRateCallAlert">Please rate the quality of your Telegram call</string>
     <string name="VoipNeedMicPermissionWithHint">**Telegram** needs microphone access so that you can make calls. Tap Settings -> Permissions, and turn **Microphone** on.</string>
     <string name="VoipNeedMicCameraPermissionWithHint">**Telegram** needs camera and microphone access so that you can make video calls. Tap Settings -> Permissions, and turn **Microphone** and **Camera** on.</string>
-    <string name="VoipNeedCameraPermission">Telegram needs access to your camera so that you can make video calls.</string>
+    <string name="VoipNeedCameraPermission">Relay needs access to your camera so that you can make video calls.</string>
     <string name="VoipFeedbackCommentHint">Add an optional comment</string>
     <string name="CallBack">Call Back</string>
     <string name="CallAgain">Call Again</string>
@@ -5013,7 +5013,7 @@
     <string name="AccActionChatPreview">Chat Preview</string>
     <string name="AccActionOpenTranscription">Open Voice Transcription</string>
     <string name="AccActionCloseTranscription">Close Transcription</string>
-    <string name="AccDescrEmojiButton">Emoji, stickers, and GIFs</string>
+    <string name="AccDescrEmojiButton">Emoji</string>
     <string name="AccDescrAttachButton">Attach media</string>
     <string name="AccDescrChanSilentOn">Send silently</string>
     <string name="AccDescrChanSilentOff">Send notifications</string>
@@ -5404,7 +5404,7 @@
     <string name="TerminateOldSessionHeader">Automatically terminate old sessions</string>
     <string name="IfInactiveFor">if inactive for</string>
     <string name="AuthAnotherClientInfo5">Go to *getdesktop.telegram.org* or *web.telegram.org* to get a QR code</string>
-    <string name="SessionsListInfo">The official Telegram app is available for Android, iPhone, iPad, Windows, macOS and Linux.</string>
+    <string name="SessionsListInfo">Relay is available for Android, iPhone, iPad and Mac.</string>
     <string name="MigrateOldFolder">Migrate old folder to Scoped Storage</string>
     <string name="SelectThisDay">Select this day</string>
     <string name="NoMessagesForThisDay">No messages for this day</string>
@@ -5530,9 +5530,9 @@
     <string name="BlurInChat">Blur in chat</string>
 
     <string name="AllowBackgroundActivity">Allow background activity</string>
-    <string name="AllowBackgroundActivityInfo">This will improve reliability for incoming notifications and Telegram calls.</string>
-    <string name="AllowBackgroundActivityInfoOneUIBelowS">This will improve reliability for incoming notifications and Telegram calls. Tap Settings -> Battery and turn **Allow background activity** on.</string>
-    <string name="AllowBackgroundActivityInfoOneUIAboveS">This will improve reliability for incoming notifications and Telegram calls. Please select **Optimised** or **Unrestricted** in Settings > Battery.</string>
+    <string name="AllowBackgroundActivityInfo">This will improve reliability for incoming notifications and Relay calls.</string>
+    <string name="AllowBackgroundActivityInfoOneUIBelowS">This will improve reliability for incoming notifications and Relay calls. Tap Settings -> Battery and turn **Allow background activity** on.</string>
+    <string name="AllowBackgroundActivityInfoOneUIAboveS">This will improve reliability for incoming notifications and Relay calls. Please select **Optimised** or **Unrestricted** in Settings > Battery.</string>
     <string name="SetNewPassword">Set a new password</string>
     <string name="ReadAllReactions">Read all reactions</string>
     <string name="ReadAllMentions">Read all mentions</string>
@@ -5558,8 +5558,8 @@
     <string name="YourPasswordReset">Your password was successfully deactivated</string>
     <string name="CreatePassword">Create a Password</string>
     <string name="CreatePasscode">Create a passcode</string>
-    <string name="CreatePasscodeInfoPIN">Please enter any 4 digits that you will use to unlock Telegram.</string>
-    <string name="CreatePasscodeInfoPassword">Please enter the password you will use to unlock Telegram.</string>
+    <string name="CreatePasscodeInfoPIN">Please enter any 4 digits that you will use to unlock Relay.</string>
+    <string name="CreatePasscodeInfoPassword">Please enter the password you will use to unlock Relay.</string>
     <string name="PasscodeReinstallNotice">If you forget your passcode, you\'ll need to **reinstall** the app. All secret chats will be lost.</string>
     <string name="EditNumberInfo">Do you want to edit your number?\n\n**%1$s**\n\nIf the number above is correct, please wait for the verification code.</string>
     <string name="ReportChatIllegalDrugs">Illegal Drugs</string>
@@ -6376,7 +6376,7 @@
     <string name="BlockBot">Block bot</string>
     <string name="AreYouSureDeleteThisChatWithBotWithCheckmark">Are you sure you want to delete the chat with **%1$s**?</string>
     <string name="DecreaseSpeed">Decrease speed</string>
-    <string name="SdCardAlert">Storing on SD card will make Telegram slow. Proceed anyway?</string>
+    <string name="SdCardAlert">Storing on SD card will make Relay slow. Proceed anyway?</string>
     <string name="Proceed">Proceed</string>
     <string name="SdCardError">SD Card Error</string>
     <string name="SdCardErrorDescription">Telegram is unable to save data on your SD card.</string>
@@ -10138,7 +10138,7 @@
     <string name="AgeVerificationFailedTitle">Age Check Failed</string>
     <string name="AgeVerificationFailedText">Sorry, you can\'t view 18+ content.</string>
     <string name="AgeVerificationPassedTitle">Age Check Passed</string>
-    <string name="AgeVerificationNeedCameraPermission">Telegram needs access to your camera so that you can confirm your age.</string>
+    <string name="AgeVerificationNeedCameraPermission">Relay needs access to your camera so that you can confirm your age.</string>
     <string name="StoriesForwardTitle">Your Stories</string>
     <string name="StoriesForwardText">Forward to stories</string>
     <string name="Gift2CollectionEmptyTitle">Organize Your Gifts</string>
@@ -11710,4 +11710,17 @@
     <string name="RelayErrorMfa">The verification code is incorrect or has expired.</string>
     <string name="RelayErrorLoginTitle">Can\'t Log In</string>
     <string name="RelayErrorEmptyFields">Enter your email or username and your password.</string>
+    <!-- Relay for Android (branding and settings, A6) -->
+    <string name="RelaySettingsServer">Server</string>
+    <string name="RelaySettingsAbout">About Relay</string>
+    <string name="RelayServerCopied">Server address copied to clipboard</string>
+    <string name="RelayLogOutConfirm">Log out of %1$s?</string>
+    <string name="RelayLogOutConfirmTitle">Log Out</string>
+    <string name="RelayAboutTitle">About</string>
+    <string name="RelayAboutVersion">Version</string>
+    <string name="RelayAboutServerVersion">Mattermost</string>
+    <string name="RelayAboutDescription">Relay is a client for Mattermost. It talks only to your Mattermost server.</string>
+    <string name="RelayAboutLicenses">Open-Source Licenses</string>
+    <string name="RelayAboutGplNotice">Relay for Android is based on Telegram for Android and, like it, is free software under the GNU General Public License, version 2 or later. Telegram is a trademark of its owners; Relay is not affiliated with or endorsed by Telegram.</string>
+    <string name="RelayAboutSourceCode">Telegram for Android source code</string>
 </resources>

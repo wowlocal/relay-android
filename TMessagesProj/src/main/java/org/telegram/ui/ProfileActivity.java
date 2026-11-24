@@ -2495,6 +2495,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             actionBar.getBackButton().setTranslationX(dp(2));
             actionBar.backButtonImageView.setContentDescription(getString(R.string.QrCode));
             actionBar.backButtonImageView.setImageResource(R.drawable.outline_header_qr_24);
+            if (!org.telegram.relay.RelayFeatures.QR_LOGIN) {
+                actionBar.backButtonImageView.setVisibility(View.GONE);
+                actionBar.backButtonImageView.setContentDescription(null);
+            }
             actionBar.backButtonImageView.setColorFilter(getThemedColor(Theme.key_actionBarDefaultIcon), PorterDuff.Mode.SRC_IN);
             actionBar.backButtonImageView.setOnClickListener(v -> {
                 Bundle args = new Bundle();
@@ -3943,18 +3947,22 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         ItemOptions itemOptions = ItemOptions.makeOptions(this, actionsView);
                         itemOptions.setLongPressSelectionEnabled(false);
                         itemOptions.setGravity(Gravity.LEFT);
-                        itemOptions.add(R.drawable.msg_qrcode, getString(R.string.QrCode), () -> {
-                            Bundle args = new Bundle();
-                            args.putLong("chat_id", chatId);
-                            args.putLong("user_id", userId);
-                            presentFragment(new QrShareActivity(args));
-                        });
+                        if (org.telegram.relay.RelayFeatures.QR_LOGIN) {
+                            itemOptions.add(R.drawable.msg_qrcode, getString(R.string.QrCode), () -> {
+                                Bundle args = new Bundle();
+                                args.putLong("chat_id", chatId);
+                                args.putLong("user_id", userId);
+                                presentFragment(new QrShareActivity(args));
+                            });
+                        }
                         itemOptions.add(R.drawable.msg_copy, getString(R.string.ProfileCopyUsername), () -> {
                             AndroidUtilities.addToClipboard("@" + UserObject.getPublicUsername(user));
                         });
-                        itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileUsernameEdit), () -> {
-                            presentFragment(new ChangeUsernameActivity());
-                        });
+                        if (org.telegram.relay.RelayFeatures.FRAGMENT) {
+                            itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileUsernameEdit), () -> {
+                                presentFragment(new ChangeUsernameActivity());
+                            });
+                        }
                         itemOptions.forceBottom(true);
                         itemOptions.translate(x - dp(8), actionsView.getMeasuredHeight() - dp(16));
                         itemOptions.show();
@@ -7964,7 +7972,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
         simpleActionBar.setOccupyStatusBar(actionBar.getOccupyStatusBar());
         simpleActionBar.setMenuOverlayProvider(this::getSimpleMenuOverlay);
-        if (hasMainTabs) {
+        if (hasMainTabs && !org.telegram.relay.RelayFeatures.QR_LOGIN) {
+            // Relay: no profile QR code on the Profile tab, and no back button there either.
+            simpleActionBar.setBackButtonImage(0);
+        } else if (hasMainTabs) {
             simpleActionBar.setBackButtonImage(R.drawable.outline_header_qr_24);
             simpleActionBar.setBackButtonContentDescription(getString(R.string.QrCode));
         } else {
@@ -7984,12 +7995,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (sharedMediaLayout != null && sharedMediaLayout.closeActionMode(true)) {
                     return;
                 }
-                if (hasMainTabs) {
+                if (hasMainTabs && org.telegram.relay.RelayFeatures.QR_LOGIN) {
                     final Bundle args = new Bundle();
                     args.putLong("chat_id", chatId);
                     args.putLong("user_id", userId);
                     presentFragment(new QrShareActivity(args));
-                } else {
+                } else if (!hasMainTabs) {
                     finishFragment();
                 }
             }
@@ -10984,8 +10995,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     setAvatarSectionRow = rowCount++;
                 }
                 numberSectionRow = rowCount++;
-                numberRow = rowCount++;
-                setUsernameRow = rowCount++;
+                if (org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
+                    numberRow = rowCount++;
+                }
+                if (org.telegram.relay.RelayFeatures.FRAGMENT) {
+                    setUsernameRow = rowCount++;
+                }
                 bioRow = rowCount++;
 
                 settingsSectionRow = rowCount++;
@@ -11004,12 +11019,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
                 settingsSectionRow2 = rowCount++;
                 chatRow = rowCount++;
-                privacyRow = rowCount++;
+                if (org.telegram.relay.RelayFeatures.TG_PRIVACY) {
+                    privacyRow = rowCount++;
+                }
                 notificationRow = rowCount++;
                 dataRow = rowCount++;
                 liteModeRow = rowCount++;
 //                stickersRow = rowCount++;
-                if (getMessagesController().filtersEnabled || !getMessagesController().dialogFilters.isEmpty()) {
+                if (org.telegram.relay.RelayFeatures.FOLDER_EDITING && (getMessagesController().filtersEnabled || !getMessagesController().dialogFilters.isEmpty())) {
                     filtersRow = rowCount++;
                 }
                 devicesRow = rowCount++;
@@ -11022,7 +11039,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     starsRow = rowCount++;
                 }
                 StarsController.getInstance(currentAccount, true).getBalance();
-                if (ApplicationLoader.isBetaBuild() || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isHuaweiStoreBuild() || (StarsController.getInstance(currentAccount, true).balanceAvailable() && (StarsController.getInstance(currentAccount, true).hasTransactions() || StarsController.getInstance(currentAccount, true).getBalance().positive()))) {
+                if (org.telegram.relay.RelayFeatures.STARS_PAYMENTS && (ApplicationLoader.isBetaBuild() || ApplicationLoader.isStandaloneBuild() || ApplicationLoader.isHuaweiStoreBuild() || (StarsController.getInstance(currentAccount, true).balanceAvailable() && (StarsController.getInstance(currentAccount, true).hasTransactions() || StarsController.getInstance(currentAccount, true).getBalance().positive())))) {
                     tonRow = rowCount++;
                 }
                 if (!getMessagesController().premiumFeaturesBlocked()) {
@@ -11034,10 +11051,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (premiumRow >= 0 || starsRow >= 0 || tonRow >= 0 || businessRow >= 0 || premiumGiftingRow >= 0) {
                     premiumSectionsRow = rowCount++;
                 }
-                helpHeaderRow = rowCount++;
-                questionRow = rowCount++;
-                faqRow = rowCount++;
-                policyRow = rowCount++;
+                if (org.telegram.relay.RelayFeatures.TG_SUPPORT) {
+                    helpHeaderRow = rowCount++;
+                    questionRow = rowCount++;
+                    faqRow = rowCount++;
+                    policyRow = rowCount++;
+                }
                 if (BuildVars.LOGS_ENABLED || BuildVars.DEBUG_PRIVATE_VERSION) {
                     helpSectionCell = rowCount++;
                     debugHeaderRow = rowCount++;
@@ -11069,7 +11088,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
                 infoStartRow = rowCount;
-                if (!isBot && (hasPhone || !hasInfo)) {
+                if (org.telegram.relay.RelayFeatures.PHONE_CONTACTS && !isBot && (hasPhone || !hasInfo)) {
                     phoneRow = rowCount++;
                 }
                 if (userInfo != null && !TextUtils.isEmpty(userInfo.about)) {
@@ -12578,6 +12597,23 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             otherItem.showSubItem(add_photo);
             otherItem.hideSubItem(edit_avatar);
             otherItem.hideSubItem(delete_avatar);
+        }
+
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: Telegram-only profile actions (gifts, TON, secret chats, statistics, stories,
+            // profile colours, t.me links and usernames, phone contacts, sharing restrictions).
+            final int[] relayHidden = {gift_premium, send_money, start_secret_chat, statistics, channel_stories, edit_color,
+                set_username, copy_link_profile, share_contact, add_contact, enable_no_forwards, disable_no_forwards, bot_privacy};
+            for (int id : relayHidden) {
+                otherItem.hideSubItem(id);
+            }
+            giftAction = org.telegram.relay.RelayFeatures.GIFTS && giftAction;
+            addStoryAction = org.telegram.relay.RelayFeatures.STORIES && addStoryAction;
+            if (!org.telegram.relay.RelayFeatures.TG_CALLS) {
+                otherItem.hideSubItem(call_item);
+                callItemVisible = videoCallItemVisible = false;
+                voiceChatAction = streamAction = false;
+            }
         }
 
         isCallAvailable = callItemVisible;
@@ -14711,6 +14747,34 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         }
 
         private static SearchResult[] onCreateSearchArray(final BaseFragment f) {
+            final SearchResult[] all = onCreateSearchArrayTelegram(f);
+            if (!org.telegram.relay.RelayConfig.ENABLED) {
+                return all;
+            }
+            // Relay: only settings that exist in Relay (notifications, passcode, devices, data,
+            // appearance, power saving, language, accounts) are searchable.
+            final String devices = getString(R.string.Devices);
+            final ArrayList<SearchResult> kept = new ArrayList<>();
+            for (SearchResult r : all) {
+                if (r == null) {
+                    continue;
+                }
+                final int g = r.guid;
+                final boolean underDevices = r.path != null && r.path.length > 0 && devices.equals(r.path[0]);
+                final boolean denied =
+                    g == 501 || g == 5 || g == 8
+                    || g >= 100 && g <= 125 && g != 108 && g != 110 && !(g == 120 || g == 121 && underDevices)
+                    || g >= 217 && g <= 220 || g == 303 || g == 324
+                    || g >= 400 && g <= 406 && g != 400
+                    || g >= 600 && g <= 813 || g == 901 || g == 913;
+                if (!denied) {
+                    kept.add(r);
+                }
+            }
+            return kept.toArray(new SearchResult[0]);
+        }
+
+        private static SearchResult[] onCreateSearchArrayTelegram(final BaseFragment f) {
             final int currentAccount = f.getCurrentAccount();
             final Theme.ResourcesProvider resourcesProvider = f.getResourceProvider();
             return new SearchResult[]{
@@ -16637,6 +16701,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
     private void updateItemsUsername() {
         if (!myProfile || setUsernameItem == null || linkItem == null) return;
+        if (!org.telegram.relay.RelayFeatures.FRAGMENT) {
+            // Relay: Mattermost usernames are set on the server; no t.me link either.
+            setUsernameItem.setVisibility(View.GONE);
+            linkItem.setVisibility(View.GONE);
+            return;
+        }
         TLRPC.User user = getMessagesController().getUser(userId);
         if (user == null) {
             return;

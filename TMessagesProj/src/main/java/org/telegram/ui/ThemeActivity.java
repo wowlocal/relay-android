@@ -778,9 +778,12 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             chatListRow = rowCount++;
             chatListInfoRow = rowCount++;
 
-            appIconHeaderRow = rowCount++;
-            appIconSelectorRow = rowCount++;
-            appIconShadowRow = rowCount++;
+            if (!org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay: Telegram's alternative app icons (and the Premium ones) are not shipped.
+                appIconHeaderRow = rowCount++;
+                appIconSelectorRow = rowCount++;
+                appIconShadowRow = rowCount++;
+            }
 
             swipeGestureHeaderRow = rowCount++;
             swipeGestureRow = rowCount++;
@@ -789,7 +792,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             nightThemeRow = rowCount++;
             browserRow = rowCount++;
             liteModeRow = rowCount++;
-            stickersRow = rowCount++;
+            if (org.telegram.relay.RelayFeatures.STICKERS) {
+                stickersRow = rowCount++;
+            }
             stickersSectionRow = rowCount++;
 
             mediaSoundHeaderRow = rowCount++;

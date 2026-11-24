@@ -60,7 +60,7 @@ public class UserConfig extends BaseController {
 
     public boolean notificationsSettingsLoaded;
     public boolean notificationsSignUpSettingsLoaded;
-    public boolean syncContacts = true;
+    public boolean syncContacts = org.telegram.relay.RelayFeatures.PHONE_CONTACTS;
     public boolean suggestContacts = true;
     public boolean showCallsTab;
     public boolean hasSecureData;
@@ -312,8 +312,8 @@ public class UserConfig extends BaseController {
             botGuestRatingLoadTime = preferences.getInt("botGuestRatingLoadTime", 0);
             webappRatingLoadTime = preferences.getInt("webappRatingLoadTime", 0);
             loginTime = preferences.getInt("loginTime", currentAccount);
-            syncContacts = preferences.getBoolean("syncContacts", true);
-            showCallsTab = preferences.getBoolean("showCallsTab", false);
+            syncContacts = org.telegram.relay.RelayFeatures.PHONE_CONTACTS && preferences.getBoolean("syncContacts", true);
+            showCallsTab = org.telegram.relay.RelayFeatures.TG_CALLS && preferences.getBoolean("showCallsTab", false);
             suggestContacts = preferences.getBoolean("suggestContacts", true);
             hasSecureData = preferences.getBoolean("hasSecureData", false);
             notificationsSettingsLoaded = preferences.getBoolean("notificationsSettingsLoaded4", false);
@@ -484,7 +484,7 @@ public class UserConfig extends BaseController {
         webappRatingLoadTime = 0;
         draftsLoaded = false;
         contactsReimported = true;
-        syncContacts = true;
+        syncContacts = org.telegram.relay.RelayFeatures.PHONE_CONTACTS;
         showCallsTab = false;
         suggestContacts = true;
         unreadDialogsLoaded = true;

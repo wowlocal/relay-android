@@ -192,13 +192,19 @@ public class DataSettingsActivity extends BaseFragment {
         enableAllStreamInfoRow = rowCount++;
 
         enableCacheStreamRow = -1;//rowCount++;
-        callsSectionRow = rowCount++;
-        useLessDataForCallsRow = rowCount++;
-//        quickRepliesRow = rowCount++;
-        callsSection2Row = rowCount++;
-        proxySectionRow = rowCount++;
-        proxyRow = rowCount++;
-        proxySection2Row = rowCount++;
+        callsSectionRow = useLessDataForCallsRow = callsSection2Row = -1;
+        proxySectionRow = proxyRow = proxySection2Row = -1;
+        if (org.telegram.relay.RelayFeatures.TG_CALLS) {
+            callsSectionRow = rowCount++;
+            useLessDataForCallsRow = rowCount++;
+//            quickRepliesRow = rowCount++;
+            callsSection2Row = rowCount++;
+        }
+        if (org.telegram.relay.RelayFeatures.PROXY) {
+            proxySectionRow = rowCount++;
+            proxyRow = rowCount++;
+            proxySection2Row = rowCount++;
+        }
         clearDraftsRow = rowCount++;
         clearDraftsSectionRow = rowCount++;
 

@@ -8874,13 +8874,19 @@ public class MediaDataController extends BaseController {
         loadRecents(MediaDataController.TYPE_FAVE, false, true, false);
         loadRecents(MediaDataController.TYPE_GREETINGS, false, true, false);
         loadRecents(MediaDataController.TYPE_PREMIUM_STICKERS, false, false, true);
-        checkFeaturedStickers();
-        checkFeaturedEmoji();
+        if (org.telegram.relay.RelayFeatures.STICKERS) {
+            checkFeaturedStickers();
+            checkFeaturedEmoji();
+        }
         checkReactions();
-        checkMenuBots(true);
-        checkPremiumPromo();
-        checkPremiumGiftStickers();
-        checkTonGiftStickers();
+        if (org.telegram.relay.RelayFeatures.BOT_WEBAPPS) {
+            checkMenuBots(true);
+        }
+        if (org.telegram.relay.RelayFeatures.PREMIUM) {
+            checkPremiumPromo();
+            checkPremiumGiftStickers();
+            checkTonGiftStickers();
+        }
         checkGenericAnimations();
         getMessagesController().getAvailableEffects();
     }

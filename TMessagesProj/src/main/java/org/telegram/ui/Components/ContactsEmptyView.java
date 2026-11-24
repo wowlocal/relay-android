@@ -80,6 +80,11 @@ public class ContactsEmptyView extends LinearLayout {
         ssb.append("  ").append(getString(R.string.NewContact));
         button.setText(ssb, false);
         addView(button, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 44, Gravity.CENTER_HORIZONTAL | Gravity.TOP));
+        if (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
+            // Relay: contacts are Mattermost users, not phone-book entries; no "New Contact".
+            titleTextView.setText(LocaleController.getString(R.string.NoContacts));
+            button.setVisibility(GONE);
+        }
     }
 
     protected void onInviteClick() {

@@ -353,72 +353,77 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         items.add(UItem.asCustom(bioEdit));
         items.add(UItem.asShadow(bioInfo));
 
-        final TLRPC.User user = getUserConfig().getCurrentUser();
-        items.add(UItem.asHeader(getString(R.string.EditAccountInfoHeader)));
-        if (user != null) {
-            numberRow = items.size();
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_PHONE, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_calls, PhoneFormat.getInstance().format("+" + user.phone), getString(R.string.TapToChangePhone)));
-        }
-        usernameRow = items.size();
-        if (UserObject.getPublicUsername(user) != null) {
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_USERNAME, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.filled_chatlist_mention, "@" + UserObject.getPublicUsername(user), getString(R.string.Username)));
-        } else {
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_USERNAME, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.filled_chatlist_mention, getString(R.string.AddUsername), null));
-        }
-        birthdayRow = items.size();
-        if (birthday != null) {
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday, birthdayString(birthday), getString(R.string.ContactBirthday)));
-        } else {
-            items.add(SettingsActivity.SettingCell.Factory.of(INFO_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday, getString(R.string.AddBirthday), null));
-        }
-        if (!getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY)) {
-            ArrayList<TLRPC.PrivacyRule> rules = getContactsController().getPrivacyRules(ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY);
-            if (rules != null && birthdayInfo == null) {
-                String string = getString(R.string.EditProfileBirthdayInfoContacts);
-                if (!rules.isEmpty()) {
-                    for (int i = 0; i < rules.size(); ++i) {
-                        if (rules.get(i) instanceof TLRPC.TL_privacyValueAllowContacts) {
-                            string = getString(R.string.EditProfileBirthdayInfoContacts);
-                            break;
-                        }
-                        if (rules.get(i) instanceof TLRPC.TL_privacyValueAllowAll || rules.get(i) instanceof TLRPC.TL_privacyValueDisallowAll) {
-                            string = getString(R.string.EditProfileBirthdayInfo);
+        // Relay: phone number, Telegram username, birthday, personal channel, business hours and
+        // location, chat automation bots are Telegram-only. Name, bio and accounts stay.
+        usernameRow = birthdayRow = channelRow = -1;
+        if (!org.telegram.relay.RelayConfig.ENABLED) {
+            final TLRPC.User user = getUserConfig().getCurrentUser();
+            items.add(UItem.asHeader(getString(R.string.EditAccountInfoHeader)));
+            if (user != null) {
+                numberRow = items.size();
+                items.add(SettingsActivity.SettingCell.Factory.of(INFO_PHONE, IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom, R.drawable.settings_calls, PhoneFormat.getInstance().format("+" + user.phone), getString(R.string.TapToChangePhone)));
+            }
+            usernameRow = items.size();
+            if (UserObject.getPublicUsername(user) != null) {
+                items.add(SettingsActivity.SettingCell.Factory.of(INFO_USERNAME, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.filled_chatlist_mention, "@" + UserObject.getPublicUsername(user), getString(R.string.Username)));
+            } else {
+                items.add(SettingsActivity.SettingCell.Factory.of(INFO_USERNAME, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.filled_chatlist_mention, getString(R.string.AddUsername), null));
+            }
+            birthdayRow = items.size();
+            if (birthday != null) {
+                items.add(SettingsActivity.SettingCell.Factory.of(INFO_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday, birthdayString(birthday), getString(R.string.ContactBirthday)));
+            } else {
+                items.add(SettingsActivity.SettingCell.Factory.of(INFO_BIRTHDAY, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.filled_birthday, getString(R.string.AddBirthday), null));
+            }
+            if (!getContactsController().getLoadingPrivacyInfo(ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY)) {
+                ArrayList<TLRPC.PrivacyRule> rules = getContactsController().getPrivacyRules(ContactsController.PRIVACY_RULES_TYPE_BIRTHDAY);
+                if (rules != null && birthdayInfo == null) {
+                    String string = getString(R.string.EditProfileBirthdayInfoContacts);
+                    if (!rules.isEmpty()) {
+                        for (int i = 0; i < rules.size(); ++i) {
+                            if (rules.get(i) instanceof TLRPC.TL_privacyValueAllowContacts) {
+                                string = getString(R.string.EditProfileBirthdayInfoContacts);
+                                break;
+                            }
+                            if (rules.get(i) instanceof TLRPC.TL_privacyValueAllowAll || rules.get(i) instanceof TLRPC.TL_privacyValueDisallowAll) {
+                                string = getString(R.string.EditProfileBirthdayInfo);
+                            }
                         }
                     }
+                    birthdayInfo = AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(string, () -> {
+                        presentFragment(new PrivacyControlActivity(PrivacyControlActivity.PRIVACY_RULES_TYPE_BIRTHDAY));
+                    }), true);
                 }
-                birthdayInfo = AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(string, () -> {
-                    presentFragment(new PrivacyControlActivity(PrivacyControlActivity.PRIVACY_RULES_TYPE_BIRTHDAY));
-                }), true);
             }
-        }
-        items.add(UItem.asShadow(birthdayInfo));
+            items.add(UItem.asShadow(birthdayInfo));
 
-        channelRow = items.size();
-        if (channel == null) {
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_CHANNEL, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_filled_menu_channels, getString(R.string.EditProfileChannelTitle), null, getString(R.string.EditProfileChannelAdd)));
-        } else {
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_CHANNEL, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_filled_menu_channels, getString(R.string.EditProfileChannelTitle), channel.title));
-        }
-        if (hadHours) {
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_HOURS, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.filled_premium_hours, getString(R.string.EditProfileHours)));
-        }
-        if (hadLocation) {
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_LOCATION, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.filled_location, getString(R.string.EditProfileLocation)));
-        }
-        if (bots != null && !bots.isEmpty()) {
-            final StringBuilder value = new StringBuilder();
-            for (final TL_account.TL_connectedBot bot : bots) {
-                final TLRPC.User botUser = MessagesController.getInstance(currentAccount).getUser(bot.bot_id);
-                if (botUser != null) {
-                    if (value.length() > 0) value.append(", ");
-                    value.append(UserObject.getUserName(botUser));
-                }
+            channelRow = items.size();
+            if (channel == null) {
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_CHANNEL, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_filled_menu_channels, getString(R.string.EditProfileChannelTitle), null, getString(R.string.EditProfileChannelAdd)));
+            } else {
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_CHANNEL, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_filled_menu_channels, getString(R.string.EditProfileChannelTitle), channel.title));
             }
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_AI, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.premium_ai_editor, getString(R.string.EditProfileChatAutomation), value));
-        } else {
-            items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_AI, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.premium_ai_editor, applyNewSpan(getString(R.string.EditProfileChatAutomation))));
+            if (hadHours) {
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_HOURS, IconBackgroundColors.ORANGE_DEEP.top, IconBackgroundColors.ORANGE_DEEP.bottom, R.drawable.filled_premium_hours, getString(R.string.EditProfileHours)));
+            }
+            if (hadLocation) {
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_LOCATION, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.filled_location, getString(R.string.EditProfileLocation)));
+            }
+            if (bots != null && !bots.isEmpty()) {
+                final StringBuilder value = new StringBuilder();
+                for (final TL_account.TL_connectedBot bot : bots) {
+                    final TLRPC.User botUser = MessagesController.getInstance(currentAccount).getUser(bot.bot_id);
+                    if (botUser != null) {
+                        if (value.length() > 0) value.append(", ");
+                        value.append(UserObject.getUserName(botUser));
+                    }
+                }
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_AI, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.premium_ai_editor, getString(R.string.EditProfileChatAutomation), value));
+            } else {
+                items.add(SettingsActivity.SettingCell.Factory.of(BUTTON_AI, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.premium_ai_editor, applyNewSpan(getString(R.string.EditProfileChatAutomation))));
+            }
+            items.add(UItem.asShadow(-3, getString(R.string.EditProfileChatAutomationInfo)));
         }
-        items.add(UItem.asShadow(-3, getString(R.string.EditProfileChatAutomationInfo)));
         final boolean hasAddAccount = UserConfig.getActivatedAccountsCount() < UserConfig.MAX_ACCOUNT_COUNT;
         if (hasAddAccount) {
             addAccountRow = items.size();
@@ -431,7 +436,7 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             for (int i = 0; i < accountNumbers.size(); ++i) {
                 items.add(SettingsActivity.AccountCell.Factory.of(i, accountNumbers.get(i)));
             }
-            if (!UserConfig.hasPremiumOnAccounts()) {
+            if (org.telegram.relay.RelayFeatures.PREMIUM && !UserConfig.hasPremiumOnAccounts()) {
                 final int moreAccounts = Math.max(0, UserConfig.getMaxAccountCount() - UserConfig.getActivatedAccountsCount());
                 items.add(UItem.asShadow(
                     TextUtils.concat(

@@ -187,6 +187,9 @@ public class StoriesController {
     }
 
     public void loadAllStories() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return;
+        }
         if (!firstLoad) {
             loadStories();
             loadStoriesRead();
@@ -248,6 +251,9 @@ public class StoriesController {
     }
 
     public boolean hasStories(long dialogId) {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return false;
+        }
         if (dialogId == 0) {
             return false;
         }
@@ -281,10 +287,16 @@ public class StoriesController {
     }
 
     public boolean hasStories() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return false;
+        }
         return (dialogListStories != null && dialogListStories.size() > 0) || hasSelfStories();
     }
 
     public void loadStories() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return;
+        }
         if (firstLoad) {
             loadingFromDatabase = true;
             storiesStorage.getAllStories(allStories -> {
@@ -1116,6 +1128,9 @@ public class StoriesController {
     }
 
     public boolean hasSelfStories() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return false;
+        }
         long clientUserId = UserConfig.getInstance(currentAccount).clientUserId;
         TL_stories.PeerStories storyItem = allStoriesMap.get(clientUserId);
         if (storyItem != null && !storyItem.stories.isEmpty()) {
@@ -1794,6 +1809,9 @@ public class StoriesController {
     }
 
     public boolean hasHiddenStories() {
+        if (!org.telegram.relay.RelayFeatures.STORIES) {
+            return false;
+        }
         return !hiddenListStories.isEmpty();
     }
 

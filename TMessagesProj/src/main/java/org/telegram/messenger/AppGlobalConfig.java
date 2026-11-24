@@ -112,7 +112,7 @@ public class AppGlobalConfig {
 
     public final ConfigStringSet botAllowedSuffixes = ofStringSet("bot_allowed_suffixes", Collections.singleton("bot"));
 
-    public final ConfigBoolean walletAvailable = ofBoolean("wallet_available", BuildVars.DEBUG_VERSION);
+    public final ConfigBoolean walletAvailable = ofBoolean("wallet_available", BuildVars.DEBUG_VERSION).forceOff(!org.telegram.relay.RelayFeatures.WALLET);
     public final ConfigBoolean walletPaidMessageRecipientMessageAmountCheck = ofBoolean("wallet_paid_message_recipient_message_amount_check", true);
     public final ConfigLong walletTransferMinNanos = ofLong("wallet_transfer_min_nanos", 100_000_000);
     public final ConfigLong walletGaslessMinNanos = ofLong("wallet_gasless_min_nanos", 100_000_000);
@@ -456,8 +456,16 @@ public class AppGlobalConfig {
             this.handler = new Internal(name, defaultValue);
         }
 
+        private boolean forcedOff;
+
+        /** Relay: the value is always false (a Telegram-only feature), whatever the app config says. */
+        private ConfigBoolean forceOff(boolean off) {
+            forcedOff = off;
+            return this;
+        }
+
         public boolean get() {
-            return handler.value;
+            return !forcedOff && handler.value;
         }
 
         private static class Internal implements ConfigInternal {

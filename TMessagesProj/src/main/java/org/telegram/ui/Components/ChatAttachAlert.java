@@ -6857,25 +6857,25 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                 if (plainTextEnabled) {
                     locationButton = buttonsCount++;
                 }
-                if (plainTextEnabled && MessagesController.getInstance(currentAccount).richEditorAvailable()) {
+                if (org.telegram.relay.RelayFeatures.RICH_MESSAGES && plainTextEnabled && MessagesController.getInstance(currentAccount).richEditorAvailable()) {
                     richButton = buttonsCount++;
                 }
 
-                if (pollsEnabled) {
+                if (org.telegram.relay.RelayFeatures.POLLS && pollsEnabled) {
                     pollButton = buttonsCount++;
                 }
-                if (plainTextEnabled) {
+                if (org.telegram.relay.RelayFeatures.PHONE_CONTACTS && plainTextEnabled) {
                     contactButton = buttonsCount++;
                 }
                 musicButton = buttonsCount++;
-                if (todoEnabled) {
+                if (org.telegram.relay.RelayFeatures.POLLS && todoEnabled) {
                     todoButton = buttonsCount++;
                 }
-                if (baseFragment instanceof ChatActivity && ((ChatActivity) baseFragment).getChatMode() == 0 && user != null && !paidUser && !user.bot && QuickRepliesController.getInstance(currentAccount).hasReplies()) {
+                if (org.telegram.relay.RelayFeatures.BUSINESS && baseFragment instanceof ChatActivity && ((ChatActivity) baseFragment).getChatMode() == 0 && user != null && !paidUser && !user.bot && QuickRepliesController.getInstance(currentAccount).hasReplies()) {
                     quickRepliesButton = buttonsCount++;
                 }
 
-                if ((photosEnabled || videosEnabled) && !paidUser && (chat == null || !ChatObject.isMonoForum(chat))) {
+                if (org.telegram.relay.RelayFeatures.BOT_WEBAPPS && (photosEnabled || videosEnabled) && !paidUser && (chat == null || !ChatObject.isMonoForum(chat))) {
                     if (baseFragment instanceof ChatActivity && !((ChatActivity) baseFragment).isInScheduleMode() && !((ChatActivity) baseFragment).isSecretChat() && ((ChatActivity) baseFragment).getChatMode() != ChatActivity.MODE_QUICK_REPLIES) {
                         ChatActivity chatActivity = (ChatActivity) baseFragment;
 
