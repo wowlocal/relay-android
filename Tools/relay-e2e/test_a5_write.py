@@ -346,7 +346,7 @@ def main():
         confirmed = False
         if ok:
             # A group creator gets Telegram's admin sheet ("Proceed"), others the plain alert ("Delete").
-            confirm = wait_until(lambda: d.find(text="Proceed") or d.find(text="Delete"), timeout=4)
+            confirm = wait_until(lambda: d.find(desc="Proceed") or d.find(text="Proceed") or d.find(text="Delete"), timeout=4)
             if confirm:
                 d.tap_node(confirm)
                 confirmed = True
