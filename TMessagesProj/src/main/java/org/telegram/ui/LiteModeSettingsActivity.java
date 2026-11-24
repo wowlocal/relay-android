@@ -258,8 +258,11 @@ public class LiteModeSettingsActivity extends BaseFragment {
         }
 
         items.add(Item.asHeader(LocaleController.getString(R.string.LiteOptionsTitle)));
-        items.add(Item.asSwitch(R.drawable.msg2_sticker, LocaleController.getString(R.string.LiteOptionsStickers), LiteMode.FLAGS_ANIMATED_STICKERS));
-        if (expanded[0]) {
+        // Relay: no stickers (RelayFeatures.STICKERS), so no "Animated Stickers" switch.
+        if (org.telegram.relay.RelayFeatures.STICKERS) {
+            items.add(Item.asSwitch(R.drawable.msg2_sticker, LocaleController.getString(R.string.LiteOptionsStickers), LiteMode.FLAGS_ANIMATED_STICKERS));
+        }
+        if (org.telegram.relay.RelayFeatures.STICKERS && expanded[0]) {
             items.add(Item.asCheckbox(LocaleController.getString(R.string.LiteOptionsAutoplayKeyboard), LiteMode.FLAG_ANIMATED_STICKERS_KEYBOARD));
             items.add(Item.asCheckbox(LocaleController.getString(R.string.LiteOptionsAutoplayChat), LiteMode.FLAG_ANIMATED_STICKERS_CHAT));
         }
@@ -287,7 +290,9 @@ public class LiteModeSettingsActivity extends BaseFragment {
                 items.add(Item.asCheckbox(LocaleController.getString("LiteOptionsThanos"), LiteMode.FLAG_CHAT_THANOS));
             }
         }
-        items.add(Item.asSwitch(R.drawable.msg2_call_earpiece, LocaleController.getString(R.string.LiteOptionsCalls), LiteMode.FLAG_CALLS_ANIMATIONS));
+        if (org.telegram.relay.RelayFeatures.TG_CALLS) {
+            items.add(Item.asSwitch(R.drawable.msg2_call_earpiece, LocaleController.getString(R.string.LiteOptionsCalls), LiteMode.FLAG_CALLS_ANIMATIONS));
+        }
         items.add(Item.asSwitch(R.drawable.msg2_videocall, LocaleController.getString(R.string.LiteOptionsAutoplayVideo), LiteMode.FLAG_AUTOPLAY_VIDEOS));
         items.add(Item.asSwitch(R.drawable.msg2_gif, LocaleController.getString(R.string.LiteOptionsAutoplayGifs), LiteMode.FLAG_AUTOPLAY_GIFS));
         items.add(Item.asSwitch(R.drawable.photo_star, LocaleController.getString(R.string.LiteOptionsParticles), LiteMode.FLAG_PARTICLES));

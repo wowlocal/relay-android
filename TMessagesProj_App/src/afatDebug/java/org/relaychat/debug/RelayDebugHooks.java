@@ -35,6 +35,7 @@ import org.telegram.tgnet.TLRPC;
  * adb shell am broadcast -a org.relaychat.DEBUG_DUMP_DIALOGS
  *     # writes files/relay-dialogs.txt: the client's chat list as shown (TSV, see dumpDialogs)
  * adb shell am broadcast -a org.relaychat.DEBUG_OPEN_CHAT --es channel &lt;mattermost channel id&gt; [--ei message &lt;id&gt;]
+ * adb shell am broadcast -a org.relaychat.DEBUG_OPEN_URL --es url &lt;url&gt;   # Browser.openUrl, like an in-app link tap
  * </pre>
  *
  * Results are logged with tag {@code RelayDebug}: {@code DEBUG_LOGIN ok account=…} or
@@ -53,6 +54,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_SEND_MEDIA = "org.relaychat.DEBUG_SEND_MEDIA";
     /** {@code --es text <substring of a message in the open chat> --es emoji 👍} (empty emoji clears). */
     public static final String ACTION_REACT = "org.relaychat.DEBUG_REACT";
+    /** {@code --es url <url>}: opens a link the way an in-app tap does ({@code Browser.openUrl}). */
+    public static final String ACTION_OPEN_URL = "org.relaychat.DEBUG_OPEN_URL";
 
     @Override
     public boolean onCreate() {
@@ -69,6 +72,7 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_WS);
         filter.addAction(ACTION_SEND_MEDIA);
         filter.addAction(ACTION_REACT);
+        filter.addAction(ACTION_OPEN_URL);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -151,6 +155,11 @@ public class RelayDebugHooks extends ContentProvider {
                     RelayHooks.debugReconnect(account, "reconnect".equals(op));
                 }
                 Log.i(TAG, "DEBUG_WS ok " + op + " " + RelayHooks.debugLiveState(account));
+                return;
+            }
+            if (ACTION_OPEN_URL.equals(action)) {
+                String url = intent.getStringExtra("url");
+                AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.openUrl(url));
                 return;
             }
             if (ACTION_DUMP_DIALOG.equals(action)) {

@@ -1,6 +1,9 @@
 package org.telegram.relay;
 
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ChatActivity;
+
+import java.util.List;
 
 /**
  * Telegram features that Relay (Mattermost) does not have. All flags are compile-time constants:
@@ -73,6 +76,84 @@ public final class RelayFeatures {
     public static final boolean RICH_MESSAGES = false;
     /** Telegram's 2-step verification cloud password. */
     public static final boolean CLOUD_PASSWORD = false;
+    /** Telegram's per-user chat archive (Mattermost archives channels for everyone, as an admin action). */
+    public static final boolean CHAT_ARCHIVE = false;
+    /** Blocking users (Mattermost has no blocking). */
+    public static final boolean BLOCK_USERS = false;
+    /** Telegram's message translation (messages.translateText). */
+    public static final boolean TRANSLATE = false;
+    /** Reporting messages and chats to Telegram. */
+    public static final boolean REPORT = false;
+    /** Forum topics (Mattermost threads are not topics). */
+    public static final boolean TOPICS = false;
+    /** Telegram invite links (t.me/+…). */
+    public static final boolean INVITE_LINKS = false;
+
+    /** Message long-press actions Relay does not offer ({@code ChatActivity.OPTION_*}). */
+    private static final int[] DENIED_MESSAGE_OPTIONS = {
+        ChatActivity.OPTION_APPLY_LOCALIZATION_OR_THEME,
+        ChatActivity.OPTION_ADD_TO_STICKERS_OR_MASKS,
+        ChatActivity.OPTION_ADD_TO_GIFS,
+        ChatActivity.OPTION_ADD_CONTACT,
+        ChatActivity.OPTION_CALL,
+        ChatActivity.OPTION_CALL_AGAIN,
+        ChatActivity.OPTION_RATE_CALL,
+        ChatActivity.OPTION_ADD_STICKER_TO_FAVORITES,
+        ChatActivity.OPTION_DELETE_STICKER_FROM_FAVORITES,
+        ChatActivity.OPTION_REPORT_CHAT,
+        ChatActivity.OPTION_UNVOTE,
+        ChatActivity.OPTION_STOP_POLL_OR_QUIZ,
+        ChatActivity.OPTION_STATISTICS,
+        ChatActivity.OPTION_TRANSLATE,
+        ChatActivity.OPTION_TRANSCRIBE,
+        ChatActivity.OPTION_HIDE_SPONSORED_MESSAGE,
+        ChatActivity.OPTION_ABOUT_REVENUE_SHARING_ADS,
+        ChatActivity.OPTION_REPORT_AD,
+        ChatActivity.OPTION_REMOVE_ADS,
+        ChatActivity.OPTION_SPEED_PROMO,
+        ChatActivity.OPTION_FACT_CHECK,
+        ChatActivity.OPTION_EDIT_PRICE,
+        ChatActivity.OPTION_GIFT,
+        ChatActivity.OPTION_EDIT_TODO,
+        ChatActivity.OPTION_ADD_TO_TODO,
+        ChatActivity.OPTION_SUGGESTION_EDIT_PRICE,
+        ChatActivity.OPTION_SUGGESTION_EDIT_TIME,
+        ChatActivity.OPTION_SUGGESTION_EDIT_MESSAGE,
+        ChatActivity.OPTION_SUGGESTION_ADD_OFFER,
+        ChatActivity.OPTION_VIEW_STATISTICS,
+        ChatActivity.OPTION_SEND_MONEY,
+    };
+
+    public static boolean isMessageOptionAllowed(int option) {
+        if (!RelayConfig.ENABLED) {
+            return true;
+        }
+        for (int denied : DENIED_MESSAGE_OPTIONS) {
+            if (denied == option) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Removes denied entries from the parallel lists {@code ChatActivity.createMenu} builds
+     * (option ids, titles, icons). Kept: reply, copy, copy link, edit, pin, forward, select, delete,
+     * save, share, replies, scheduling.
+     */
+    public static void filterMessageOptions(List<Integer> options, List<CharSequence> items, List<Integer> icons) {
+        for (int i = options.size() - 1; i >= 0; i--) {
+            if (!isMessageOptionAllowed(options.get(i))) {
+                options.remove(i);
+                if (i < items.size()) {
+                    items.remove(i);
+                }
+                if (i < icons.size()) {
+                    icons.remove(i);
+                }
+            }
+        }
+    }
 
     /** Fragments that must never open in Relay (class simple names). */
     private static final String[] DENIED_FRAGMENTS = {
@@ -100,6 +181,13 @@ public final class RelayFeatures {
         "IntroActivity",
         "ChangeUsernameActivity",
         "QrShareActivity",
+        // A6b: settings screens Relay has no backing for.
+        "PrivacySettingsActivity",
+        "StickersActivity",
+        "ArchivedStickersActivity",
+        "FeaturedStickersActivity",
+        "FilterChatlistActivity",
+        "GroupStickersActivity",
     };
 
     /**

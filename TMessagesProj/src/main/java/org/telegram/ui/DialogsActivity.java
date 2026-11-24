@@ -3721,11 +3721,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                                     return PixelFormat.TRANSPARENT;
                                 }
                             })
-                            .addIf(getMessagesController().getDialogFilters().size() > 1, R.drawable.tabs_reorder, LocaleController.getString(R.string.FilterReorder), () -> {
+                            .addIf(org.telegram.relay.RelayFeatures.FOLDER_EDITING && getMessagesController().getDialogFilters().size() > 1, R.drawable.tabs_reorder, LocaleController.getString(R.string.FilterReorder), () -> {
                                 filterTabsView.setIsEditing(true);
                                 showDoneItem(true);
                             })
-                            .add(R.drawable.msg_edit, defaultTab ? LocaleController.getString(R.string.FilterEditAll) : LocaleController.getString(R.string.FilterEdit), () -> {
+                            .addIf(org.telegram.relay.RelayFeatures.FOLDER_EDITING, R.drawable.msg_edit, defaultTab ? LocaleController.getString(R.string.FilterEditAll) : LocaleController.getString(R.string.FilterEdit), () -> {
                                 presentFragment(defaultTab ? new FiltersSetupActivity() : new FilterCreateActivity(dialogFilter));
                             })
                             .addIf(dialogFilter != null && !dialogs.isEmpty(), muteAll ? R.drawable.msg_mute : R.drawable.msg_unmute, muteAll ? LocaleController.getString(R.string.FilterMuteAll) : LocaleController.getString(R.string.FilterUnmuteAll), () -> {
@@ -3742,14 +3742,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                             .addIf(hasUnread, R.drawable.msg_markread, LocaleController.getString(R.string.MarkAllAsRead), () -> {
                                 markDialogsAsRead(dialogs);
                             })
-                            .addIf(hasShare, R.drawable.msg_share, FilterCreateActivity.withNew(filter != null && filter.isMyChatlist() ? -1 : 0, LocaleController.getString(R.string.LinkActionShare), true), () -> {
+                            .addIf(org.telegram.relay.RelayFeatures.FOLDER_EDITING && hasShare, R.drawable.msg_share, FilterCreateActivity.withNew(filter != null && filter.isMyChatlist() ? -1 : 0, LocaleController.getString(R.string.LinkActionShare), true), () -> {
                                 if (shareEmpty[0]) {
                                     presentFragment(new FilterChatlistActivity(finalFilter, null));
                                 } else {
                                     FilterCreateActivity.FilterInvitesBottomSheet.show(DialogsActivity.this, finalFilter, null);
                                 }
                             })
-                            .addIf(!defaultTab, R.drawable.msg_delete, LocaleController.getString(R.string.FilterDeleteItem), true, () -> {
+                            .addIf(org.telegram.relay.RelayFeatures.FOLDER_EDITING && !defaultTab, R.drawable.msg_delete, LocaleController.getString(R.string.FilterDeleteItem), true, () -> {
                                 showDeleteAlert(dialogFilter);
                             })
                             .setDimAlpha(0x60)
@@ -8438,7 +8438,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final ArrayList<Long> dialogIdArray = new ArrayList<>();
         dialogIdArray.add(dialogId);
 
-        boolean hasFolders = communityId == 0 &&
+        boolean hasFolders = org.telegram.relay.RelayFeatures.FOLDER_EDITING && communityId == 0 &&
             getMessagesController().filtersEnabled &&
             getMessagesController().dialogFiltersLoaded &&
             getMessagesController().dialogFilters != null &&
@@ -9815,7 +9815,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             }
         }
-        if (archiveItem != null && archive2Item != null) {
+        if (archiveItem != null && archive2Item != null && !org.telegram.relay.RelayFeatures.CHAT_ARCHIVE) {
+            // Relay: Mattermost has no per-user chat archive (archiving a channel is an admin action for everyone).
+            archiveItem.setVisibility(View.GONE);
+            archive2Item.setVisibility(View.GONE);
+        } else if (archiveItem != null && archive2Item != null) {
             if (canUnarchiveCount != 0 && communitiesCount == 0 && communityId == 0) {
                 final String contentDescription = LocaleController.getString(R.string.Unarchive);
                 archiveItem.setTextAndIcon(contentDescription, R.drawable.msg_unarchive);
@@ -9860,7 +9864,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
         }
         if (blockItem != null) {
-            if (cantBlockCount != 0) {
+            if (cantBlockCount != 0 || !org.telegram.relay.RelayFeatures.BLOCK_USERS) {
                 blockItem.setVisibility(View.GONE);
             } else {
                 blockItem.setVisibility(View.VISIBLE);
@@ -9875,14 +9879,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 } catch (Exception ignore) {
                 }
             }
-            if (cantRemoveFromFolder) {
+            if (cantRemoveFromFolder || !org.telegram.relay.RelayFeatures.FOLDER_EDITING) {
                 removeFromFolderItem.setVisibility(View.GONE);
             } else {
                 removeFromFolderItem.setVisibility(View.VISIBLE);
             }
         }
         if (addToFolderItem != null) {
-            if (folderId == 1 || filterTabsView != null && getFilterTabsVisibilityFactor(false) > 0.5f && filterTabsView.currentTabIsDefault() && !FiltersListBottomSheet.getCanAddDialogFilters(this, selectedDialogs).isEmpty()) {
+            if (org.telegram.relay.RelayFeatures.FOLDER_EDITING && folderId == 1 || org.telegram.relay.RelayFeatures.FOLDER_EDITING && filterTabsView != null && getFilterTabsVisibilityFactor(false) > 0.5f && filterTabsView.currentTabIsDefault() && !FiltersListBottomSheet.getCanAddDialogFilters(this, selectedDialogs).isEmpty()) {
                 addToFolderItem.setVisibility(View.VISIBLE);
             } else {
                 addToFolderItem.setVisibility(View.GONE);
@@ -10840,6 +10844,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private boolean showSuggestion(String suggestion) {
+        if (!org.telegram.relay.RelayFeatures.TG_PRIVACY) {
+            return false;
+        }
         if ("AUTOARCHIVE_POPULAR".equals(suggestion)) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
             builder.setTitle(LocaleController.getString(R.string.HideNewChatsAlertTitle));
@@ -10856,6 +10863,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void showFiltersHint() {
+        if (!org.telegram.relay.RelayFeatures.FOLDER_EDITING) {
+            return;
+        }
         if (askingForPermissions || !getMessagesController().dialogFiltersLoaded || !getMessagesController().showFiltersTooltip || filterTabsView == null || !getMessagesController().getDialogFilters().isEmpty() || isPaused || !getUserConfig().filtersLoaded || inPreviewMode) {
             return;
         }

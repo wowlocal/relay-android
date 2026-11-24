@@ -9557,8 +9557,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
 
                     final boolean forwardsAllowed = !userInfo.noforwards_my_enabled && !userInfo.noforwards_peer_enabled;
-                    otherItem.setSubItemShown(enable_no_forwards, forwardsAllowed);
-                    otherItem.setSubItemShown(disable_no_forwards, !forwardsAllowed);
+                    // Relay: no per-chat sharing restrictions.
+                    otherItem.setSubItemShown(enable_no_forwards, !org.telegram.relay.RelayConfig.ENABLED && forwardsAllowed);
+                    otherItem.setSubItemShown(disable_no_forwards, !org.telegram.relay.RelayConfig.ENABLED && !forwardsAllowed);
                 }
             }
         } else if (id == NotificationCenter.privacyRulesUpdated) {
@@ -11185,7 +11186,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     divider = true;
                 }
 
-                if (!myProfile && showAddToContacts && user != null && !user.contact && !user.bot && !UserObject.isService(user.id)) {
+                if (org.telegram.relay.RelayFeatures.PHONE_CONTACTS && !myProfile && showAddToContacts && user != null && !user.contact && !user.bot && !UserObject.isService(user.id)) {
                     addToContactsRow = rowCount++;
                     divider = true;
                 }
@@ -12603,7 +12604,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             // Relay: Telegram-only profile actions (gifts, TON, secret chats, statistics, stories,
             // profile colours, t.me links and usernames, phone contacts, sharing restrictions).
             final int[] relayHidden = {gift_premium, send_money, start_secret_chat, statistics, channel_stories, edit_color,
-                set_username, copy_link_profile, share_contact, add_contact, enable_no_forwards, disable_no_forwards, bot_privacy};
+                set_username, copy_link_profile, share_contact, add_contact, enable_no_forwards, disable_no_forwards, bot_privacy,
+                // A6b: reports, blocking, phone contacts, t.me sharing, linked discussion, topics.
+                report, block_contact, edit_contact, delete_contact, share, view_discussion, delete_topic};
             for (int id : relayHidden) {
                 otherItem.hideSubItem(id);
             }
@@ -12653,6 +12656,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void createAutoDeleteItem(Context context) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: no Telegram auto-delete timers (Mattermost retention is a server policy).
+            return;
+        }
         autoDeletePopupWrapper = new AutoDeletePopupWrapper(context, otherItem.getPopupLayout().getSwipeBack(), new AutoDeletePopupWrapper.Callback() {
 
             @Override
@@ -13761,7 +13768,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             } else {
                                 text = "—";
                             }
-                            containsQr = !myProfile;
+                            containsQr = org.telegram.relay.RelayFeatures.QR_LOGIN && !myProfile;
                         } else if (currentChat != null) {
                             TLRPC.Chat chat = getMessagesController().getChat(chatId);
                             username = ChatObject.getPublicUsername(chat);
@@ -13769,7 +13776,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                                 usernames.addAll(chat.usernames);
                             }
                             if (ChatObject.isPublic(chat)) {
-                                containsQr = !myProfile;
+                                containsQr = org.telegram.relay.RelayFeatures.QR_LOGIN && !myProfile;
                                 text = getMessagesController().linkPrefix + "/" + username + (topicId != 0 ? "/" + topicId : "");
                                 value = LocaleController.getString(R.string.InviteLink);
                             } else {

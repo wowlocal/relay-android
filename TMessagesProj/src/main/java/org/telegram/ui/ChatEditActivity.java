@@ -1186,7 +1186,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
         if (locationCell != null || /*signCell != null ||*/ historyCell != null || typeCell != null || linkedCell != null || forumsCell != null) {
             settingsSectionCell = new TextInfoPrivacyCell(context, 12, resourceProvider);
-            if (forumsCell != null) {
+            if (forumsCell != null && org.telegram.relay.RelayFeatures.TOPICS) {
                 settingsSectionCell.setText(getString(R.string.ForumToggleDescription));
             } else if (/*signCell != null*/ false) {
                 settingsSectionCell.setText(getString("ChannelSignMessagesInfo", R.string.ChannelSignMessagesInfo));
@@ -2494,6 +2494,28 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         if (suggestedCell != null) {
             updateSuggestedCell(animated);
         }
+        relayHideTelegramRows();
+    }
+
+    /**
+     * Relay: rows of Telegram group/channel settings Mattermost has no equivalent for (public link
+     * and type, linked channel, history for new members, colours, topics, reaction and permission
+     * rules, welcome message, invite links, removed users, recent actions, stickers, boosts,
+     * affiliate programs, communities). Name, photo, description, admins, members and delete stay.
+     */
+    private void relayHideTelegramRows() {
+        if (!org.telegram.relay.RelayConfig.ENABLED || currentChat == null) {
+            return;
+        }
+        final View[] hidden = {locationCell, typeCell, linkedCell, suggestedCell, colorCell, autoTranslationCell, historyCell,
+            forumsCell, reactionsCell, stickersCell, stickersInfoCell, memberRequestsCell, inviteLinksCell, blockCell, logCell,
+            channelAffiliateProgramsCell, statsAndBoosts, welcomeMessagesCell, communityCell, communityInfoCell, communityUnlinkCell,
+            communityGapView, publicLinkCell};
+        for (View v : hidden) {
+            if (v != null) {
+                v.setVisibility(View.GONE);
+            }
+        }
     }
 
     public void updateColorCell() {
@@ -2531,6 +2553,10 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
 
     private ValueAnimator updateHistoryShowAnimator;
     private void updateHistoryShow(boolean show, boolean animated) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: Mattermost channel history is always visible to members.
+            show = false;
+        }
         final boolean finalShow = show;
         if (updateHistoryShowAnimator != null) {
             updateHistoryShowAnimator.cancel();

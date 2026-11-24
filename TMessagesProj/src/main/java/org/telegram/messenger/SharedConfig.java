@@ -1589,6 +1589,15 @@ public class SharedConfig {
     }
 
     public static int getChatSwipeAction(int currentAccount) {
+        final int action = getChatSwipeActionTelegram(currentAccount);
+        if (!org.telegram.relay.RelayFeatures.CHAT_ARCHIVE && action == SwipeGestureSettingsView.SWIPE_GESTURE_ARCHIVE) {
+            // Relay: no chat archive; swiping marks as read / unread instead.
+            return SwipeGestureSettingsView.SWIPE_GESTURE_READ;
+        }
+        return action;
+    }
+
+    private static int getChatSwipeActionTelegram(int currentAccount) {
         if (chatSwipeAction >= 0) {
             if (chatSwipeAction == SwipeGestureSettingsView.SWIPE_GESTURE_FOLDERS && MessagesController.getInstance(currentAccount).dialogFilters.isEmpty()) {
                 return SwipeGestureSettingsView.SWIPE_GESTURE_ARCHIVE;

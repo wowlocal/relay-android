@@ -1851,7 +1851,8 @@ public class EmojiView extends FrameLayout implements
             }
         });
 
-        emojiTabs = new EmojiTabsStrip(context, resourcesProvider, true, false, true, needAnimatedEmoji, 0, fragment != null ? () -> {
+        // Relay: no emoji-pack settings gear (StickersActivity is Telegram's sticker and emoji pack store).
+        emojiTabs = new EmojiTabsStrip(context, resourcesProvider, true, false, true, needAnimatedEmoji, 0, fragment != null && org.telegram.relay.RelayFeatures.STICKERS ? () -> {
             if (delegate != null) {
                 delegate.onEmojiSettingsClick(emojiAdapter.frozenEmojiPacks);
             }
