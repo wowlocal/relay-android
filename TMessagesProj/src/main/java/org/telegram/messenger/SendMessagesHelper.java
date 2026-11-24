@@ -2742,6 +2742,7 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                         }
                     } else {
                         req.from_peer = new TLRPC.TL_inputPeerEmpty();
+                        org.telegram.relay.bridge.RelayHooks.tagDialog(req, msgObj.getDialogId()); // Relay: per-dialog ids
                     }
                     req.random_id = randomIds;
                     req.id = ids;

@@ -161,8 +161,8 @@ final class RelayWrite {
             }
             queue.poll();
             retryAt = 0;
-            RelayConfig.log(TAG, "write: " + job.label + " done in " + (System.currentTimeMillis() - started) + " ms"
-                    + (job.attempt > 0 ? " after " + job.attempt + " retries" : ""));
+            RelayConfig.log(TAG, "write: " + job.label + (response instanceof TLRPC.TL_error ? " failed: " + ((TLRPC.TL_error) response).text : " done")
+                    + " in " + (System.currentTimeMillis() - started) + " ms" + (job.attempt > 0 ? " after " + job.attempt + " retries" : ""));
             job.deferred.complete(response);
         }
     }
@@ -171,6 +171,11 @@ final class RelayWrite {
 
     private Channel channelOf(TLRPC.InputPeer peer) throws MattermostException {
         String channelId = path.directory.channelIdOf(peer);
+        return channelId != null ? path.directory.channel(channelId) : null;
+    }
+
+    private Channel channelOfDialog(long dialogId) throws MattermostException {
+        String channelId = path.directory.channelIdOf(dialogId);
         return channelId != null ? path.directory.channel(channelId) : null;
     }
 
@@ -796,10 +801,14 @@ final class RelayWrite {
      * text and files instead.
      */
     TLObject forwardMessages(TLRPC.TL_messages_forwardMessages r) {
+        long taggedFrom = RelayHooks.taggedDialog(r);
         return enqueue("forwardMessages", job -> {
-            Channel from = channelOf(r.from_peer);
+            // Private-chat sources come as inputPeerEmpty (Telegram's account-wide ids): the caller tags the dialog.
+            Channel from = r.from_peer instanceof TLRPC.TL_inputPeerEmpty && taggedFrom != 0
+                    ? channelOfDialog(taggedFrom) : channelOf(r.from_peer);
             Channel to = channelOf(r.to_peer);
             if (from == null || to == null) {
+                RelayConfig.log(TAG, "forward: unknown chat from=" + r.from_peer + " to=" + r.to_peer);
                 return peerInvalid();
             }
             String root = rootFor(to.id, r.reply_to);
