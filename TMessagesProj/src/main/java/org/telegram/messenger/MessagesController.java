@@ -16168,6 +16168,10 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void performLogout(int type) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: revoke the Mattermost session and wipe the bridge state of this slot.
+            org.telegram.relay.auth.RelayAuth.onTelegramLogout(currentAccount);
+        }
         if (type == 1) {
             GramWalletStorage.wipeForUser(ApplicationLoader.applicationContext, currentAccount, getUserConfig().getClientUserId());
             unregistedPush();

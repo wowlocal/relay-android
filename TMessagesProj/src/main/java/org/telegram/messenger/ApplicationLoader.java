@@ -408,6 +408,12 @@ public class ApplicationLoader extends Application {
     }
 
     private void initPushServices() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: no Firebase token until push goes through the Mattermost push proxy (A7);
+            // requesting one opens Google sockets for a dummy Firebase project.
+            SharedConfig.pushStringStatus = "__RELAY_PUSH_DISABLED__";
+            return;
+        }
         AndroidUtilities.runOnUIThread(() -> {
             if (getPushProvider().hasServices()) {
                 getPushProvider().onRequestPushToken();

@@ -1120,6 +1120,10 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     }
 
     private BaseFragment getClientNotActivatedFragment() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: Mattermost server + login instead of Telegram's intro / phone login.
+            return new org.telegram.relay.ui.RelayLoginActivity();
+        }
         if (LoginActivity.loadCurrentState(false, currentAccount).getInt("currentViewNum", 0) != 0) {
             return new LoginActivity();
         }
@@ -1292,7 +1296,11 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 layersActionBarLayout.rebuildLogout();
                 rightActionBarLayout.rebuildLogout();
             }
-            presentFragment(new IntroActivity().setOnLogout());
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                presentFragment(new org.telegram.relay.ui.RelayLoginActivity().setOnLogout());
+            } else {
+                presentFragment(new IntroActivity().setOnLogout());
+            }
         }
     }
 

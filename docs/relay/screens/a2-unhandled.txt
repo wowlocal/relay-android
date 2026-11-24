@@ -1,0 +1,67 @@
+# Session 1: login → idle chat list
+account=0 unhandled=32
+messages.getStickerSet	stub	7
+account.getNotifySettings	stub	3
+account.getDefaultProfilePhotoEmojis	stub	2
+help.getPremiumPromo	stub	2
+messages.getAttachMenuBots	stub	2
+messages.getStickers	stub	2
+stories.getAllStories	stub	2
+account.getAutoDownloadSettings	stub	1
+account.getBirthdays	stub	1
+account.getContactSignUpNotification	stub	1
+account.getGlobalPrivacySettings	stub	1
+account.getReactionsNotifySettings	stub	1
+account.getSavedRingtones	error	1
+account.getThemes	stub	1
+account.getWebBrowserSettings	stub	1
+account.updateStatus	stub	1
+contacts.getTopPeers	stub	1
+help.getInviteText	stub	1
+help.getPeerColors	stub	1
+help.getPeerProfileColors	stub	1
+help.getPromoData	stub	1
+help.getTermsOfServiceUpdate	stub	1
+langpack.getLanguages	stub	1
+messages.getAllDrafts	error	1
+messages.getAvailableEffects	stub	1
+messages.getAvailableReactions	stub	1
+messages.getFavedStickers	stub	1
+messages.getFeaturedEmojiStickers	stub	1
+messages.getFeaturedStickers	stub	1
+messages.getRecentReactions	stub	1
+messages.getTopReactions	stub	1
+stories.getAllReadPeerStories	stub	1
+handled=7
+help.getAppConfig	handler	2
+messages.getDialogFilters	handler	1
+messages.getDialogs	handler	1
+messages.getPeerDialogs	handler	1
+messages.getPinnedDialogs	handler	1
+updates.getState	handler	1
+users.getFullUser	handler	1
+
+# Session 2: cold start with a session → idle chat list
+account=0 unhandled=17
+messages.getStickerSet	stub	7
+account.getDefaultProfilePhotoEmojis	stub	2
+stories.getAllStories	stub	2
+account.getGlobalPrivacySettings	stub	1
+account.getSavedRingtones	error	1
+account.getThemes	stub	1
+account.getWebBrowserSettings	stub	1
+account.updateStatus	stub	1
+contacts.getStatuses	stub	1
+contacts.getTopPeers	stub	1
+help.getPeerColors	stub	1
+help.getPeerProfileColors	stub	1
+langpack.getLanguages	stub	1
+messages.getAvailableReactions	stub	1
+messages.getRecentReactions	stub	1
+messages.getStickers	stub	1
+messages.getTopReactions	stub	1
+handled=4
+contacts.getContacts	handler	1
+help.getAppConfig	handler	2
+messages.getPeerDialogs	handler	1
+users.getFullUser	handler	1

@@ -14725,7 +14725,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             }
                         }
                         if (freeAccount >= 0) {
-                            f.presentFragment(new LoginActivity(freeAccount));
+                            f.presentFragment((org.telegram.relay.RelayConfig.ENABLED ? new org.telegram.relay.ui.RelayLoginActivity(freeAccount) : new LoginActivity(freeAccount)));
                         }
                     }).withLink("tg://settings/edit/add-account"),
                     // TODO:

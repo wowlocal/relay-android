@@ -130,6 +130,11 @@ android {
         }
     }
 
+    // Relay: the pure-Java Mattermost client library is compiled into the app module.
+    sourceSets {
+        main.java.srcDirs += '../relay-mattermost/src/main/java'
+    }
+
     // IWidgetEngine: the widget engine's isolated process (WidgetEngineService).
     buildFeatures {
         aidl true

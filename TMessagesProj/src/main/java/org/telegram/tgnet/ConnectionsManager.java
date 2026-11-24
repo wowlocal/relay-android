@@ -46,6 +46,7 @@ import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.StatsController;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.relay.bridge.RelayBridge;
 import org.telegram.utils.proxy.WebProxyConnectionTester;
 import org.telegram.utils.proxy.WebProxyTransport;
 import org.telegram.utils.proxy.ProxySettings;
@@ -166,12 +167,17 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void discardConnection(int dcId, int connectionType) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         Utilities.stageQueue.postRunnable(() -> {
             native_discardConnection(currentAccount, dcId, connectionType);
         });
     }
 
     public void failNotRunningRequest(int requestToken) {
+        if (RelayBridge.enabled(currentAccount)) {
+            RelayBridge.get(currentAccount).failNotRunning(requestToken);
+            return;
+        }
         Utilities.stageQueue.postRunnable(() -> {
             native_failNotRunningRequest(currentAccount, requestToken);
         });
@@ -273,6 +279,9 @@ public class ConnectionsManager extends BaseController {
             userPremium = getUserConfig().getCurrentUser().premium;
         }
         init(SharedConfig.buildVersion(), TLRPC.LAYER, BuildVars.APP_ID, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+        if (RelayBridge.enabled(currentAccount)) {
+            RelayBridge.onConnectionsManagerCreated(currentAccount);
+        }
     }
 
     private String getRegId() {
@@ -420,6 +429,11 @@ public class ConnectionsManager extends BaseController {
     }
 
     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
+        if (RelayBridge.enabled(currentAccount)) {
+            // Relay: every request is answered by the in-process Mattermost bridge, never by tgnet.
+            RelayBridge.get(currentAccount).handle(object, onComplete, onCompleteTimestamp, onQuickAck, flags, datacenterId, connectionType, requestToken);
+            return;
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("send request " + object + " with token = " + requestToken);
         }
@@ -614,6 +628,10 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void cancelRequest(int token, boolean notifyServer, Runnable onCancelled) {
+        if (RelayBridge.enabled(currentAccount)) {
+            RelayBridge.get(currentAccount).cancel(token, onCancelled);
+            return;
+        }
         Utilities.stageQueue.postRunnable(() -> {
             if (onCancelled != null) {
                 listenCancel(token, () -> {
@@ -625,10 +643,15 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void cleanup(boolean resetKeys) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_cleanUp(currentAccount, resetKeys);
     }
 
     public void cancelRequestsForGuid(int guid) {
+        if (RelayBridge.enabled(currentAccount)) {
+            RelayBridge.get(currentAccount).cancelForGuid(guid);
+            return;
+        }
         Utilities.stageQueue.postRunnable(() -> {
             native_cancelRequestsForGuid(currentAccount, guid);
         });
@@ -638,10 +661,15 @@ public class ConnectionsManager extends BaseController {
         if (guid == 0) {
             return;
         }
+        if (RelayBridge.enabled(currentAccount)) {
+            RelayBridge.get(currentAccount).bindToGuid(requestToken, guid);
+            return;
+        }
         native_bindRequestToGuid(currentAccount, requestToken, guid);
     }
 
     public void applyDatacenterAddress(int datacenterId, String ipAddress, int port) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_applyDatacenterAddress(currentAccount, datacenterId, ipAddress, port);
     }
 
@@ -653,10 +681,12 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void setUserId(long id) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_setUserId(currentAccount, id);
     }
 
     public void checkConnection() {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         byte selectedStrategy = getIpStrategy();
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("selected ip strategy " + selectedStrategy);
@@ -666,10 +696,12 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void setPushConnectionEnabled(boolean value) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_setPushConnectionEnabled(currentAccount, value);
     }
 
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
         if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
@@ -717,6 +749,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setLangCode(String langCode) {
+        if (RelayBridge.enabled(0)) return; // Relay: tgnet stays offline
         langCode = langCode.replace('_', '-').toLowerCase();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             native_setLangCode(a, langCode);
@@ -724,6 +757,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setRegId(String regId, @PushListenerController.PushType int type, String status) {
+        if (RelayBridge.enabled(0)) return; // Relay: tgnet stays offline
         String pushString = regId;
         if (!TextUtils.isEmpty(pushString) && type == PushListenerController.PUSH_TYPE_HUAWEI) {
             pushString = "huawei://" + pushString;
@@ -741,6 +775,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setSystemLangCode(String langCode) {
+        if (RelayBridge.enabled(0)) return; // Relay: tgnet stays offline
         langCode = langCode.replace('_', '-').toLowerCase();
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             native_setSystemLangCode(a, langCode);
@@ -748,6 +783,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void switchBackend(boolean restart) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         SharedPreferences preferences = MessagesController.getGlobalMainSettings();
         preferences.edit().remove("language_showed2").commit();
         native_switchBackend(currentAccount, restart);
@@ -758,14 +794,17 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void resumeNetworkMaybe() {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_resumeNetwork(currentAccount, true);
     }
 
     public void updateDcSettings() {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_updateDcSettings(currentAccount);
     }
 
     public void setDefaultDatacenterId(int dcId) {
+        if (RelayBridge.enabled(currentAccount)) return; // Relay: tgnet stays offline
         native_moveDatacenter(currentAccount, dcId);
     }
 
@@ -774,6 +813,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public long checkProxy(ProxySettings settings, RequestTimeDelegate requestTimeDelegate) {
+        if (RelayBridge.enabled(currentAccount)) return 0; // Relay: tgnet stays offline
         if (settings == null || !settings.isValid()) {
             return 0;
         }
@@ -811,7 +851,9 @@ public class ConnectionsManager extends BaseController {
             if (lastPauseTime == 0) {
                 lastPauseTime = System.currentTimeMillis();
             }
-            native_pauseNetwork(currentAccount);
+            if (!RelayBridge.enabled(currentAccount)) {
+                native_pauseNetwork(currentAccount);
+            }
         } else {
             if (appPaused) {
                 return;
@@ -823,7 +865,9 @@ public class ConnectionsManager extends BaseController {
                 getContactsController().checkContacts();
             }
             lastPauseTime = 0;
-            native_resumeNetwork(currentAccount, false);
+            if (!RelayBridge.enabled(currentAccount)) {
+                native_resumeNetwork(currentAccount, false);
+            }
         }
     }
 
@@ -983,6 +1027,7 @@ public class ConnectionsManager extends BaseController {
     }
 
     public static void setProxySettings(boolean enabled, ProxySettings settings) {
+        if (RelayBridge.enabled(0)) return; // Relay: tgnet stays offline
         String address = "";
         int port = 0;
         String username = "";

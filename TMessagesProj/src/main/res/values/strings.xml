@@ -11679,4 +11679,35 @@
     <string name="FpnvConsentSimSlot">SIM Slot</string>
     <string name="FpnvConsentSimSlotValue">SIM %1$d</string>
     <string name="FpnvConsentPhoneNumber">Phone Number</string>
+    <!-- Relay for Android (Mattermost login, A2) -->
+    <string name="RelayAppName">Relay</string>
+    <string name="RelayServerSubtitle">Chat with your team on Mattermost. Enter the address of your team\'s server to get started.</string>
+    <string name="RelayServerField">Server address</string>
+    <string name="RelayServerHint">chat.example.com</string>
+    <string name="RelayConnect">Connect</string>
+    <string name="RelayServerFooter">Works with Mattermost %1$s and newer.</string>
+    <string name="RelayLoginTitle">Mattermost</string>
+    <string name="RelayLoginSubtitle">Log in with your account on %1$s.</string>
+    <string name="RelayLoginIdField">Email or username</string>
+    <string name="RelayPasswordField">Password</string>
+    <string name="RelayLogIn">Log In</string>
+    <string name="RelayLoginFooter">%1$s · Mattermost %2$s</string>
+    <string name="RelayMfaTitle">Two-Step Verification</string>
+    <string name="RelayMfaSubtitle">Enter the code from your authenticator app for %1$s.</string>
+    <string name="RelayMfaField">Code</string>
+    <string name="RelayVerify">Verify</string>
+    <string name="RelayErrorUnreachableTitle">Can\'t Connect</string>
+    <string name="RelayErrorUnreachable">Can\'t connect to %1$s. Check the address and your internet connection.</string>
+    <string name="RelayErrorNotMattermostTitle">Not a Mattermost Server</string>
+    <string name="RelayErrorNotMattermost">%1$s doesn\'t look like a Mattermost server. Check the address.</string>
+    <string name="RelayErrorUnsupportedTitle">Server Too Old</string>
+    <string name="RelayErrorUnsupported">%1$s runs Mattermost %2$s. Relay needs Mattermost %3$s or newer.</string>
+    <string name="RelayErrorInvalidUrlTitle">Invalid Address</string>
+    <string name="RelayErrorInvalidUrl">Enter a server address like chat.example.com.</string>
+    <string name="RelayErrorCredentialsTitle">Incorrect Login</string>
+    <string name="RelayErrorCredentials">The email, username or password is incorrect.</string>
+    <string name="RelayErrorMfaTitle">Incorrect Code</string>
+    <string name="RelayErrorMfa">The verification code is incorrect or has expired.</string>
+    <string name="RelayErrorLoginTitle">Can\'t Log In</string>
+    <string name="RelayErrorEmptyFields">Enter your email or username and your password.</string>
 </resources>

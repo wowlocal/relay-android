@@ -485,7 +485,7 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
                 freeAccounts -= (UserConfig.MAX_ACCOUNT_COUNT - UserConfig.MAX_ACCOUNT_DEFAULT_COUNT);
             }
             if (freeAccounts > 0 && availableAccount != null) {
-                presentFragment(new LoginActivity(availableAccount));
+                presentFragment((org.telegram.relay.RelayConfig.ENABLED ? new org.telegram.relay.ui.RelayLoginActivity(availableAccount) : new LoginActivity(availableAccount)));
             } else if (!UserConfig.hasPremiumOnAccounts()) {
                 showDialog(new LimitReachedBottomSheet(this, getContext(), TYPE_ACCOUNTS, currentAccount, null));
             }

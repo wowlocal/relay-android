@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Relay debug-only additions (merged on top of TMessagesProj/config/debug/AndroidManifest_SDK23.xml). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:networkSecurityConfig="@xml/relay_network_security_config" />
+    <application android:networkSecurityConfig="@xml/relay_network_security_config">
+        <!-- e2e test hooks (org.relaychat.DEBUG_LOGIN / DEBUG_DUMP broadcasts); never in release builds. -->
+        <provider
+            android:name="org.relaychat.debug.RelayDebugHooks"
+            android:authorities="${applicationId}.relaydebug"
+            android:exported="false" />
+    </application>
 </manifest>
