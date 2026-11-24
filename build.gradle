@@ -17,6 +17,26 @@ repositories {
     google()
 }
 
+// Relay: optional build knobs, read from a Gradle property (-P..., gradle.properties in
+// GRADLE_USER_HOME) or from local.properties (untracked). Unset = upstream behaviour.
+//   relay.buildRoot  out-of-tree build dirs: <root>/<project path>, CMake staging in
+//                    <root>/TMessagesProj/cxx (keeps the huge native state off the repo disk)
+//   relay.abis       comma list of ABIs for native code + APK, e.g. arm64-v8a (default: all four)
+def relayLocalProps = new Properties()
+def relayLocalPropsFile = rootProject.file('local.properties')
+if (relayLocalPropsFile.exists()) {
+    relayLocalPropsFile.withInputStream { relayLocalProps.load(it) }
+}
+def relayProp = { String name -> (findProperty(name) ?: relayLocalProps.getProperty(name))?.toString()?.trim() ?: null }
+ext.relayBuildRoot = relayProp('relay.buildRoot')
+ext.relayAbis = relayProp('relay.abis')?.split(',')?.collect { it.trim() }?.findAll { it }
+if (relayBuildRoot) {
+    allprojects { p ->
+        def rel = p == rootProject ? '_root' : p.path.substring(1).replace(':', '/')
+        p.layout.buildDirectory.set(new File(relayBuildRoot, rel))
+    }
+}
+
 // Strip JLatexMath fonts we don't ship (transitive AAR assets from
 // io.noties.markwon:ext-latex -> ru.noties:jlatexmath-android, ~764 KB total under
 // assets/org/scilab/forge/jlatexmath/fonts/). Has to live in the APK modules — a

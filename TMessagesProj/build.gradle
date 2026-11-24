@@ -123,6 +123,10 @@ android {
     externalNativeBuild {
         cmake {
             path 'jni/CMakeLists.txt'
+            // Relay: CMake staging (.cxx) next to the redirected build dir, see root build.gradle.
+            if (rootProject.ext.relayBuildRoot) {
+                buildStagingDirectory new File(rootProject.ext.relayBuildRoot, 'TMessagesProj/cxx')
+            }
         }
     }
 
@@ -151,6 +155,13 @@ android {
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']
 
         multiDexEnabled true
+
+        // Relay: build native code only for the ABIs in relay.abis (root build.gradle).
+        if (rootProject.ext.relayAbis) {
+            ndk {
+                abiFilters(*rootProject.ext.relayAbis)
+            }
+        }
 
         externalNativeBuild {
             cmake {

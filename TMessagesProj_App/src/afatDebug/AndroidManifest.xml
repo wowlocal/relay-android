@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Relay debug-only additions (merged on top of TMessagesProj/config/debug/AndroidManifest_SDK23.xml). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application android:networkSecurityConfig="@xml/relay_network_security_config" />
+</manifest>
