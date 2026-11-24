@@ -87,25 +87,18 @@ final class RelayConvert {
         }
     }
 
-    /** {@code metadata.files} in {@code file_ids} order. */
+    /**
+     * {@code metadata.files} in their own (upload) order, as iOS {@code PostLayout} does: the server
+     * reorders {@code file_ids}, so an album would come out reversed.
+     */
     private static List<FileInfo> orderedFiles(Post post) {
-        List<FileInfo> files = post.getFiles();
-        if (post.fileIds == null || post.fileIds.size() < 2 || files.size() < 2) {
-            return files;
-        }
-        Map<String, FileInfo> byId = new LinkedHashMap<>();
-        for (FileInfo file : files) {
-            byId.put(file.id, file);
-        }
-        List<FileInfo> ordered = new ArrayList<>();
-        for (String id : post.fileIds) {
-            FileInfo file = byId.remove(id);
-            if (file != null) {
-                ordered.add(file);
+        List<FileInfo> files = new ArrayList<>();
+        for (FileInfo file : post.getFiles()) {
+            if (file.deleteAt == 0) {
+                files.add(file);
             }
         }
-        ordered.addAll(byId.values());
-        return ordered;
+        return files;
     }
 
     private final RelayAccount account;

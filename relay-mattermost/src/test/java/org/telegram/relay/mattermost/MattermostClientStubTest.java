@@ -175,6 +175,24 @@ public class MattermostClientStubTest {
     }
 
     @Test
+    public void createPostSendsProps() throws Exception {
+        client.setToken("t");
+        org.telegram.relay.mattermost.model.PostDraft draft = new org.telegram.relay.mattermost.model.PostDraft("c1", "");
+        draft.pendingPostId("u1:abc");
+        com.google.gson.JsonObject voice = new com.google.gson.JsonObject();
+        voice.addProperty("v", 1);
+        voice.addProperty("duration", 3);
+        draft.props = new com.google.gson.JsonObject();
+        draft.props.add("relay_voice", voice);
+        client.createPost(draft);
+        String body = new String(last().body, UTF8);
+        assertTrue(body, body.contains("\"props\":{\"relay_voice\":{\"v\":1,\"duration\":3}}"));
+        assertTrue(body, body.contains("\"pending_post_id\":\"u1:abc\""));
+        client.createPost(new org.telegram.relay.mattermost.model.PostDraft("c1", "plain"));
+        assertTrue(!new String(last().body, UTF8).contains("\"props\":{"));
+    }
+
+    @Test
     public void pingReadsVersionHeader() throws Exception {
         assertEquals("11.7.14", client.ping(true).getServerVersion().toString());
         assertEquals("get_server_status=true", last().rawQuery);

@@ -115,6 +115,20 @@ final class RelayHandlers {
             return res;
         });
 
+        // Before editing, the composer asks whether the message may be edited (own posts; caption for files).
+        map.put(TLRPC.TL_messages_getMessageEditData.class, (bridge, account, req) -> {
+            TLRPC.TL_messages_getMessageEditData r = (TLRPC.TL_messages_getMessageEditData) req;
+            RelayReadPath path = RelayReadPath.of(account);
+            String channelId = path.directory.channelIdOf(r.peer);
+            RelayHistory.Unit unit = channelId != null ? path.history.unitAt(channelId, r.id) : null;
+            if (unit == null || !account.session.userId.equals(unit.layout.post.userId) || unit.layout.service) {
+                return RelayTl.error(400, "MESSAGE_AUTHOR_REQUIRED");
+            }
+            TLRPC.TL_messages_messageEditData res = new TLRPC.TL_messages_messageEditData();
+            res.caption = !unit.layout.files.isEmpty();
+            return res;
+        });
+
         // MARK: write path (§7, A5): queued per account, answered when Mattermost has it
         map.put(TLRPC.TL_messages_sendMessage.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendMessage((TLRPC.TL_messages_sendMessage) req));
         map.put(TLRPC.TL_messages_sendMedia.class, (bridge, account, req) -> RelayWrite.of(bridge, account).sendMedia((TLRPC.TL_messages_sendMedia) req));

@@ -223,12 +223,14 @@ final class RelayLive implements WebSocketListener {
             networkCallback = new ConnectivityManager.NetworkCallback() {
                 @Override
                 public void onAvailable(Network network) {
-                    onNetworkChanged();
+                    onNetworkChanged(null);
                 }
 
                 @Override
                 public void onLost(Network network) {
-                    onNetworkChanged();
+                    // The lost network can still be listed for a moment: leave it out, and look again shortly.
+                    onNetworkChanged(network);
+                    Utilities.stageQueue.postRunnable(() -> onNetworkChanged(null), 1500);
                 }
             };
             NetworkRequest request = new NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build();
@@ -252,10 +254,17 @@ final class RelayLive implements WebSocketListener {
     }
 
     private static boolean hasNetwork(ConnectivityManager cm) {
+        return hasNetwork(cm, null);
+    }
+
+    private static boolean hasNetwork(ConnectivityManager cm, Network except) {
         if (cm == null) {
             return true;
         }
         for (Network network : cm.getAllNetworks()) {
+            if (network.equals(except)) {
+                continue;
+            }
             NetworkCapabilities caps = cm.getNetworkCapabilities(network);
             if (caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
                 return true;
@@ -264,12 +273,12 @@ final class RelayLive implements WebSocketListener {
         return false;
     }
 
-    private synchronized void onNetworkChanged() {
+    private synchronized void onNetworkChanged(Network lost) {
         if (!started || socket == null) {
             return;
         }
         ConnectivityManager cm = (ConnectivityManager) ApplicationLoader.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        boolean available = hasNetwork(cm);
+        boolean available = hasNetwork(cm, lost);
         if (available == networkAvailable) {
             return;
         }
@@ -606,9 +615,39 @@ final class RelayLive implements WebSocketListener {
         path.noteKnown(Collections.singletonList(channel.id));
         if (post.isReply()) {
             refreshRoot(channel, post.rootId);
+            if (!account.session.userId.equals(post.userId) && path.directory.any().collapsedThreads) {
+                fixCrtUnread(channel);
+            }
         }
         RelayConfig.log(TAG, "live: posted " + post.id + " in " + channel.name + " -> " + units.size() + " message(s), "
                 + (System.currentTimeMillis() - receivedAt) + " ms after the event");
+    }
+
+    /**
+     * Collapsed reply threads: a reply does not make the chat unread in Mattermost (the {@code _root}
+     * counters), but Telegram counts every incoming message. The badge is set back to the server's count
+     * ({@code still_unread_count}, read max unchanged).
+     */
+    private void fixCrtUnread(Channel channel) {
+        if (channel.isDirect()) {
+            return;
+        }
+        try {
+            ChannelMember member = account.client.channelMember(channel.id);
+            Channel fresh = account.client.channel(channel.id);
+            int unread = (int) Math.max(0, fresh.totalMsgCountRoot - member.msgCountRoot);
+            // Megagroups only: a DM's read update has no still_unread_count in Telegram (known gap).
+            ArrayList<TLRPC.Update> list = new ArrayList<>();
+            TL_update.TL_updateReadChannelInbox u = new TL_update.TL_updateReadChannelInbox();
+            u.channel_id = -path.directory.dialogId(channel);
+            u.max_id = 0;
+            u.still_unread_count = unread;
+            u.pts = account.db().pts(RelayDatabase.channelBox(u.channel_id));
+            list.add(u);
+            updates.deliver(list, refs(channel, Collections.<String>emptyList()));
+        } catch (MattermostException e) {
+            RelayConfig.logError(TAG, "unread after reply", e);
+        }
     }
 
     /** Re-sends a thread root with its current reply count ("N replies"). */

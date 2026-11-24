@@ -637,6 +637,13 @@ final class RelayWrite {
     /** Uploads a prepared file to the channel ({@code POST /files}); null when it is too big (notice shown). */
     private FileInfo upload(String channelId, Upload upload, Job job) throws Exception {
         if (upload.existingFileId != null) {
+            // A file this app just uploaded (album item, uploadMedia) is used as it is; a file that already
+            // belongs to a post (Telegram reuses the photo of an earlier send, a copy-forward) is re-uploaded:
+            // Mattermost attaches a file to one post only and silently drops it otherwise.
+            FileInfo info = account.client.fileInfo(upload.existingFileId);
+            if ((info.postId == null || info.postId.isEmpty()) && channelId.equals(info.channelId)) {
+                return info;
+            }
             return copyFile(channelId, upload.existingFileId, job);
         }
         if (upload.file == null) {
@@ -749,8 +756,8 @@ final class RelayWrite {
             List<String> captions = new ArrayList<>();
             for (TLRPC.TL_inputSingleMedia single : r.multi_media) {
                 Upload upload = prepare(single.media);
-                String fileId = upload != null ? upload.existingFileId : null;
-                if (fileId == null && upload != null && upload.file != null) {
+                String fileId = null;
+                if (upload != null) {
                     FileInfo info = upload(channel.id, upload, job);
                     fileId = info != null ? info.id : null;
                 }

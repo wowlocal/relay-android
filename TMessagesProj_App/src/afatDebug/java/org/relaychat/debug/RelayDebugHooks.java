@@ -51,6 +51,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_WS = "org.relaychat.DEBUG_WS";
     /** {@code --es channel <id> --es kind photo|video|document|voice --es paths a,b,c [--es caption …]}. */
     public static final String ACTION_SEND_MEDIA = "org.relaychat.DEBUG_SEND_MEDIA";
+    /** {@code --es text <substring of a message in the open chat> --es emoji 👍} (empty emoji clears). */
+    public static final String ACTION_REACT = "org.relaychat.DEBUG_REACT";
 
     @Override
     public boolean onCreate() {
@@ -66,6 +68,7 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_OPEN_CHAT);
         filter.addAction(ACTION_WS);
         filter.addAction(ACTION_SEND_MEDIA);
+        filter.addAction(ACTION_REACT);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -133,6 +136,12 @@ public class RelayDebugHooks extends ContentProvider {
                     java.util.List<String> list = java.util.Arrays.asList(paths != null ? paths.split(",") : new String[0]);
                     AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.sendMedia(UserConfig.selectedAccount, did, kind != null ? kind : "photo", list, caption));
                 }, "RelayDebugSend").start();
+                return;
+            }
+            if (ACTION_REACT.equals(action)) {
+                String text = intent.getStringExtra("text");
+                String emoji = intent.getStringExtra("emoji");
+                AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebug.react(UserConfig.selectedAccount, text, emoji));
                 return;
             }
             if (ACTION_WS.equals(action)) {

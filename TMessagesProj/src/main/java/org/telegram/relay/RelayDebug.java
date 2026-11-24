@@ -130,6 +130,37 @@ public final class RelayDebug {
         Log.i(TAG, "DEBUG_SEND_MEDIA ok kind=" + kind + " files=" + paths.size() + " dialog=" + dialogId);
     }
 
+    /**
+     * Sets the own reactions of a message in the open chat (found by text) through Telegram's
+     * {@code SendMessagesHelper.sendReaction} → {@code messages.sendReaction}: {@code emoji} empty clears them.
+     * (The reaction picker needs Telegram's animated reaction set, which Relay does not have yet.)
+     */
+    public static void react(int account, String text, String emoji) {
+        org.telegram.ui.ActionBar.BaseFragment last = org.telegram.ui.LaunchActivity.getLastFragment();
+        if (!(last instanceof org.telegram.ui.ChatActivity)) {
+            Log.w(TAG, "DEBUG_REACT: no open chat");
+            return;
+        }
+        org.telegram.ui.ChatActivity chat = (org.telegram.ui.ChatActivity) last;
+        if (emoji != null && emoji.matches("[a-z0-9_+\\-]+")) {
+            emoji = org.telegram.relay.mattermost.text.EmojiTable.unicode(emoji); // a Mattermost name (adb-safe)
+        }
+        for (org.telegram.messenger.MessageObject m : chat.messages) {
+            if (m.messageOwner != null && m.messageOwner.message != null && m.messageOwner.message.contains(text)) {
+                java.util.ArrayList<org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble.VisibleReaction> list = new java.util.ArrayList<>();
+                org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble.VisibleReaction added = null;
+                if (emoji != null && !emoji.isEmpty()) {
+                    added = org.telegram.ui.Components.Reactions.ReactionsLayoutInBubble.VisibleReaction.fromEmojicon(emoji);
+                    list.add(added);
+                }
+                org.telegram.messenger.SendMessagesHelper.getInstance(account).sendReaction(m, list, added, false, false, chat, null);
+                Log.i(TAG, "DEBUG_REACT ok id=" + m.getId() + " emoji=" + emoji);
+                return;
+            }
+        }
+        Log.w(TAG, "DEBUG_REACT: message not found: " + text);
+    }
+
     /** Opens a chat (optionally at a message) the way a notification tap does. */
     public static void openChat(long dialogId, int messageId) {
         if (dialogId == 0) {

@@ -282,7 +282,8 @@ public final class Json {
             if (value == null) {
                 out.nullValue();
             } else {
-                out.jsonValue(value.toString());
+                // Works for string writers and for JsonTreeWriter (toJsonTree), which has no jsonValue().
+                com.google.gson.internal.bind.TypeAdapters.JSON_ELEMENT.write(out, value);
             }
         }
 
