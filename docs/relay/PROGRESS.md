@@ -25,3 +25,4 @@ Phases are defined in [PLAN.md](PLAN.md). Newest entries last.
 - Started: A3 read path (main tree) and A6 branding/feature hiding (worktree `~/Developer/relay-android-wt/a6`, branch `relay-a6`, emulator-5556).
 - Markdown ⇄ entities done (`905eaf0`, `relay-mattermost.text`): iOS parity, 45 new tests, all 12,501 seeded posts convert. Outgoing default = pass-through like iOS; literal escaping opt-in.
 - Started: restore LiveKit dev container + calls plugin on mmdev (for A8).
+- Calls test bed restored: `relay-livekit` v1.13.10 + plugin `org.relaychat.calls` 0.2.1 on mmdev; scripted alice→bob call passes with audio both ways. Recreate: `~/Developer/relay-calls-integration/dev-livekit/recreate.sh`, smoke: `smoke.sh`.
