@@ -23,3 +23,5 @@ Phases are defined in [PLAN.md](PLAN.md). Newest entries last.
 - **A2 done** (`50ac9e8`): RelayBridge at `sendRequestInternal` (real handlers + stub table + auto-stub), tgnet offline (only socket 127.0.0.1:8065), RelayLoginActivity (server/credentials/MFA, errors), logout wipes state, debug login broadcast `org.relaychat.DEBUG_LOGIN`. e2e `tools/relay-e2e/test_a2_login.py` 27/27 on emulator-5554. FCM auto-init off until push work.
 - Decision: per-dialog message-id spaces (storage keys `(mid, uid)`); peer-less update paths made peer-aware in the bridge.
 - Started: A3 read path (main tree) and A6 branding/feature hiding (worktree `~/Developer/relay-android-wt/a6`, branch `relay-a6`, emulator-5556).
+- Markdown ⇄ entities done (`905eaf0`, `relay-mattermost.text`): iOS parity, 45 new tests, all 12,501 seeded posts convert. Outgoing default = pass-through like iOS; literal escaping opt-in.
+- Started: restore LiveKit dev container + calls plugin on mmdev (for A8).
