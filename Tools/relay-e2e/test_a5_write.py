@@ -343,11 +343,15 @@ def main():
         gone = wait_until(lambda: not find_post(bob, sandbox["id"], "channel edited %d" % t0), timeout=10)
         check.ok("delete reaches Mattermost", gone and edited_id is not None)
         ok = message_menu(d, "root by bob %d" % t0, "Delete")
+        confirmed = False
         if ok:
-            confirm = wait_until(lambda: d.find(text="Delete"), timeout=4)
+            # A group creator gets Telegram's admin sheet ("Proceed"), others the plain alert ("Delete").
+            confirm = wait_until(lambda: d.find(text="Proceed") or d.find(text="Delete"), timeout=4)
             if confirm:
                 d.tap_node(confirm)
+                confirmed = True
         time.sleep(3)
+        check.ok("delete of bob's post confirmed in the app", confirmed)
         still = find_post(bob, sandbox["id"], "root by bob %d" % t0)
         msgs, _ = dump_messages(d, sandbox["id"])
         check.ok("deleting bob's post is refused and the message comes back", still and find_msg(msgs, "root by bob %d" % t0))

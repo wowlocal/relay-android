@@ -1117,7 +1117,8 @@ final class RelayLive implements WebSocketListener {
                 }
                 List<RelayHistory.Unit> mapped = mappedUnits(channel.id, post);
                 if (!mapped.isEmpty()) {
-                    if (post.updateAt >= since) {
+                    // Changed since (edit, reactions, reply count); a post untouched since its creation is skipped.
+                    if (post.updateAt >= since && post.updateAt > post.createAt) {
                         edited.addAll(mapped);
                     }
                 } else if (post.createAt >= since && !post.isEphemeral()) {

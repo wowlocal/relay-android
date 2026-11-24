@@ -394,14 +394,15 @@ def main():
         probe(random_links["id"], "posted while the app was stopped")
         d.logcat_clear()
         d.launch()
-        reset = d.wait_log(r"cold start: chat list (changed|unchanged)", timeout=30, tags=["RelayBridge"])
+        # A4: the first getDifference of a process runs a REST catch-up (was: a chat-list fingerprint).
+        reset = d.wait_log(r"catch-up since \d+ s: \d+ channels, (\d+) new", timeout=30, tags=["RelayBridge"])
         time.sleep(5)
         dialogs, _ = dump_dialogs(d)
         mem = alice.get("/channels/%s/members/me" % random_links["id"])
         ch = alice.get("/channels/%s" % random_links["id"])
         unread = (ch["total_msg_count_root"] - mem["msg_count_root"]) if crt else (ch["total_msg_count"] - mem["msg_count"])
         rl = dialogs.get(random_links["id"], {})
-        check.ok("cold start: server change detected", reset is not None and reset.group(1) == "changed", reset.group(0) if reset else "")
+        check.ok("cold start: server change caught up", reset is not None and int(reset.group(1)) >= 1, reset.group(0) if reset else "")
         check.ok("cold start: unread from server (%d) and new preview" % unread,
                  rl.get("unread") == unread and PROBE in rl.get("preview", ""), str(rl))
         shot(d, "cold-start")
