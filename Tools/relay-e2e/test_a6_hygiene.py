@@ -137,8 +137,9 @@ _SIZE = {}
 
 def screen_size(d):
     if d.serial not in _SIZE:
-        m = re.search(r"(\d+)x(\d+)", d.shell("wm size"))
-        _SIZE[d.serial] = (int(m.group(1)), int(m.group(2))) if m else (1080, 2400)
+        # "Override size" (when set) comes after "Physical size" and is what apps get.
+        sizes = re.findall(r"(\d+)x(\d+)", d.shell("wm size"))
+        _SIZE[d.serial] = (int(sizes[-1][0]), int(sizes[-1][1])) if sizes else (1080, 2400)
     return _SIZE[d.serial]
 
 

@@ -59,6 +59,15 @@ final class RelayReadPath {
     final RelayFiles files;
     final RelayHistory history;
     final RelayConvert convert;
+    /** Chats this device marked read just now: their {@code channel_viewed} echo is not a read on another device. */
+    final java.util.concurrent.ConcurrentHashMap<String, Long> viewedHere = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** True when the chat was viewed from this app within {@code windowMs} (the WebSocket echoes our own view). */
+    boolean viewedHereRecently(String channelId, long windowMs) {
+        Long at = viewedHere.get(channelId);
+        return at != null && System.currentTimeMillis() - at < windowMs;
+    }
+
     /** Chats the client has a dialog for (megagroups need {@code updateChannel} first); null = unknown (pre-A4 state). */
     private Set<String> known;
     private final Set<Long> tooLongChannels = java.util.Collections.synchronizedSet(new java.util.HashSet<Long>());
@@ -561,6 +570,7 @@ final class RelayReadPath {
             return;
         }
         account.client.viewChannel(channelId);
+        viewedHere.put(channelId, System.currentTimeMillis());
         directory.invalidate();
         RelayConfig.log(TAG, "viewed " + channelId);
     }

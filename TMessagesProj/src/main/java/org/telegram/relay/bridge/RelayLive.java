@@ -914,7 +914,8 @@ final class RelayLive implements WebSocketListener {
         path.directory.invalidate();
         for (String channelId : viewed.channelIds) {
             Channel channel = path.directory.any().channels.get(channelId);
-            if (channel == null) {
+            if (channel == null || path.viewedHereRecently(channelId, 10_000)) {
+                // The echo of this app's own read: the client already knows (and keeps its "Unread Messages" bar).
                 continue;
             }
             emitRead(channel);
