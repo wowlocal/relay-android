@@ -643,7 +643,10 @@ final class RelayReadPath {
         RelayFinding.fillFull(account, channel, full); // A7b: pinned message, purpose/header cache
         TLRPC.TL_messages_chatFull res = new TLRPC.TL_messages_chatFull();
         res.full_chat = full;
-        res.chats.add(directory.tlChannel(channel));
+        TLRPC.TL_channel chat = directory.tlChannel(channel);
+        // A8: the channel's live call (Telegram's join panel and video chat).
+        org.telegram.relay.calls.RelayGroupSession.decorateFullChannel(account.account, channelId, full, chat);
+        res.chats.add(chat);
         return res;
     }
 
@@ -677,6 +680,12 @@ final class RelayReadPath {
         if (photo != null) {
             full.profile_photo = photo;
             full.flags |= TLObject.FLAG_2;
+        }
+        // A8: DM users are callable over the Relay calls plugin (not bots, deactivated users or Saved Messages).
+        if (org.telegram.relay.RelayFeatures.RELAY_CALLS && mm != null && !mm.isBot && !mm.isDeactivated() && !mmId.equals(account.session.userId)) {
+            full.phone_calls_available = true;
+            full.video_calls_available = true;
+            full.phone_calls_private = false;
         }
         TLRPC.TL_users_userFull res = new TLRPC.TL_users_userFull();
         res.full_user = full;

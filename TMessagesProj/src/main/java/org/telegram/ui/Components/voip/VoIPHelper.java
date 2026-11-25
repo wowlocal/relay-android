@@ -75,8 +75,7 @@ public class VoIPHelper {
 	private static final int VOIP_SUPPORT_ID = 4244000;
 
 	public static void startCall(TLRPC.User user, boolean videoCall, boolean canVideoCall, final Activity activity, TLRPC.UserFull userFull, AccountInstance accountInstance) {
-		if (!org.telegram.relay.RelayFeatures.TG_CALLS) {
-			// Relay: calls come back over LiveKit in A8.
+		if (!org.telegram.relay.RelayFeatures.TG_CALLS && !org.telegram.relay.RelayFeatures.RELAY_CALLS) {
 			return;
 		}
 		if (accountInstance == null ? MessagesController.getInstance(UserConfig.selectedAccount).isFrozen() : accountInstance.getMessagesController().isFrozen()) {
@@ -131,7 +130,7 @@ public class VoIPHelper {
 	}
 
 	public static void startCall(TLRPC.Chat chat, TLRPC.InputPeer peer, String hash, boolean createCall, Boolean checkJoiner, Activity activity, BaseFragment fragment, AccountInstance accountInstance) {
-		if (!org.telegram.relay.RelayFeatures.TG_CALLS) {
+		if (!org.telegram.relay.RelayFeatures.TG_CALLS && !org.telegram.relay.RelayFeatures.RELAY_GROUP_CALLS) {
 			return;
 		}
 		if (activity == null) {

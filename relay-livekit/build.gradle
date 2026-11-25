@@ -1,0 +1,49 @@
+// relay-livekit: the LiveKit side of Relay calls (A8), a small Kotlin library with a Java-friendly API
+// (RelayRoom). TMessagesProj (Java) depends on it; nothing here knows Telegram or Mattermost.
+//
+// WebRTC: LiveKit's `io.github.webrtc-sdk:android-prefixed` relocates its Java classes to
+// `livekit.org.webrtc` and its JNI symbols to `Java_livekit_org_webrtc_*` in liblkjingle_peerconnection_so.so,
+// so it lives beside Telegram's own `org.webrtc` (tgcalls, compiled into libtmessages) without conflicts.
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+repositories {
+    google()
+    mavenCentral()
+    // LiveKit's audioswitch fork is published on JitPack only.
+    maven {
+        url 'https://jitpack.io'
+        content { includeGroup 'com.github.davidliu' }
+    }
+}
+
+android {
+    namespace 'org.telegram.relay.livekit'
+    compileSdkVersion 36
+    buildToolsVersion '36.0.0'
+
+    defaultConfig {
+        minSdkVersion 23
+        targetSdkVersion 36
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    api 'io.livekit:livekit-android:2.30.0'
+    // LiveKit declares coroutines as a runtime dependency; the wrapper launches its own scope.
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+}

@@ -31,6 +31,8 @@ public final class RelayDatabase extends SQLiteOpenHelper {
     public static final String KIND_FILE = "file";
     /** A user's profile picture version, keyed {@code <userId>:<last_picture_update>}: the TL photo id of the avatar. */
     public static final String KIND_AVATAR = "avatar";
+    /** A8: a calls-plugin call id: the TL id of Telegram's phone call / group call. */
+    public static final String KIND_CALL = "call";
 
     private static final int VERSION = 2;
 
@@ -50,6 +52,8 @@ public final class RelayDatabase extends SQLiteOpenHelper {
                 return 5_000_000_001L;
             case KIND_AVATAR:
                 return 7_000_000_001L;
+            case KIND_CALL:
+                return 8_000_000_001L;
             default:
                 return 1L;
         }

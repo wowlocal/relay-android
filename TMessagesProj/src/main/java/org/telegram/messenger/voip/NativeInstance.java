@@ -56,6 +56,10 @@ public class NativeInstance {
     }
 
     public static NativeInstance make(String version, Instance.Config config, String path, Instance.Endpoint[] endpoints, Instance.Proxy proxy, int networkType, Instance.EncryptionKey encryptionKey, VideoSink remoteSink, long videoCapturer, AudioLevelsCallback audioLevelsCallback) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A8): a 1:1 call is a LiveKit room of the calls plugin, not a tgcalls instance.
+            return org.telegram.relay.calls.RelayVoip.makePrivate(remoteSink, videoCapturer, audioLevelsCallback);
+        }
         if (BuildVars.LOGS_ENABLED) {
             FileLog.d("create new tgvoip instance, version " + version);
         }
@@ -68,6 +72,10 @@ public class NativeInstance {
     }
 
     public static NativeInstance makeGroup(String logPath, long videoCapturer, boolean screencast, boolean noiseSupression, PayloadCallback payloadCallback, AudioLevelsCallback audioLevelsCallback, VideoSourcesCallback unknownParticipantsCallback, RequestBroadcastPartCallback requestBroadcastPartCallback, RequestBroadcastPartCallback cancelRequestBroadcastPartCallback, RequestCurrentTimeCallback requestCurrentTimeCallback, boolean isConference) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A8): a group call is the channel's LiveKit room.
+            return org.telegram.relay.calls.RelayVoip.makeGroup(videoCapturer, screencast, payloadCallback, audioLevelsCallback, unknownParticipantsCallback);
+        }
         ContextUtils.initialize(ApplicationLoader.applicationContext);
         NativeInstance instance = new NativeInstance();
         instance.payloadCallback = payloadCallback;
@@ -201,6 +209,36 @@ public class NativeInstance {
     private static native long makeGroupNativeInstance(NativeInstance instance, String persistentStateFilePath, boolean highQuality, long videoCapturer, boolean screencast, boolean noiseSupression, boolean conference);
     private static native long makeNativeInstance(String version, NativeInstance instance, Instance.Config config, String persistentStateFilePath, Instance.Endpoint[] endpoints, Instance.Proxy proxy, int networkType, Instance.EncryptionKey encryptionKey, VideoSink remoteSink, long videoCapturer, float aspectRatio);
     public static native long createVideoCapturer(VideoSink localSink, int type);
+
+    // Relay (A8): VoIPService's capturer calls go through these. In Relay mode the camera and the screen are
+    // LiveKit tracks (org.telegram.relay.calls.RelayVoip): the handle is a Relay capturer id, not a tgcalls pointer.
+    public static long createCapturer(VideoSink localSink, int type) {
+        return org.telegram.relay.RelayConfig.ENABLED ? org.telegram.relay.calls.RelayVoip.createCapturer(localSink, type) : createVideoCapturer(localSink, type);
+    }
+
+    public static void setCapturerVideoState(long videoCapturer, int videoState) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            org.telegram.relay.calls.RelayVoip.setCapturerState(videoCapturer, videoState);
+        } else {
+            setVideoStateCapturer(videoCapturer, videoState);
+        }
+    }
+
+    public static void switchCapturerCamera(long videoCapturer, boolean front) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            org.telegram.relay.calls.RelayVoip.switchCapturer(videoCapturer, front);
+        } else {
+            switchCameraCapturer(videoCapturer, front);
+        }
+    }
+
+    public static void destroyCapturer(long videoCapturer) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            org.telegram.relay.calls.RelayVoip.destroyCapturer(videoCapturer);
+        } else {
+            destroyVideoCapturer(videoCapturer);
+        }
+    }
     public static native void setVideoStateCapturer(long videoCapturer, int videoState);
     public static native void switchCameraCapturer(long videoCapturer, boolean front);
     public static native void destroyVideoCapturer(long videoCapturer);

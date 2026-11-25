@@ -30,6 +30,11 @@ idea {
 repositories {
     mavenCentral()
     google()
+    // Relay A8: LiveKit's audioswitch fork (relay-livekit) is on JitPack only.
+    maven {
+        url 'https://jitpack.io'
+        content { includeGroup 'com.github.davidliu' }
+    }
 }
 
 configurations {
@@ -110,6 +115,9 @@ dependencies {
 //    implementation 'com.google.mlkit:translate:17.0.3'
 
     implementation 'com.google.android.recaptcha:recaptcha:18.7.1'
+
+    // Relay A8: calls over LiveKit (prefixed WebRTC, see relay-livekit/build.gradle).
+    implementation project(':relay-livekit')
 
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }

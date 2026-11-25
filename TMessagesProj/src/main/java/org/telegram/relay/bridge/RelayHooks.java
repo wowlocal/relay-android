@@ -3,6 +3,7 @@ package org.telegram.relay.bridge;
 import org.telegram.relay.RelayConfig;
 import org.telegram.relay.account.RelayAccount;
 import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.TLRPC;
 
 import java.util.Collections;
 import java.util.Map;
@@ -202,6 +203,63 @@ public final class RelayHooks {
         }
         try {
             return RelayReadPath.of(relayAccount).directory.channelIdOf(dialogId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // MARK: - A8 calls (org.telegram.relay.calls)
+
+    /**
+     * Delivers pts-less updates (phone calls, group calls) as one {@code TL_updates} with the users and chats they
+     * reference, on the account's bridge executor. Any thread.
+     */
+    public static void deliverUpdates(int account, java.util.List<TLRPC.Update> updates, java.util.Collection<String> mmUserIds, java.util.Collection<TLRPC.Chat> chats) {
+        RelayAccount relayAccount = RelayAccount.get(account);
+        if (relayAccount == null || updates.isEmpty()) {
+            return;
+        }
+        RelayBridge bridge = RelayBridge.get(account);
+        java.util.List<TLRPC.Update> copy = new java.util.ArrayList<>(updates);
+        bridge.post(() -> {
+            RelayLive live = RelayLive.of(bridge, relayAccount);
+            RelayUpdates.Refs refs = new RelayUpdates.Refs();
+            if (mmUserIds != null) {
+                refs.users(mmUserIds);
+            }
+            if (chats != null) {
+                for (TLRPC.Chat chat : chats) {
+                    refs.chat(chat);
+                }
+            }
+            live.updates.deliver(copy, refs);
+        });
+    }
+
+    /** The TL users of Mattermost user ids (fetched when unknown). Bridge or I/O thread. */
+    public static java.util.List<TLRPC.User> tlUsers(int account, java.util.Collection<String> mmUserIds) {
+        RelayAccount relayAccount = RelayAccount.get(account);
+        if (relayAccount == null) {
+            return new java.util.ArrayList<>();
+        }
+        try {
+            return RelayReadPath.of(relayAccount).users(mmUserIds);
+        } catch (Exception e) {
+            RelayConfig.logError(RelayConfig.TAG_BRIDGE, "calls: users " + mmUserIds, e);
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    /** The megagroup of a GM/channel (null for DMs or unknown channels). Bridge or I/O thread. */
+    public static TLRPC.TL_channel tlChannel(int account, String channelId) {
+        RelayAccount relayAccount = RelayAccount.get(account);
+        if (relayAccount == null) {
+            return null;
+        }
+        try {
+            RelayReadPath path = RelayReadPath.of(relayAccount);
+            org.telegram.relay.mattermost.model.Channel channel = path.directory.channel(channelId);
+            return channel == null || channel.isDirect() ? null : path.directory.tlChannel(channel);
         } catch (Exception e) {
             return null;
         }

@@ -891,6 +891,68 @@ public class MattermostClient {
         return new MattermostWebSocket(serverUrl, token, configuration, listener);
     }
 
+    // MARK: - Plugins
+
+    /** The answer of a plugin route: any HTTP status (only transport failures throw), body as text. */
+    public static final class PluginResponse {
+        public final int statusCode;
+        public final String body;
+
+        public PluginResponse(int statusCode, String body) {
+            this.statusCode = statusCode;
+            this.body = body;
+        }
+
+        public boolean isSuccessful() {
+            return statusCode >= 200 && statusCode < 300;
+        }
+    }
+
+    /**
+     * {@code <method> <serverUrl>/plugins/<pluginId>/<path>} with the session token, an optional JSON body.
+     * Non-2xx answers are returned, not thrown (plugins put useful JSON in error bodies, e.g. a {@code 409} with
+     * the conflicting call); a {@code 401} still reaches the {@link Listener}.
+     */
+    public PluginResponse plugin(String method, String pluginId, String path, JsonElement body) throws MattermostException {
+        Request request = new Request(method, "/plugins/" + pluginId + "/" + path);
+        request.serverRoot = true;
+        if (body != null) {
+            request.json(body);
+        }
+        HttpURLConnection connection = open(request);
+        try {
+            int status;
+            try {
+                writeBody(connection, request);
+                status = connection.getResponseCode();
+            } catch (SocketTimeoutException e) {
+                throw MattermostException.transport("timeout: " + method + " " + request.path, e);
+            } catch (IOException e) {
+                throw MattermostException.transport(method + " " + request.path + ": " + e.getMessage(), e);
+            }
+            byte[] bytes = new byte[0];
+            try {
+                InputStream in = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+                if (in != null) {
+                    bytes = readFully(in);
+                }
+            } catch (IOException e) {
+                if (status >= 200 && status < 300) {
+                    throw MattermostException.transport("reading " + request.path + ": " + e.getMessage(), e);
+                }
+            }
+            if (status == 401 && token != null) {
+                Listener current = listener;
+                if (current != null) {
+                    current.onUnauthorized(this, errorFromResponse(status, bytes, null, null));
+                }
+            }
+            return new PluginResponse(status, new String(bytes, UTF8));
+        } finally {
+            connection.disconnect();
+        }
+    }
+
     // MARK: - Request plumbing
 
     private <T> T get(String path, Class<T> type) throws MattermostException {
@@ -910,6 +972,8 @@ public class MattermostClient {
         Multipart multipart;
         UploadProgressListener uploadProgress;
         int readTimeout = -1;
+        /** {@link #path} is relative to the server URL (plugin routes), not to {@code /api/v4}. */
+        boolean serverRoot;
         final Map<String, String> headers = new LinkedHashMap<String, String>();
 
         Request(String method, String path) {
@@ -965,7 +1029,7 @@ public class MattermostClient {
     }
 
     URL url(Request request) throws MattermostException {
-        String url = getApiBaseUrl() + request.path;
+        String url = (request.serverRoot ? serverUrl : getApiBaseUrl()) + request.path;
         if (request.query != null && !request.query.isEmpty()) {
             url += "?" + request.query.encode();
         }

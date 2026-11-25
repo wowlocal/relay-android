@@ -5,12 +5,19 @@ include ':TMessagesProj_AppHockeyApp'
 include ':TMessagesProj_AppStandalone'
 include ':TMessagesProj_AppTests'
 include ':jlatexmath'
+// Relay A8: LiveKit (Kotlin) behind a Java-friendly wrapper, see relay-livekit/build.gradle.
+include ':relay-livekit'
 project(':jlatexmath').projectDir = file('TMessagesProj/lib/jlatexmath/jlatexmath')
 
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Relay A8: LiveKit's audioswitch fork is on JitPack only.
+        maven {
+            url 'https://jitpack.io'
+            content { includeGroup 'com.github.davidliu' }
+        }
     }
 }
 

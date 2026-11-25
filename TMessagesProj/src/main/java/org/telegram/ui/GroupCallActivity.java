@@ -8674,7 +8674,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             if (isConference()) {
                 conferenceAddPeopleRow = rowsCount++;
                 conferenceShareLinkRow = rowsCount++;
-            } else if (!isRtmpStream() && ((!ChatObject.isChannel(currentChat) || currentChat != null && currentChat.megagroup) && ChatObject.canWriteToChat(currentChat) ||
+            } else if (!org.telegram.relay.RelayConfig.ENABLED && !isRtmpStream() && ((!ChatObject.isChannel(currentChat) || currentChat != null && currentChat.megagroup) && ChatObject.canWriteToChat(currentChat) ||
                     ChatObject.isChannel(currentChat) && currentChat != null && !currentChat.megagroup && ChatObject.isPublic(currentChat))) {
                 addMemberRow = rowsCount++;
             }
@@ -9632,6 +9632,10 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         if (voip != null && voip.isConference()) {
             return call != null && call.call != null && call.call.creator;
         } else {
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay: no admin features (titles, recording, join muted, invite links, muting others) are backed.
+                return false;
+            }
             return ChatObject.canManageCalls(currentChat);
         }
     }

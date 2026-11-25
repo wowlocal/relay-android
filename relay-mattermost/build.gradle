@@ -19,7 +19,8 @@ java {
 }
 
 // Build outputs on the fast external disk when it is mounted (shared with the Android build).
-def externalBuildRoot = file('/Volumes/X5/relay-android/build')
+// A worktree points it elsewhere: RELAY_BUILD_ROOT or -Prelay.buildRoot (then <root>/relay-mattermost).
+def externalBuildRoot = file(System.getenv('RELAY_BUILD_ROOT') ?: findProperty('relay.buildRoot') ?: '/Volumes/X5/relay-android/build')
 if (externalBuildRoot.isDirectory()) {
     layout.buildDirectory = new File(externalBuildRoot, 'relay-mattermost')
 }

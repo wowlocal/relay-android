@@ -12515,7 +12515,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 }
                 if (chatInfo != null) {
-                    if (ChatObject.canManageCalls(chat) && chatInfo.call == null) {
+                    if (org.telegram.relay.RelayFeatures.canStartGroupCall(chat) && chatInfo.call == null) {
                         otherItem.addSubItem(call_item, R.drawable.msg_voicechat, chat.megagroup && !chat.gigagroup ? LocaleController.getString(R.string.StartVoipChat) : LocaleController.getString(R.string.StartVoipChannel));
                         hasVoiceChatItem = true;
                         if (chat.megagroup && !chat.gigagroup) {
@@ -12597,7 +12597,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             } else {
                 if (chatInfo != null) {
-                    if (ChatObject.canManageCalls(chat) && chatInfo.call == null) {
+                    if (org.telegram.relay.RelayFeatures.canStartGroupCall(chat) && chatInfo.call == null) {
                         otherItem.addSubItem(call_item, R.drawable.msg_voicechat, LocaleController.getString(R.string.StartVoipChat));
                         hasVoiceChatItem = true;
                         voiceChatAction = true;
@@ -12663,9 +12663,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             giftAction = org.telegram.relay.RelayFeatures.GIFTS && giftAction;
             addStoryAction = org.telegram.relay.RelayFeatures.STORIES && addStoryAction;
             if (!org.telegram.relay.RelayFeatures.TG_CALLS) {
-                otherItem.hideSubItem(call_item);
-                callItemVisible = videoCallItemVisible = false;
-                voiceChatAction = streamAction = false;
+                // A8: Relay calls keep the DM call buttons (userFull.phone_calls_available) and the video chat of
+                // channels; Telegram's live streams have no Relay backing.
+                if (!org.telegram.relay.RelayFeatures.RELAY_CALLS) {
+                    otherItem.hideSubItem(call_item);
+                    callItemVisible = videoCallItemVisible = false;
+                }
+                if (!org.telegram.relay.RelayFeatures.RELAY_GROUP_CALLS) {
+                    voiceChatAction = false;
+                }
+                streamAction = false;
             }
         }
 
