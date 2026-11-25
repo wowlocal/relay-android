@@ -16,7 +16,7 @@ alice is in the app (fresh login); bob posts, rings and creates channels over RE
      the chat live, and unsetting it unpins.
   5. QA-04 team folders: a channel bob adds alice to (Engineering) and one alice creates elsewhere (Design) show in
      their team folders, live and after a cold start, and the folder counts the new channel's unread.
-  6. QA-16: an @-mention in a just-joined channel shows the "@" badge (dialog mention count).
+  6. QA-16: an @-mention in a just-joined channel shows the "@" badge (= the server's mention count).
   7. QA-05 Add Members: only the channel's team is offered; a non-team user → Relay's "not a member of the team".
   8. QA-07: opening a group message shows no "Unknown error: RELAY_UNSUPPORTED".
   9. QA-17: Recent Mentions leaves out the user's own posts.
@@ -319,7 +319,9 @@ def main():
         check.ok("Engineering folder's unread count includes the new channel", before_eng is not None and after_eng == before_eng + 1, "%s → %s" % (before_eng, after_eng))
         shot(d, "eng-folder")
         dd, _ = dump_dialogs(d)
-        check.ok("mention in a just-joined channel → '@' (mentions=1)", dd.get(ch_e["id"], {}).get("mentions") == 1, str(dd.get(ch_e["id"])))
+        server_mentions = alice.get("/channels/%s/members/me" % ch_e["id"])["mention_count"]
+        check.ok("mention in a just-joined channel → '@' badge = the server's mention count",
+                 server_mentions >= 1 and dd.get(ch_e["id"], {}).get("mentions") == server_mentions, "server=%s app=%s" % (server_mentions, dd.get(ch_e["id"])))
         cold_start(d, 10)
         check.ok("after a cold start: both still in their folders", in_folder(ch_e, eng) and in_folder(ch_d, design))
 
