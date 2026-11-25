@@ -816,6 +816,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 openSetPhotoAlert();
             });
             settingsContainer.addView(setAvatarCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            if (org.telegram.relay.RelayConfig.ENABLED && currentUser == null) {
+                setAvatarCell.setVisibility(View.GONE); // Relay polish1: Mattermost channels have no icon
+            }
         }
 
         descriptionTextView = new EditTextBoldCursor(context);

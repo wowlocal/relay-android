@@ -540,7 +540,8 @@ final class RelayLive implements WebSocketListener {
         RelayConvert.Layout layout = new RelayConvert.Layout(post);
         IngestResult result = account.messageIds.insertPost(new PostOrderKey(post.createAt, post.id), layout.parts, channelId, account.messageIdStore());
         if (result.renumberPlan != null) {
-            RelayConfig.log(TAG, "RENUMBER in " + channelId + " (live): " + result.renumberPlan);
+            path.history.renumbers.incrementAndGet();
+            RelayRenumber.onResult(account, channelId, result, "live"); // Polish 1: migrate the client's messages
         }
         Set<String> inserted = new HashSet<>();
         for (PostAllocation allocation : result.allocations) {
@@ -695,6 +696,18 @@ final class RelayLive implements WebSocketListener {
             list.add(editUpdate(channel, message));
         }
         updates.emit(list, refs(channel, users), 0);
+    }
+
+    /** Polish 1: re-sends a post as an edit (its media changed locally, e.g. a probed video). Bridge executor. */
+    void reemitPost(String channelId, String postId) {
+        try {
+            Post post = path.history.post(postId);
+            if (post != null && post.channelId != null && post.channelId.equals(channelId)) {
+                onEdited(post);
+            }
+        } catch (Throwable t) {
+            RelayConfig.logError(TAG, "re-emit " + postId, t);
+        }
     }
 
     private void onEdited(Post post) throws Exception {

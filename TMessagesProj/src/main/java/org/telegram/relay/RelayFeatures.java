@@ -72,6 +72,8 @@ public final class RelayFeatures {
     public static final boolean TELEGRAM_LOGIN = false;
     /** Polls and checklists (Mattermost has no native polls). */
     public static final boolean POLLS = false;
+    /** Polish 1: "Location" in the attach menu. Off, as on iOS (never posted; Mattermost has no location message). */
+    public static final boolean LOCATION = false;
     /** Telegram's rich-text article messages (InstantPage). */
     public static final boolean RICH_MESSAGES = false;
     /** Telegram's 2-step verification cloud password. */

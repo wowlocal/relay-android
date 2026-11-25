@@ -149,7 +149,7 @@ final class RelayHistory {
     private void note(IngestResult result, String channelId, String what) {
         if (result != null && result.renumberPlan != null) {
             renumbers.incrementAndGet();
-            RelayConfig.log(TAG, "RENUMBER in " + channelId + " (" + what + "): " + result.renumberPlan + " — cached client messages in that range are stale");
+            RelayRenumber.onResult(account, channelId, result, what); // Polish 1: migrate the client's messages
         }
     }
 

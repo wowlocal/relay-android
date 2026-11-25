@@ -323,6 +323,29 @@ public final class RelayProfile {
         }
     }
 
+    /**
+     * Polish 1: the accessibility text of a user's emoji status, which in Relay is the Mattermost custom status
+     * (Telegram says "Premium account"): "Custom Status: &lt;text&gt;", or "Custom Status" without a text.
+     */
+    public static String emojiStatusDescription(int accountNum, long userTlId) {
+        String label = org.telegram.messenger.LocaleController.getString(org.telegram.messenger.R.string.RelayCustomStatus);
+        RelayAccount account = RelayAccount.get(accountNum);
+        if (account == null) {
+            return label;
+        }
+        try {
+            String mmId = account.db().mmId(org.telegram.relay.account.RelayDatabase.KIND_USER, userTlId);
+            User user = mmId != null ? account.cachedUser(mmId) : null;
+            CustomStatus status = user != null ? user.getCustomStatus() : null;
+            if (status != null && status.text != null && !status.text.trim().isEmpty() && !isExpired(status)) {
+                return label + ": " + status.text.trim();
+            }
+        } catch (Throwable t) {
+            RelayConfig.logError(TAG, "emoji status description", t);
+        }
+        return label;
+    }
+
     /** Adds {@code updateUserEmojiStatus} for a user (live custom status changes). */
     static void addEmojiStatusUpdate(RelayAccount account, TLRPC.TL_user tl, java.util.List<TLRPC.Update> out) {
         if (tl == null) {

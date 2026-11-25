@@ -296,7 +296,7 @@ final class RelayWrite {
     private TLRPC.TL_updates sent(Channel channel, Post post, long[] randomIdOfPart) throws Exception {
         path.history.rememberPost(post);
         RelayConvert.Layout layout = new RelayConvert.Layout(post);
-        account.messageIds.insertPost(new PostOrderKey(post.createAt, post.id), layout.parts, channel.id, account.messageIdStore());
+        RelayRenumber.onResult(account, channel.id, account.messageIds.insertPost(new PostOrderKey(post.createAt, post.id), layout.parts, channel.id, account.messageIdStore()), "sent"); // Polish 1
         List<RelayHistory.Unit> units = live.mappedUnits(channel.id, post);
         List<String> users = new ArrayList<>();
         ArrayList<TLRPC.Message> messages = path.messages(channel, units, users);

@@ -6854,7 +6854,7 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
                     moneyButton = buttonsCount++;
                 }
 
-                if (plainTextEnabled) {
+                if (org.telegram.relay.RelayFeatures.LOCATION && plainTextEnabled) { // Relay polish1: hidden as on iOS
                     locationButton = buttonsCount++;
                 }
                 if (org.telegram.relay.RelayFeatures.RICH_MESSAGES && plainTextEnabled && MessagesController.getInstance(currentAccount).richEditorAvailable()) {

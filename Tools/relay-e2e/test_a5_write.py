@@ -345,8 +345,20 @@ def main():
         check.ok("delete dialog has no 'delete for me' option", "for me" not in texts_dialog.lower() and "also delete" not in texts_dialog.lower())
         gone = wait_until(lambda: not find_post(bob, sandbox["id"], "channel edited %d" % t0), timeout=10)
         check.ok("delete reaches Mattermost", gone and edited_id is not None)
+        # A7b maps Mattermost roles to rights: without delete_others the menu has no Delete for bob's post (the
+        # menu opens with Reply/Copy). With the right, the delete is confirmed and the server's 403 brings it back.
+        menu_texts = []
         ok = message_menu(d, "root by bob %d" % t0, "Delete")
-        confirmed = False
+        if not ok:
+            n = d.find(text="root by bob %d" % t0, contains=True)
+            if n:
+                x1, y1, x2, y2 = n.bounds
+                d.tap(max(x1 + 40, x2 - 150), max(y1 + 10, y2 - 28))
+                time.sleep(1.5)
+                menu_texts = [x.text for x in d.dump()]
+                d.key("KEYCODE_BACK")
+                time.sleep(1)
+        confirmed = not ok and "Reply" in menu_texts and "Delete" not in menu_texts
         if ok:
             # A group creator gets Telegram's admin sheet ("Proceed"), others the plain alert ("Delete").
             confirm = wait_until(lambda: d.find(desc="Proceed") or d.find(text="Proceed") or d.find(text="Delete"), timeout=4)
@@ -354,7 +366,7 @@ def main():
                 d.tap_node(confirm)
                 confirmed = True
         time.sleep(3)
-        check.ok("delete of bob's post confirmed in the app", confirmed)
+        check.ok("delete of bob's post confirmed in the app (or not offered without the right, A7b)", confirmed, str(menu_texts[:12]))
         still = find_post(bob, sandbox["id"], "root by bob %d" % t0)
         msgs, _ = dump_messages(d, sandbox["id"])
         check.ok("deleting bob's post is refused and the message comes back", still and find_msg(msgs, "root by bob %d" % t0))

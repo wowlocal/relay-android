@@ -103,6 +103,34 @@ public final class RelayThreadsUi {
         }));
     }
 
+    /**
+     * Reply in a megagroup's main history with collapsed threads (message menu, polish 1: swipe-to-reply and the
+     * selection bar's Reply too): opens the post's thread instead of quoting into the channel. True when handled.
+     */
+    public static boolean replyInThread(ChatActivity chat, MessageObject message) {
+        if (!RelayConfig.ENABLED || chat == null || message == null || chat.isThreadChat() || message.getDialogId() >= 0
+                || !RelayThreadsHooks.collapsedThreads(chat.getCurrentAccount()) || message.messageOwner == null || message.messageOwner.action != null
+                || message.getId() <= 0 || message.scheduled || chat.getChatMode() != 0) {
+            return false;
+        }
+        // Any part of a root post (the bridge resolves the post), or a reply's root.
+        int root = message.getReplyTopMsgId() != 0 ? message.getReplyTopMsgId() : message.getId();
+        RelayConfig.log(TAG, "reply in thread " + root + " of " + message.getDialogId());
+        openThread(chat, chat.getCurrentAccount(), message.getDialogId(), root, 0);
+        return true;
+    }
+
+    /** Polish 1: the "N Replies" footer opens the thread at its first unread reply ({@link #openThread}), as iOS. */
+    public static boolean openFromFooter(ChatActivity chat, MessageObject message) {
+        if (!RelayConfig.ENABLED || chat == null || message == null || chat.isThreadChat() || message.getDialogId() >= 0
+                || !RelayThreadsHooks.collapsedThreads(chat.getCurrentAccount()) || message.getId() <= 0) {
+            return false;
+        }
+        RelayConfig.log(TAG, "footer: thread " + message.getId() + " of " + message.getDialogId());
+        openThread(chat, chat.getCurrentAccount(), message.getDialogId(), message.getId(), 0);
+        return true;
+    }
+
     // MARK: - Message menu
 
     /** Adds Follow / Unfollow Thread for messages of a thread (roots with replies, replies) with collapsed threads on. */
@@ -134,12 +162,7 @@ public final class RelayThreadsUi {
      * (Mattermost's reply arrow opens the thread too).
      */
     public static boolean handleMessageOption(ChatActivity chat, int option, MessageObject message) {
-        if (option == ChatActivity.OPTION_REPLY && message != null && !chat.isThreadChat() && message.getDialogId() < 0
-                && RelayThreadsHooks.collapsedThreads(chat.getCurrentAccount()) && message.messageOwner != null && message.messageOwner.action == null
-                && message.getId() > 0 && !message.scheduled) {
-            // Any part of a root post (the bridge resolves the post), or a reply's root.
-            int root = message.getReplyTopMsgId() != 0 ? message.getReplyTopMsgId() : message.getId();
-            openThread(chat, chat.getCurrentAccount(), message.getDialogId(), root, 0);
+        if (option == ChatActivity.OPTION_REPLY && replyInThread(chat, message)) {
             return true;
         }
         if (option != OPTION_FOLLOW_THREAD && option != OPTION_UNFOLLOW_THREAD) {

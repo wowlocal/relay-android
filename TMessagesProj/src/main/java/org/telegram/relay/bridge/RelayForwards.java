@@ -61,6 +61,19 @@ final class RelayForwards {
         return null;
     }
 
+    /**
+     * Polish 1: what a post shows (iOS {@code ForwardedPost.content}): the forwarded post of a plain forward without
+     * files of its own (its text, files and props), else the post itself. The embed carries the forwarded post's
+     * {@code metadata.files}, so its files become the forward's parts (grouping keys stay the forward's).
+     */
+    static Post content(Post post) {
+        if (post == null || post.fileIds != null && !post.fileIds.isEmpty()) {
+            return post;
+        }
+        Post forwarded = forwardedPost(post);
+        return forwarded != null ? forwarded : post;
+    }
+
     /** Telegram's forward header: the forwarded post's author and date. */
     static void setHeader(TLRPC.Message m, Post forwarded, RelayAccount account, Collection<String> usersOut) {
         TLRPC.TL_messageFwdHeader header = new TLRPC.TL_messageFwdHeader();

@@ -339,6 +339,7 @@ public final class RelayAuth {
         RelaySessionStore.clear(account);
         RelayAccount.drop(account);
         RelayDatabase.deleteFiles(account);
+        org.telegram.relay.bridge.RelayNotifications.applyKeepConnected(); // Polish 1: no account left → the keep-alive service stops now
         if (session != null) {
             RelayConfig.log(TAG, "logout account=" + account + " " + session);
             Utilities.globalQueue.postRunnable(() -> {

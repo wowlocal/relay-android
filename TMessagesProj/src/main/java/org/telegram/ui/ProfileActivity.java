@@ -11853,7 +11853,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (user != null && !MessagesController.isSupportUser(user) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
                     rightIconIsStatus = true;
                     nameTextView.setRightDrawable(getEmojiStatusDrawable(user.emoji_status, true, true));
-                    nameTextViewRightDrawableContentDescription = LocaleController.getString(R.string.AccDescrPremium);
+                    nameTextViewRightDrawableContentDescription = org.telegram.relay.RelayConfig.ENABLED
+                            ? org.telegram.relay.bridge.RelayProfile.emojiStatusDescription(currentAccount, user.id) // Relay polish1: a custom status, not Premium
+                            : LocaleController.getString(R.string.AccDescrPremium);
                 } else if (getMessagesController().isPremiumUser(user)) {
                     rightIconIsPremium = true;
                     nameTextView.setRightDrawable(getEmojiStatusDrawable(null, true, true));

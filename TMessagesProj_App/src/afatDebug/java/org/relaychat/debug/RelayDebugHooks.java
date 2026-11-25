@@ -220,7 +220,7 @@ public class RelayDebugHooks extends ContentProvider {
                                     text.append("msg\t").append(cursor.intValue(0)).append('\t').append(clean(m.message))
                                             .append('\t').append(m.edit_date).append('\t').append(reactions(m))
                                             .append('\t').append(m.replies != null ? m.replies.replies : 0)
-                                            .append('\t').append(m.reply_to != null ? m.reply_to.reply_to_msg_id : 0)
+                                            .append('\t').append(m.reply_to != null ? (m.reply_to.reply_to_msg_id != 0 ? m.reply_to.reply_to_msg_id : m.reply_to.reply_to_top_id) : 0) // with CRT a reply carries only its thread root (top id)
                                             .append('\t').append(m.media != null ? m.media.getClass().getSimpleName() : "")
                                             .append('\t').append(m.out ? 1 : 0).append('\n');
                                 }

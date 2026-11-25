@@ -57,7 +57,8 @@ final class RelayConvert {
             List<FileInfo> others = new ArrayList<>();
             service = post.isSystemMessage();
             if (!service) {
-                for (FileInfo file : orderedFiles(post)) {
+                // Polish 1: a plain forward shows the forwarded post's files too (iOS PostLayout, ForwardedPost.content).
+                for (FileInfo file : orderedFiles(RelayForwards.content(post))) {
                     if (RelayFiles.isPhoto(file)) {
                         images.add(file);
                     } else {
@@ -182,7 +183,8 @@ final class RelayConvert {
         FileInfo file = layout.file(part);
         if (file != null) {
             m.media = files.media(file, date);
-            markVoice(post, layout, file, m.media);
+            markVoice(forwarded != null ? forwarded : post, layout, file, m.media);
+            RelayVideoProbe.schedule(account, post, file); // Polish 1: size, duration, frame of other clients' videos
             m.flags |= TLObject.FLAG_9;
             long grouped = layout.groupedId(part);
             if (grouped != 0) {
