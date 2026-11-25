@@ -127,3 +127,21 @@ With neither property set, the build behaves as upstream does: all four ABIs, in
 - Telegram's welcome screen talks to Telegram DCs on "Start Messaging"; A2 replaces that.
 - `assembleAfatDebug` is the only debug variant: the `variantFilter` drops `bundleAfat` for
   non-release builds.
+
+## Release build
+
+```sh
+# once per machine: local.properties → relay.signing=<path to keystore.properties outside the repo>
+./gradlew -Prelay.abis=arm64-v8a,armeabi-v7a :TMessagesProj_App:assembleAfatRelease
+# → $relay.buildRoot/TMessagesProj_App/outputs/apk/afat/release/app.apk (org.relaychat.android)
+```
+
+- Signing: `relay.signing` points at a `keystore.properties` (`storeFile`, `storePassword`, `keyAlias`,
+  `keyPassword`). On the build Mac it is `~/.relay-secrets/android/keystore.properties` with
+  `relay-release.jks` next to it (cert SHA-256 `36:8E:E7:C9:…:1C:5E:71:1F:54`). **Back the keystore up**:
+  every future update must be signed with the same key. Without `relay.signing` the build falls back to
+  upstream's public placeholder keystore — never publish such an APK.
+- R8: `TMessagesProj/proguard-rules.pro` keeps `org.telegram.relay.**` (Gson models, reflective bridge).
+- Version: `RELAY_VERSION_NAME` in `gradle.properties` is what Android shows; `versionCode` stays
+  upstream-derived (`APP_VERSION_CODE*10 + abi`), so it must not go down on a future upstream rebase.
+- Debug hooks (`org.relaychat.DEBUG_*`) are not in release builds; smoke-test it through the UI.
