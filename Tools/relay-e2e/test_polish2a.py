@@ -10,8 +10,8 @@ alice is in the app (fresh login); bob posts, rings and creates channels over RE
   1. QA-01 login: no notification for the unread history synced at login; the summary counts only new posts.
   2. QA-01 live: a DM notifies, a channel post without a mention does not (push level "mention"), an @-mention does;
      the summary counts the pushed posts only; a cold start restores only this session's notifiable posts.
-  3. QA-02 / QA-08 / QA-09: no scheduling (menu, long-press Send), no Clear History, max length = MaxPostSize; a
-     4,500-character message is one post.
+  3. QA-02 / QA-08 / QA-09 / QA-20: no scheduling (menu, long-press Send), no Clear History, max length = MaxPostSize; a
+     4,500-character message is one post; a public channel is "public channel" in search and has "Leave Channel".
   4. QA-03 favourites: Pin in the app → favorite_channel + Favorites category; unpin; a favourite set elsewhere pins
      the chat live, and unsetting it unpins.
   5. QA-04 team folders: a channel bob adds alice to (Engineering) and one alice creates elsewhere (Design) show in
@@ -264,7 +264,21 @@ def main():
             shot(d, "channel-menu")
             texts = " | ".join(d.screen_texts())
             check.ok("channel menu has no Clear History", "Clear History" not in texts and "Clear history" not in texts, texts[:200])
+            check.ok("QA-20: a public channel's menu says Leave Channel (not Leave Group)", "Leave Channel" in texts and "Leave Group" not in texts, texts[:120])
             d.key("KEYCODE_BACK")
+        to_chat_list(d)
+        search = d.find(text="Search Chats")
+        if search:
+            d.tap_node(search)
+            time.sleep(1)
+            d.type_text(town["display_name"])
+            time.sleep(3)
+            rows = [n.text for n in d.dump() if n.text.startswith(town["display_name"] + ",")]
+            shot(d, "search-public-channel")
+            check.ok("QA-20: search row says 'public channel' (not 'private group')", any("public channel" in r for r in rows), str(rows))
+            d.key("KEYCODE_BACK")
+            d.key("KEYCODE_BACK")
+            time.sleep(1)
         to_chat_list(d)
 
         # MARK: 4. Favourites ↔ pinned chats.

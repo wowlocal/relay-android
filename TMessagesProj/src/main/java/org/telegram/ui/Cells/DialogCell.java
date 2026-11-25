@@ -5948,7 +5948,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     return fromChat == null ? "" : fromChat.title;
                 }
             }
-        } else if (message.isOutOwner() && fromUser != null) {
+        } else if ((message.isOutOwner() || org.telegram.relay.RelayConfig.ENABLED && !isSavedDialog && message.messageOwner != null
+                && message.messageOwner.from_id instanceof TLRPC.TL_peerUser && message.messageOwner.from_id.user_id == selfId) && fromUser != null) {
+            // Relay (polish 2a, QA-24): an own post re-sent after a cold start kept a stale isOutOwner (false) and the
+            // preview read "Alice:" instead of "You:" until the next redraw.
             return getString(R.string.FromYou);
         } else if (!isSavedDialog && message != null && message.messageOwner != null && message.messageOwner.from_id instanceof TLRPC.TL_peerUser && (user = MessagesController.getInstance(currentAccount).getUser(message.messageOwner.from_id.user_id)) != null) {
             return AndroidUtilities.escape(UserObject.getFirstName(user).replace("\n", ""));

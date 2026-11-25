@@ -4902,7 +4902,7 @@ public class MessageObject {
                     }
                 } else if (messageOwner.action instanceof TLRPC.TL_messageActionGroupCallScheduled) {
                     TLRPC.TL_messageActionGroupCallScheduled action = (TLRPC.TL_messageActionGroupCallScheduled) messageOwner.action;
-                    if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup()) {
+                    if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup() || org.telegram.relay.RelayConfig.ENABLED && messageOwner.peer_id instanceof TLRPC.TL_peerChannel) { // Relay: every channel is a group (chat-list previews said "Live stream")
                         messageText = formatString(R.string.ActionGroupCallScheduled, LocaleController.formatStartsTime(action.schedule_date, 3, false));
                     } else {
                         messageText = formatString(R.string.ActionChannelCallScheduled, LocaleController.formatStartsTime(action.schedule_date, 3, false));
@@ -4927,7 +4927,7 @@ public class MessageObject {
                             }
                         }
 
-                        if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup()) {
+                        if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup() || org.telegram.relay.RelayConfig.ENABLED && messageOwner.peer_id instanceof TLRPC.TL_peerChannel) { // Relay: every channel is a group (chat-list previews said "Live stream")
                             if (isOut()) {
                                 messageText = formatString(R.string.ActionGroupCallEndedByYou, time);
                             } else {
@@ -4937,7 +4937,7 @@ public class MessageObject {
                             messageText = formatString(R.string.ActionChannelCallEnded, time);
                         }
                     } else {
-                        if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup()) {
+                        if (messageOwner.peer_id instanceof TLRPC.TL_peerChat || isSupergroup() || org.telegram.relay.RelayConfig.ENABLED && messageOwner.peer_id instanceof TLRPC.TL_peerChannel) { // Relay: every channel is a group (chat-list previews said "Live stream")
                             if (isOut()) {
                                 messageText = getString(R.string.ActionGroupCallStartedByYou);
                             } else {

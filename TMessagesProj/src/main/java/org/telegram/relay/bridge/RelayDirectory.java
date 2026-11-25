@@ -303,6 +303,7 @@ final class RelayDirectory {
         c.flags |= TLObject.FLAG_18;
         // A7b: the user's rights from Mattermost roles, membership (left = not a member), archived = read-only.
         RelayMembers.of(account).applyRights(channel, c);
+        RelayFinding.noteKind(c.id, channel); // polish 2a (QA-20): public / private / group message labels
         return c;
     }
 

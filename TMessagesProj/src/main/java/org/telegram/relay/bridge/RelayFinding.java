@@ -101,6 +101,38 @@ public final class RelayFinding {
     }
 
     /** True when the chat is an archived Mattermost channel (read-only). */
+    /** Polish 2a (QA-20): Mattermost channel type per chat: O public, P private, G group message. */
+    private static final Map<Long, String> kinds = new java.util.concurrent.ConcurrentHashMap<>();
+
+    static void noteKind(long chatId, Channel channel) {
+        if (channel.type != null && !channel.type.isEmpty()) {
+            kinds.put(Math.abs(chatId), channel.type);
+        }
+    }
+
+    /** "O", "P", "G" or null when unknown. */
+    public static String kindOf(long chatId) {
+        return kinds.get(Math.abs(chatId));
+    }
+
+    /** The lower-case type label of a chat for lists ("public channel", "private channel", "group message"), or null. */
+    public static String typeLabel(long chatId) {
+        String kind = kindOf(chatId);
+        if (kind == null) {
+            return null;
+        }
+        switch (kind) {
+            case "O":
+                return org.telegram.messenger.LocaleController.getString(org.telegram.messenger.R.string.ChannelPublic).toLowerCase();
+            case "P":
+                return org.telegram.messenger.LocaleController.getString(org.telegram.messenger.R.string.ChannelPrivate).toLowerCase();
+            case "G":
+                return org.telegram.messenger.LocaleController.getString(org.telegram.messenger.R.string.RelayGroupMessageLabel).toLowerCase();
+            default:
+                return null;
+        }
+    }
+
     public static boolean isArchived(long chatId) {
         RelayMembers.Rights r = rights(chatId);
         return r != null && r.archived;

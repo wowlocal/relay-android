@@ -4439,7 +4439,7 @@ public class ChatActivity extends BaseFragment implements
                         if (currentChat.monoforum) {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveConversationMenu));
                         } else if (currentChat.megagroup) {
-                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveMegaMenu));
+                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(org.telegram.relay.RelayConfig.ENABLED && !"G".equals(org.telegram.relay.bridge.RelayFinding.kindOf(currentChat.id)) ? R.string.RelayLeaveChannel : R.string.LeaveMegaMenu)); // Relay (polish 2a, QA-20)
                         } else {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveChannelMenu));
                         }
@@ -45152,7 +45152,7 @@ public class ChatActivity extends BaseFragment implements
                 if (ChatObject.isChannel(currentChat) && !currentChat.creator) {
                     if (!ChatObject.isNotInChat(currentChat)) {
                         if (currentChat.megagroup) {
-                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveMegaMenu));
+                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(org.telegram.relay.RelayConfig.ENABLED && !"G".equals(org.telegram.relay.bridge.RelayFinding.kindOf(currentChat.id)) ? R.string.RelayLeaveChannel : R.string.LeaveMegaMenu)); // Relay (polish 2a, QA-20)
                         } else {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveChannelMenu));
                         }

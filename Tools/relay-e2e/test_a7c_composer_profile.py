@@ -454,7 +454,9 @@ def main():
             row = d.find(text="Keep connected in background")
             if row:
                 break
-            d.shell("input swipe 540 1800 540 700 300")
+            sizes = re.findall(r"(\d+)x(\d+)", d.shell("wm size"))
+            sw, sh = (int(sizes[-1][0]), int(sizes[-1][1])) if sizes else (1080, 2400)
+            d.shell("input swipe %d %d %d %d 300" % (sw // 2, int(sh * 0.75), sw // 2, int(sh * 0.3)))  # any screen size
             time.sleep(1)
         check.ok("keep connected: setting in Notifications", row)
         if row:
