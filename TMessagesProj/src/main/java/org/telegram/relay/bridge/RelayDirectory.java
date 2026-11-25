@@ -91,6 +91,11 @@ final class RelayDirectory {
         }
     }
 
+    /** The last snapshot or null, without I/O (UI-thread lookups, A7b). */
+    Snapshot peek() {
+        return snapshot;
+    }
+
     /** The last snapshot, whatever its age, or a fresh one. */
     Snapshot any() throws MattermostException {
         Snapshot current = snapshot;
@@ -179,12 +184,40 @@ final class RelayDirectory {
             if (channelId == null) {
                 channelId = get(0).dmByUser.get(userId);
             }
+            if (channelId == null) {
+                // A7b: a chat with someone the user has no DM with yet (New Message, a profile): Mattermost
+                // creates the DM channel on first use, as its own clients do.
+                channelId = createDirect(userId);
+            }
             return channelId;
         }
         if (dialogId < 0) {
             return account.db().mmId(RelayDatabase.KIND_CHANNEL, -dialogId);
         }
         return null;
+    }
+
+    private final Map<String, Long> directFailures = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Creates the DM with a user (A7b); null when that fails (failures are not retried for 5 minutes). */
+    private String createDirect(String userId) {
+        if (RelayAccount.isSynthetic(userId)) {
+            return null;
+        }
+        Long failedAt = directFailures.get(userId);
+        if (failedAt != null && System.currentTimeMillis() - failedAt < 5 * 60_000) {
+            return null;
+        }
+        try {
+            Channel channel = account.client.createDirectChannel(account.session.userId, userId);
+            invalidate();
+            RelayConfig.log(TAG, "created DM " + channel.id);
+            return channel.id;
+        } catch (MattermostException e) {
+            RelayConfig.logError(TAG, "create DM with " + userId, e);
+            directFailures.put(userId, System.currentTimeMillis());
+            return null;
+        }
     }
 
     String channelIdOf(TLRPC.InputPeer peer) throws MattermostException {
@@ -268,6 +301,8 @@ final class RelayDirectory {
         rights.until_date = Integer.MAX_VALUE;
         c.default_banned_rights = rights;
         c.flags |= TLObject.FLAG_18;
+        // A7b: the user's rights from Mattermost roles, membership (left = not a member), archived = read-only.
+        RelayMembers.of(account).applyRights(channel, c);
         return c;
     }
 

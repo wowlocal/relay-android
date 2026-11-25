@@ -199,6 +199,14 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
             && needPhonebook && !isAdmin && onlyUsers == 0 && !isEmptyWithMainTabs ? 2 : 0;
     }
 
+    /**
+     * Relay (A7b): New Message has a third row, Browse Channels, after New Group Message and New Channel.
+     * Section 0 positions after it are shifted by this amount.
+     */
+    public int relayExtraTopRows() {
+        return org.telegram.relay.RelayConfig.ENABLED && !needPhonebook && !isAdmin && onlyUsers == 0 && !isEmptyWithMainTabs ? 1 : 0;
+    }
+
     public Object getItem(int section, int position) {
         if (isEmptyWithMainTabs && section == 1 && position > 1) {
             final int index = position - 2;
@@ -279,7 +287,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 } else if (needPhonebook) {
                     return row + relaySkippedTopRows() < 2;
                 } else {
-                    return row < 3;
+                    return row < 3 + relayExtraTopRows();
                 }
             } else {
                 if (isEmpty) {
@@ -371,7 +379,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
         } else {
             if (section == 0) {
                 if (isEmpty) {
-                    return (includeSearch ? 1 : 0) + 2;
+                    return (includeSearch ? 1 : 0) + 2 + relayExtraTopRows();
                 }
 
                 if (isAdmin) {
@@ -379,7 +387,7 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                 } else if (needPhonebook) {
                     return (includeSearch ? 1 : 0) + 4 - relaySkippedTopRows();
                 } else {
-                    return (includeSearch ? 1 : 0) + 4;
+                    return (includeSearch ? 1 : 0) + 4 + relayExtraTopRows();
                 }
             } else {
                 if (isEmpty) {
@@ -611,6 +619,15 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                         } else {
                             textCell.setTextAndIcon(getString(R.string.InviteToGroupByLink), R.drawable.msg_link2, false);
                         }
+                    } else if (relayExtraTopRows() > 0) {
+                        // Relay (A7b): Mattermost's group message, channel creation and channel directory.
+                        if (position == 0) {
+                            textCell.setTextAndValueAndColorfulIcon(getString(R.string.RelayNewGroupMessage), "", false, R.drawable.settings_group, 0xFF1CA5ED, 0xFF1488E1, false);
+                        } else if (position == 1) {
+                            textCell.setTextAndValueAndColorfulIcon(getString(R.string.RelayNewChannel), "", false, R.drawable.settings_channel, 0xFF55CA47, 0xFF27B434, false);
+                        } else if (position == 2) {
+                            textCell.setTextAndValueAndColorfulIcon(getString(R.string.RelayBrowseChannels), "", false, R.drawable.msg_discussion, 0xFFF79A35, 0xFFE8812C, false);
+                        }
                     } else {
                         if (position == 0) {
                             textCell.setTextAndValueAndColorfulIcon(getString(R.string.NewGroup), "", false, R.drawable.settings_group, 0xFF1CA5ED, 0xFF1488E1, false);
@@ -704,6 +721,14 @@ public class ContactsAdapter extends RecyclerListView.SectionsAdapter {
                         return isEmpty ? SHADOW_CELL : (sortType == SORT_TYPE_BY_NAME || sortType == SORT_TYPE_BY_TIME ? HEADER_CELL : GRAY_CELL);
                     }
                 } else {
+                    if (relayExtraTopRows() > 0) {
+                        if (position == 2) {
+                            return TEXT_CELL;
+                        }
+                        if (position > 2) {
+                            position--;
+                        }
+                    }
                     if (position == 2) {
                         return SHADOW_CELL;
                     }

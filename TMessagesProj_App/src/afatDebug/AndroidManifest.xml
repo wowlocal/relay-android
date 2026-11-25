@@ -12,5 +12,10 @@
             android:name="org.relaychat.debug.RelayA7cDebugHooks"
             android:authorities="${applicationId}.relaydebuga7c"
             android:exported="false" />
+        <!-- A7b e2e hooks: search, members, counters through the client's ConnectionsManager; A7b screens. -->
+        <provider
+            android:name="org.relaychat.debug.RelayFindingDebugHooks"
+            android:authorities="${applicationId}.relaydebug.a7b"
+            android:exported="false" />
     </application>
 </manifest>

@@ -1536,12 +1536,16 @@ public class SearchViewPager extends ViewPagerFixed implements FilteredSearchVie
                 return;
             }
 
+            // Relay (A7b): no Telegram channel recommendations, bot/app search or public posts search; people
+            // and channels come in the Chats tab (contacts.search), posts in its Messages section.
+            if (!org.telegram.relay.RelayConfig.ENABLED) {
             if (expandedPublicPosts) {
                 items.add(new Item(PUBLIC_POSTS_TYPE));
             }
             items.add(new Item(CHANNELS_TYPE));
             items.add(new Item(BOTS_TYPE));
             items.add(new Item(POSTS_TYPE));
+            }
             if (!showOnlyDialogsAdapter) {
                 Item item = new Item(FILTER_TYPE);
                 item.filterIndex = 0;

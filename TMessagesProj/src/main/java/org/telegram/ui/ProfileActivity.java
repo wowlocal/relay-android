@@ -614,6 +614,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int enable_no_forwards = 46;
     private final static int disable_no_forwards = 47;
     private final static int send_money = 48;
+    private final static int relay_unarchive = 7303; // Relay (A7b)
 
     private Rect rect = new Rect();
 
@@ -2617,6 +2618,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                 } else if (id == leave_group) {
                     leaveChatPressed(false);
+                } else if (id == relay_unarchive) {
+                    org.telegram.relay.bridge.RelayFinding.unarchive(currentAccount, chatId, (chat, error) -> {
+                        if (chat != null) {
+                            getMessagesController().putChat(chat, false);
+                            createActionBarMenu(true);
+                        } else if (error != null) {
+                            BulletinFactory.of(ProfileActivity.this).createErrorBulletin(error).show();
+                        }
+                    });
                 } else if (id == delete_group) {
                     leaveChatPressed(true);
                 } else if (id == enable_no_forwards) {
@@ -7294,6 +7304,11 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 }
             }
 
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay (A7b): no per-member Telegram restrictions or tags; admin = Mattermost channel admin.
+                canRestrict = false;
+                canEditTag = false;
+            }
             boolean result = (canEditAdmin || canEditTag || canRestrict || allowKick);
             if (resultOnly || !result) {
                 return result;
@@ -7322,7 +7337,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     .addIf(canEditTag, !isAdmin && TextUtils.isEmpty(rank) ? R.drawable.menu_tag_plus : R.drawable.menu_tag_edit, getString(isAdmin ? R.string.EditAdminTag : TextUtils.isEmpty(rank) ? R.string.AddMemberTag : R.string.EditMemberTag), () -> {
                         TagEditCell.showSheet(getContext(), currentAccount, getDialogId(), user, rank, isAdmin, isOwner, resourcesProvider);
                     })
-                    .addIf(canEditAdmin, R.drawable.msg_admins, editingAdmin ? LocaleController.getString(R.string.EditAdminRights) : LocaleController.getString(R.string.SetAsAdmin), () -> openRightsEdit.run(0))
+                    .addIf(canEditAdmin && !org.telegram.relay.RelayConfig.ENABLED, R.drawable.msg_admins, editingAdmin ? LocaleController.getString(R.string.EditAdminRights) : LocaleController.getString(R.string.SetAsAdmin), () -> openRightsEdit.run(0))
+                    .addIf(canEditAdmin && org.telegram.relay.RelayConfig.ENABLED, R.drawable.msg_admins, editingAdmin ? LocaleController.getString(R.string.ChannelRemoveUserAdmin) : LocaleController.getString(R.string.SetAsAdmin), () -> relaySetAdmin(user, !editingAdmin))
                     .addIf(canRestrict, R.drawable.msg_permissions, LocaleController.getString(R.string.ChangePermissions), () -> {
                         if (channelParticipant instanceof TLRPC.TL_channelParticipantAdmin || participant instanceof TLRPC.TL_chatParticipantAdmin) {
                             showDialog(
@@ -7352,6 +7368,34 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             presentFragment(new ProfileActivity(args));
         }
         return true;
+    }
+
+    /** Relay (A7b): make a member channel admin or member again (Mattermost scheme role), then reload the list. */
+    private void relaySetAdmin(TLRPC.User user, boolean admin) {
+        TLRPC.TL_channels_editAdmin req = new TLRPC.TL_channels_editAdmin();
+        req.channel = getMessagesController().getInputChannel(chatId);
+        req.user_id = getMessagesController().getInputUser(user);
+        req.admin_rights = new TLRPC.TL_chatAdminRights();
+        if (admin) {
+            req.admin_rights.change_info = req.admin_rights.invite_users = req.admin_rights.ban_users = true;
+            req.admin_rights.pin_messages = req.admin_rights.add_admins = req.admin_rights.other = true;
+        }
+        req.rank = "";
+        getConnectionsManager().sendRequest(req, (response, error) -> {
+            if (response instanceof TLRPC.Updates) {
+                getMessagesController().processUpdates((TLRPC.Updates) response, false);
+            }
+            AndroidUtilities.runOnUIThread(() -> {
+                if (error != null) {
+                    BulletinFactory.of(this).createErrorBulletin(error.text).show();
+                } else {
+                    getMessagesController().loadFullChat(chatId, 0, true);
+                    if (admin) {
+                        BulletinFactory.createPromoteToAdminBulletin(ProfileActivity.this, user.first_name).show();
+                    }
+                }
+            });
+        });
     }
 
     private void openRightsEdit(int action, TLRPC.User user, TLRPC.ChatParticipant participant, TLRPC.TL_chatAdminRights adminRights, TLRPC.TL_chatBannedRights bannedRights, String rank, boolean editingAdmin) {
@@ -12501,6 +12545,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     }
                     if (topicId == 0) {
                         otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
+                    }
+                    if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.bridge.RelayFinding.canUnarchive(chat.id)) {
+                        // Relay (A7b): team and system admins can bring an archived channel back.
+                        otherItem.addSubItem(relay_unarchive, R.drawable.msg_unarchive, getString(R.string.RelayUnarchiveChannel));
                     }
                     if (chat.creator) {
                         otherItem.addColoredGap();

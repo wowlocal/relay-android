@@ -848,6 +848,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             }
             return false;
         });
+        relayAddHeaderField(context, settingsContainer);
         descriptionTextView.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
@@ -1586,7 +1587,8 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             }
         }
 
-        if (currentChat != null && currentChat.creator) {
+        final boolean relayArchive = org.telegram.relay.RelayConfig.ENABLED && currentChat != null && org.telegram.relay.bridge.RelayFinding.canArchive(currentChat.id);
+        if (currentChat != null && (currentChat.creator || relayArchive)) {
             deleteContainer = new FrameLayout(context);
             linearLayout1.addView(deleteContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
@@ -1601,7 +1603,14 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 deleteCell.setText(getString(R.string.DeleteAndExitButton), false);
             }
             deleteContainer.addView(deleteCell, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            if (relayArchive) {
+                deleteCell.setText(getString(R.string.RelayArchiveChannel), false);
+            }
             deleteCell.setOnClickListener(v -> {
+                if (relayArchive) {
+                    relayConfirmArchive();
+                    return;
+                }
                 AlertsCreator.createClearOrDeleteDialogAlert(ChatEditActivity.this, false, currentChat, null, false, true, true, false, (param) -> {
                     if (AndroidUtilities.isTablet()) {
                         getNotificationCenter().postNotificationName(NotificationCenter.closeChats, -chatId);
@@ -1623,7 +1632,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         nameTextView.setText(Emoji.replaceEmoji(currentUser != null ? ContactsController.formatName(currentUser) : currentChat.title, nameTextView.getEditText().getPaint().getFontMetricsInt(), true));
         nameTextView.setSelection(nameTextView.length());
         if (info != null) {
-            descriptionTextView.setText(info.about);
+            descriptionTextView.setText(relayAbout(info));
         } else if (userInfo != null) {
             descriptionTextView.setText(userInfo.about);
         }
@@ -1816,7 +1825,7 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             TLRPC.ChatFull chatFull = (TLRPC.ChatFull) args[0];
             if (chatFull.id == chatId) {
                 if (info == null && descriptionTextView != null) {
-                    descriptionTextView.setText(chatFull.about);
+                    descriptionTextView.setText(relayAbout(chatFull));
                 }
                 boolean infoWasEmpty = info == null;
                 info = chatFull;
@@ -2039,8 +2048,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             return true;
         }
 
-        String about = info != null && info.about != null ? info.about : "";
+        String about = relayAbout(info);
         if (info != null && ChatObject.isChannel(currentChat) && info.hidden_prehistory != historyHidden ||
+            relayHeaderChanged() ||
             nameTextView != null && !currentChat.title.equals(nameTextView.getText().toString()) ||
             descriptionTextView != null && !about.equals(descriptionTextView.getText().toString()) ||
             forum != currentChat.forum
@@ -2166,9 +2176,16 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
         if (!currentChat.title.equals(nameTextView.getText().toString())) {
             getMessagesController().changeChatTitle(chatId, nameTextView.getText().toString());
         }
-        String about = info != null && info.about != null ? info.about : "";
+        String about = relayAbout(info);
         if (descriptionTextView != null && !about.equals(descriptionTextView.getText().toString())) {
             getMessagesController().updateChatAbout(chatId, descriptionTextView.getText().toString(), info);
+        }
+        if (relayHeaderChanged()) {
+            org.telegram.relay.bridge.RelayFinding.setHeader(currentAccount, chatId, relayHeaderTextView.getText().toString(), (ok, error) -> {
+                if (error != null) {
+                    FileLog.e("relay header: " + error);
+                }
+            });
         }
         if (forum != currentChat.forum || forumTabs != currentChat.forum_tabs || forumSidebar != currentChat.forum_sidebar) {
             final boolean changedTabs = forumTabs != currentChat.forum_tabs;
@@ -2495,6 +2512,81 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
             updateSuggestedCell(animated);
         }
         relayHideTelegramRows();
+    }
+
+    // MARK: - Relay (A7b): purpose, header, archive
+
+    private EditTextBoldCursor relayHeaderTextView;
+    private String relayHeaderInitial = "";
+
+    /** Telegram's description is the channel purpose (the info screen falls back to the header when it is empty). */
+    private String relayAbout(TLRPC.ChatFull full) {
+        if (org.telegram.relay.RelayConfig.ENABLED && currentChat != null) {
+            String purpose = org.telegram.relay.bridge.RelayFinding.purpose(currentChat.id);
+            if (purpose != null) {
+                return purpose;
+            }
+        }
+        return full != null && full.about != null ? full.about : "";
+    }
+
+    private boolean relayHeaderChanged() {
+        return relayHeaderTextView != null && !relayHeaderInitial.equals(relayHeaderTextView.getText().toString());
+    }
+
+    /** The Mattermost channel header, below the description (channels the user may edit, not group messages). */
+    private void relayAddHeaderField(Context context, LinearLayout container) {
+        if (!org.telegram.relay.RelayConfig.ENABLED || currentChat == null || !org.telegram.relay.bridge.RelayFinding.canChangeInfo(currentChat.id)) {
+            return;
+        }
+        String header = org.telegram.relay.bridge.RelayFinding.header(currentChat.id);
+        relayHeaderInitial = header != null ? header : "";
+        relayHeaderTextView = new EditTextBoldCursor(context);
+        relayHeaderTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        ThemeBind.hintTextColor(relayHeaderTextView, Theme.key_windowBackgroundWhiteHintText);
+        ThemeBind.textColor(relayHeaderTextView, Theme.key_windowBackgroundWhiteBlackText);
+        relayHeaderTextView.setPadding(0, 0, 0, dp(6));
+        relayHeaderTextView.setBackgroundDrawable(null);
+        relayHeaderTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+        relayHeaderTextView.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_AUTO_CORRECT);
+        relayHeaderTextView.setHint(getString(R.string.RelayChannelHeaderHint));
+        ThemeBind.cursorColor(relayHeaderTextView, Theme.key_windowBackgroundWhiteBlackText);
+        relayHeaderTextView.setCursorSize(dp(20));
+        relayHeaderTextView.setCursorWidth(1.5f);
+        relayHeaderTextView.setText(relayHeaderInitial);
+        container.addView(relayHeaderTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 23, 6, 23, 9));
+    }
+
+    private void relayConfirmArchive() {
+        if (getParentActivity() == null || currentChat == null) {
+            return;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(getParentActivity())
+            .setTitle(getString(R.string.RelayArchiveChannel))
+            .setMessage(LocaleController.formatString(R.string.RelayArchiveChannelConfirm, currentChat.title))
+            .setPositiveButton(getString(R.string.RelayArchiveChannel), (d, w) -> {
+                TLRPC.TL_channels_deleteChannel req = new TLRPC.TL_channels_deleteChannel();
+                req.channel = getMessagesController().getInputChannel(currentChat);
+                getConnectionsManager().sendRequest(req, (response, error) -> {
+                    if (response instanceof TLRPC.Updates) {
+                        getMessagesController().processUpdates((TLRPC.Updates) response, false);
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (error != null) {
+                            BulletinFactory.of(this).createErrorBulletin(error.text).show();
+                        } else {
+                            finishFragment();
+                        }
+                    });
+                });
+            })
+            .setNegativeButton(getString(R.string.Cancel), null)
+            .create();
+        showDialog(dialog);
+        android.widget.TextView button = (android.widget.TextView) dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE);
+        if (button != null) {
+            button.setTextColor(Theme.getColor(Theme.key_text_RedBold));
+        }
     }
 
     /**

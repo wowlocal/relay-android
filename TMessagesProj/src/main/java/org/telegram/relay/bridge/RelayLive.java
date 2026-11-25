@@ -408,6 +408,8 @@ final class RelayLive implements WebSocketListener {
                     WebSocketEvent.Membership m = event.getMembership();
                     if (m != null && account.session.userId.equals(m.userId)) {
                         onChannelJoined(m.channelId);
+                    } else if (m != null) {
+                        RelayMembers.of(account).onMembersChanged(this, m.channelId); // A7b: info screens refresh
                     }
                     break;
                 }
@@ -418,6 +420,8 @@ final class RelayLive implements WebSocketListener {
                     if (channelId != null && (userId == null || userId.isEmpty() || account.session.userId.equals(userId)
                             || account.session.userId.equals(event.broadcast.userId))) {
                         onChannelGone(channelId);
+                    } else if (channelId != null) {
+                        RelayMembers.of(account).onMembersChanged(this, channelId); // A7b: info screens refresh
                     }
                     break;
                 }
@@ -701,12 +705,14 @@ final class RelayLive implements WebSocketListener {
         if (channel == null) {
             return;
         }
+        Post before = path.history.cachedPost(post.id);
         path.history.rememberPost(post);
         List<RelayHistory.Unit> units = mappedUnits(channel.id, post);
         if (units.isEmpty()) {
             return;
         }
         emitEdits(channel, units);
+        RelaySearch.of(account).onPostEdited(this, channel, before, post); // A7b: pinned elsewhere
     }
 
     private void onDeleted(Post post) throws Exception {
@@ -1048,6 +1054,9 @@ final class RelayLive implements WebSocketListener {
         Channel still = path.directory.get(0).channels.get(channelId);
         if (still != null || tlId == 0) {
             return;
+        }
+        if (RelayMembers.of(account).onArchived(this, channelId)) {
+            return; // A7b: archived, still a member: the chat stays, read-only
         }
         forget(channelId, tlId);
     }

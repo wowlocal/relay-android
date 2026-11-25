@@ -288,6 +288,8 @@ public final class RelayAuth {
         MessagesController.getInstance(account).putUser(user, false);
         MessagesController.getInstance(account).loadAppConfig();
         RelayBridge.get(account).start();
+        // A7b: the contacts are the Mattermost user directory (as LoginActivity.onAuthSuccess does).
+        org.telegram.messenger.ContactsController.getInstance(account).checkAppAccount();
     }
 
     /**

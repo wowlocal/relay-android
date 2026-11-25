@@ -59,7 +59,7 @@ final class RelayUpdates {
     static String box(TLRPC.Update u) {
         if (u instanceof TL_update.TL_updateNewMessage || u instanceof TL_update.TL_updateEditMessage
                 || u instanceof TL_update.TL_updateDeleteMessages || u instanceof TL_update.TL_updateReadHistoryInbox
-                || u instanceof TL_update.TL_updateReadHistoryOutbox) {
+                || u instanceof TL_update.TL_updateReadHistoryOutbox || u instanceof TL_update.TL_updatePinnedMessages) {
             return RelayDatabase.BOX_COMMON;
         }
         long channelId = channelOf(u);
@@ -76,6 +76,9 @@ final class RelayUpdates {
         }
         if (u instanceof TL_update.TL_updateDeleteChannelMessages) {
             return ((TL_update.TL_updateDeleteChannelMessages) u).channel_id;
+        }
+        if (u instanceof TL_update.TL_updatePinnedChannelMessages) { // A7b: pin/unpin
+            return ((TL_update.TL_updatePinnedChannelMessages) u).channel_id;
         }
         return 0;
     }
@@ -115,6 +118,12 @@ final class RelayUpdates {
         } else if (u instanceof TL_update.TL_updateDeleteChannelMessages) {
             ((TL_update.TL_updateDeleteChannelMessages) u).pts = pts;
             ((TL_update.TL_updateDeleteChannelMessages) u).pts_count = count;
+        } else if (u instanceof TL_update.TL_updatePinnedMessages) { // A7b
+            ((TL_update.TL_updatePinnedMessages) u).pts = pts;
+            ((TL_update.TL_updatePinnedMessages) u).pts_count = count;
+        } else if (u instanceof TL_update.TL_updatePinnedChannelMessages) {
+            ((TL_update.TL_updatePinnedChannelMessages) u).pts = pts;
+            ((TL_update.TL_updatePinnedChannelMessages) u).pts_count = count;
         }
     }
 
@@ -127,6 +136,8 @@ final class RelayUpdates {
         if (u instanceof TL_update.TL_updateNewChannelMessage) return ((TL_update.TL_updateNewChannelMessage) u).pts;
         if (u instanceof TL_update.TL_updateEditChannelMessage) return ((TL_update.TL_updateEditChannelMessage) u).pts;
         if (u instanceof TL_update.TL_updateDeleteChannelMessages) return ((TL_update.TL_updateDeleteChannelMessages) u).pts;
+        if (u instanceof TL_update.TL_updatePinnedMessages) return ((TL_update.TL_updatePinnedMessages) u).pts;
+        if (u instanceof TL_update.TL_updatePinnedChannelMessages) return ((TL_update.TL_updatePinnedChannelMessages) u).pts;
         return 0;
     }
 

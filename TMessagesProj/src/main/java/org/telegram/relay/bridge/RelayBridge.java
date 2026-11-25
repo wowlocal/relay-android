@@ -62,6 +62,9 @@ public final class RelayBridge {
 
     static {
         RelayHandlers.register(handlers);
+        // A7b: search, pinning, saved posts, directory, membership.
+        RelaySearch.register(handlers);
+        RelayMembers.register(handlers);
         RelayStubs.register(stubs);
     }
 
