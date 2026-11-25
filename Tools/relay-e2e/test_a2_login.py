@@ -38,27 +38,27 @@ def fresh_start(d, check):
     d.reverse()
     d.logcat_clear()
     d.launch()
-    field = d.wait_for(desc="relay_server_field", timeout=30)
+    field = d.wait_for(rid="relay_server_field", timeout=30)
     check.ok("fresh install shows the Relay server screen", field is not None)
     return field
 
 
 def enter_server(d, url):
-    field = d.find(desc="relay_server_field")
+    field = d.find(rid="relay_server_field")
     d.clear_field(field)
     d.type_text(url)
-    d.tap_node(d.find(desc="relay_connect_button"))
+    d.tap_node(d.find(rid="relay_connect_button"))
 
 
 def enter_credentials(d, user, password):
-    login = d.wait_for(desc="relay_login_field", timeout=20)
+    login = d.wait_for(rid="relay_login_field", timeout=20)
     if login is None:
         return False
     d.tap_node(login)
     d.type_text(user)
-    d.tap_node(d.find(desc="relay_password_field"))
+    d.tap_node(d.find(rid="relay_password_field"))
     d.type_text(password)
-    d.tap_node(d.find(desc="relay_login_button"))
+    d.tap_node(d.find(rid="relay_login_button"))
     return True
 
 
@@ -94,7 +94,7 @@ def scenario_unreachable(d, check):
     shot(d, "error-unreachable")
     check.ok("unreachable server shows \"Can't Connect\"", alert is not None)
     dismiss_alert(d)
-    check.ok("still on the server step", d.find(desc="relay_server_field") is not None)
+    check.ok("still on the server step", d.find(rid="relay_server_field") is not None)
 
 
 def scenario_not_mattermost(d, check):
@@ -115,7 +115,7 @@ def scenario_wrong_password(d, check, user):
     shot(d, "error-password")
     check.ok("wrong password shows \"Incorrect Login\"", alert is not None)
     dismiss_alert(d)
-    check.ok("still on the credentials step", d.find(desc="relay_password_field") is not None)
+    check.ok("still on the credentials step", d.find(rid="relay_password_field") is not None)
 
 
 def check_connected(d, check, label):
@@ -152,7 +152,7 @@ def scenario_login(d, check, user, password):
     fresh_start(d, check)
     shot(d, "server")
     enter_server(d, r.MM_URL)
-    if not d.wait_for(desc="relay_login_field", timeout=20):
+    if not d.wait_for(rid="relay_login_field", timeout=20):
         check.ok("credentials step appears", False)
         return
     shot(d, "credentials")
@@ -222,7 +222,7 @@ def logout(d, check):
         return
     nodes = [n for n in d.dump() if n.text == "Log out"]
     d.tap_node(max(nodes, key=lambda n: n.bounds[0]))
-    field = d.wait_for(desc="relay_server_field", timeout=20)
+    field = d.wait_for(rid="relay_server_field", timeout=20)
     shot(d, "after-logout")
     check.ok("logout returns to the Relay login screen", field is not None)
     check.ok("no crash on logout", not d.crashes())

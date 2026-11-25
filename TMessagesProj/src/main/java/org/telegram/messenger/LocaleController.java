@@ -687,9 +687,16 @@ public class LocaleController {
         languages.add(localeInfo);
         languagesDict.put(localeInfo.shortName, localeInfo);
 
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (polish 2b): English only, as on iOS (docs/relay/LOCALIZATION.md). Telegram's other languages
+            // come from its servers as language packs; the bundled ones cover ~10% of the strings, so offering them
+            // gave a half-translated UI. No language list, no packs, no following the device language.
+            relayKeepOnlyEnglish();
+        } else {
         loadOtherLanguages();
         if (remoteLanguages.isEmpty()) {
             AndroidUtilities.runOnUIThread(() -> loadRemoteLanguages(UserConfig.selectedAccount));
+        }
         }
 
         for (int a = 0; a < otherLanguages.size(); a++) {
@@ -741,6 +748,12 @@ public class LocaleController {
                     override = true;
                 }
             }
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay: always English, also when the device (or an older install's setting) says otherwise.
+                // override = true pins it, so a device language change re-applies English.
+                currentInfo = getLanguageFromDict("en");
+                override = true;
+            }
 
             if (currentInfo == null && systemDefaultLocale.getLanguage() != null) {
                 currentInfo = getLanguageFromDict(systemDefaultLocale.getLanguage());
@@ -769,6 +782,18 @@ public class LocaleController {
         }
 
         AndroidUtilities.runOnUIThread(() -> currentSystemLocale = getSystemLocaleStringIso639());
+    }
+
+    /** Relay: drops every built-in language but English (the list Telegram builds above). */
+    private void relayKeepOnlyEnglish() {
+        for (int a = languages.size() - 1; a >= 0; a--) {
+            LocaleInfo info = languages.get(a);
+            if (!"en".equals(info.shortName)) {
+                languages.remove(a);
+                languagesDict.remove(info.getKey());
+                languagesDict.remove(info.shortName);
+            }
+        }
     }
 
     public static String getLanguageFlag(String countryCode) {
@@ -3374,7 +3399,7 @@ public class LocaleController {
     }
 
     public void loadRemoteLanguages(final int currentAccount, boolean applyCurrent) {
-        if (loadingRemoteLanguages) {
+        if (loadingRemoteLanguages || org.telegram.relay.RelayConfig.ENABLED) {
             return;
         }
         loadingRemoteLanguages = true;

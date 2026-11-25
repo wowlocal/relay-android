@@ -14816,7 +14816,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return all;
             }
             // Relay: only settings that exist in Relay (notifications, passcode, devices, data,
-            // appearance, power saving, language, accounts) are searchable.
+            // appearance, power saving, accounts) are searchable.
             final String devices = getString(R.string.Devices);
             final ArrayList<SearchResult> kept = new ArrayList<>();
             for (SearchResult r : all) {
@@ -14829,7 +14829,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     g == 501 || g == 5 || g == 8
                     || g >= 100 && g <= 125 && g != 108 && g != 110 && !(g == 120 || g == 121 && underDevices)
                     || g >= 217 && g <= 220 || g == 303 || g == 324
-                    || g >= 400 && g <= 406 && g != 400
+                    || g >= 400 && g <= 406 // polish 2b: Language too (English only), and its translation rows
                     || g >= 600 && g <= 813 || g == 901 || g == 913;
                 if (!denied) {
                     kept.add(r);

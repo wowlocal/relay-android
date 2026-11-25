@@ -339,7 +339,7 @@
     <string name="ContactsPermissionAlertNotNow">Not now</string>
     <string name="ContactsPermissionAlertContinue">Continue</string>
     <string name="NotificationsPermissionAlertTitle">Turn on notifications</string>
-    <string name="NotificationsPermissionAlertSubtitle">Please allow Telegram to send you notifications to stay in touch with your friends and family.</string>
+    <string name="NotificationsPermissionAlertSubtitle">Please allow Relay to send you notifications to stay in touch with your team.</string>
     <string name="NotificationsPermissionAlert1">Get notified about new messages</string>
     <string name="NotificationsPermissionAlert2">Learn when you are mentioned in groups</string>
     <string name="NotificationsPermissionAlert3">Mute specific chats and types of chats</string>
@@ -463,7 +463,7 @@
     <string name="MegaLeaveAlertWithName">Are you sure you want to leave **%1$s**?</string>
     <string name="GroupUserCantAdd">Sorry, you can\'t add this user to groups.</string>
     <string name="GroupUserAddLimit">Sorry, this group is full.</string>
-    <string name="GroupUserLeftError">Sorry, if a person is no longer part of a group, you need to be in their Telegram contacts in order to add them back.\n\nNote that they can still join via the group\'s invite link as long as they are not in the Removed Users list.</string>
+    <string name="GroupUserLeftError">Sorry, this person can\'t be added to this chat. Only members of the channel\'s team can be added.</string>
     <string name="GroupUserCantAdmin">Sorry, too many administrators in this group.</string>
     <string name="PublicChannelsTooMuch">Sorry, the target user has too many public groups or channels already. Please ask them to make one of their existing groups or channels private first.</string>
     <string name="LocatedChannelsTooMuch">Sorry, the target user owns too many location-based groups. Please ask them to delete or transfer an existing one first.</string>
@@ -667,7 +667,7 @@
     <string name="ChannelCantOpenBanned">Unfortunately, you were banned from participating in public groups.</string>
     <string name="ChannelCantOpenNa">Sorry, this chat is no longer accessible.</string>
     <string name="ChannelAddTo">Add %1$s to the channel?</string>
-    <string name="ChannelUserLeftError">Sorry, if a person is no longer part of a channel, you need to be in their Telegram contacts in order to add them back.\n\nNote that they could still join via the channel\'s invite link as long as they are not in the Removed users list.</string>
+    <string name="ChannelUserLeftError">Sorry, this person can\'t be added to this channel. Only members of the channel\'s team can be added.</string>
     <string name="ChannelUserCantAdd">Sorry, you can\'t add this user to channels.</string>
     <string name="ChannelUserCantAdmin">Sorry, too many admins in this channel.</string>
     <string name="ChannelUserCantBot">Sorry, too many bots in this channel.</string>
@@ -1393,7 +1393,7 @@
     <string name="PinMessageAlertTitle">Pin message</string>
     <string name="UnpinMessageAlertTitle">Unpin message</string>
     <string name="PinOldMessageAlert">Do you want to pin an older message while leaving a more recent one pinned?</string>
-    <string name="PinMessageAlert">Do you want to pin this message for all members in the group?</string>
+    <string name="PinMessageAlert">Do you want to pin this message for all members?</string>
     <string name="PinMessageAlertChannel">Do you want to pin this message in this channel?</string>
     <string name="PinMessageAlertChat">Do you want to pin this message at the top of the chat?</string>
     <string name="UnpinMessageAlert">Do you want to unpin this message?</string>
@@ -1508,7 +1508,7 @@
     <string name="ChatYourSelfDescription2">Send media and files to store them</string>
     <string name="ChatYourSelfDescription3">Access this chat from any device</string>
     <string name="ChatYourSelfDescription4">Use search to quickly find things</string>
-    <string name="ChatYourSelfTitle">Your cloud storage</string>
+    <string name="ChatYourSelfTitle">Your saved messages</string>
     <string name="JumpToDate">Jump to Date</string>
     <string name="DeleteForUser">Delete for %1$s</string>
     <string name="DeleteForAll">Delete for all members</string>
@@ -1815,8 +1815,8 @@
     <string name="NotificationGroupFew">%1$s sent %3$s to the group %2$s</string>
     <string name="NotificationGroupAlbum">%1$s sent an album to the group %2$s</string>
     <string name="NotificationGroupForwardedFew">%1$s forwarded %3$s to the group %2$s</string>
-    <string name="NotificationHiddenName">Telegram</string>
-    <string name="NotificationHiddenChatName">Telegram</string>
+    <string name="NotificationHiddenName">Relay</string>
+    <string name="NotificationHiddenChatName">Relay</string>
     <string name="NotificationHiddenChatUserName">User</string>
     <string name="NotificationHiddenMessage">New message</string>
     <string name="Reply">Reply</string>
@@ -1886,7 +1886,7 @@
     <string name="NotificationActionMissedCallConference">You missed a call from %1$s</string>
     <string name="NotificationActionMissedCallConferenceOther_one">You missed a call from %2$s and %1$d other</string>
     <string name="NotificationActionMissedCallConferenceOther_other">You missed a call from %2$s and %1$d others</string>
-    <string name="SecretChatName">Telegram</string>
+    <string name="SecretChatName">Relay</string>
     <!--contacts view-->
     <string name="SelectContact">Select Contact</string>
     <string name="ShareContactTitle">Share Contact</string>
@@ -2278,7 +2278,7 @@
     <string name="NewThemeTitle">New Theme</string>
     <string name="EditThemeTitle">Edit Theme</string>
     <string name="CreateNewThemeHelp">Tap on the palette icon to view the list of elements on each screen - and edit them.</string>
-    <string name="CreateNewThemeAlert">You can create your own theme by changing colors within the app.\n\nYou can always switch back to the default Telegram theme here.</string>
+    <string name="CreateNewThemeAlert">You can create your own theme by changing colors within the app.\n\nYou can always switch back to the default theme here.</string>
     <string name="ThemeSetUrlHelp">You can use a-z, 0-9 and underscores.\nMinimum length is 5 characters.</string>
     <string name="ThemeHelpLink">Your theme will be updated for all users each time you change it. Anyone can install it using this link:\n%1$s</string>
     <string name="ThemeCreateHelp">Anyone can install your theme using this link. When you change the theme, it will be updated for all users who installed it.\n\nThe theme will be based on your currently selected theme and wallpaper.</string>
@@ -2380,7 +2380,7 @@
     <string name="NotificationsAndSounds">Notifications and Sounds</string>
     <string name="CustomNotifications">Custom Notifications</string>
     <string name="ProfilePopupNotification">Popup notifications</string>
-    <string name="ProfilePopupNotificationInfo">New messages from this contact will appear on your screen when you are not using Telegram.</string>
+    <string name="ProfilePopupNotificationInfo">New messages from this contact will appear on your screen when you are not using Relay.</string>
     <string name="NotificationsLed">LED</string>
     <string name="NotificationsLedColor">Color</string>
     <string name="ColorBlue">Blue</string>
@@ -2704,7 +2704,7 @@
     <string name="UseProxyWebInfo">WEB proxy uses an HTTPS page inside a private WebView. Enter a hostname without a scheme or path and a 16-byte MTProxy secret. This proof of concept requires a current Android System WebView and is intended for foreground testing.</string>
     <string name="ConnectingToProxyEnable">Enable</string>
     <string name="LowDiskSpaceTitle">Attention</string>
-    <string name="LowDiskSpaceMessage">Your device is almost out of disk space. To free some space, you can set up Telegram to cache only recent media.</string>
+    <string name="LowDiskSpaceMessage">Your device is almost out of disk space. To free some space, you can set up Relay to cache only recent media.</string>
     <string name="LowDiskSpaceMessage2">Your device is almost out of disk space. You can use cache settings to remove unnecessary media — and re-download files if you need them again.</string>
     <string name="LowDiskSpaceButton">Manage Cache</string>
     <string name="AutodownloadContacts">Contacts</string>
@@ -2715,7 +2715,7 @@
     <string name="AutodownloadSizeLimitUpTo">up to %1$s</string>
     <string name="Streaming">Streaming</string>
     <string name="EnableStreaming">Stream Videos and Audio Files</string>
-    <string name="EnableAllStreamingInfo">Some videos can\'t be streamed – e.g., all videos that were sent from Android using Telegram 4.7 and earlier versions.\n</string>
+    <string name="EnableAllStreamingInfo">Some videos can\'t be streamed, e.g. videos whose format needs the whole file before playback.\n</string>
     <string name="TapToChangePhone">Tap to change phone number</string>
     <string name="ShowNotificationsFor">Show notifications for</string>
     <string name="AllAccounts">All Accounts</string>
@@ -2732,12 +2732,12 @@
     <string name="TapToChange">Tap to change</string>
     <string name="AlternativeOptions">Alternative options</string>
     <string name="AddAnotherAccount">Add another account</string>
-    <string name="AddAnotherAccountInfo">Connect other Telegram accounts and easily switch between them.</string>
+    <string name="AddAnotherAccountInfo">Log in to another Mattermost account and easily switch between them.</string>
     <string name="SetPasscode">Set a Passcode</string>
     <string name="SetPasscodeInfo">Lock the app with a passcode so that others can\'t open it.</string>
     <string name="ClearCache">Clear Cache</string>
     <string name="ClearSelectedCache">Clear Selected</string>
-    <string name="ClearCacheInfo">Free up disk space on your device; your media will stay in the cloud.</string>
+    <string name="ClearCacheInfo">Free up disk space on your device; your media will stay on the server.</string>
     <string name="ClearingCache">Clearing cache…</string>
     <string name="ClearingCacheDescription">Please keep this window open while Relay is clearing your cache.</string>
     <string name="ChangePhoneNumber">Change Phone Number</string>
@@ -2819,7 +2819,7 @@
     <string name="LocalDatabaseClearTextTitle">Clear local database</string>
     <string name="LocalDatabaseClearText">Are you sure you want to clear cached text messages?</string>
     <string name="LocalDatabaseClearText2">This operation can take a few minutes to complete.\n\nLocal database size: **%s**</string>
-    <string name="LocalDatabaseInfo">Clearing the local database will delete the texts of cached messages and compress the database to save internal disk space. Telegram needs some data to work, so database size will not reach zero.\n\nThis operation can take a few minutes to complete.</string>
+    <string name="LocalDatabaseInfo">Clearing the local database will delete the texts of cached messages and compress the database to save internal disk space. Relay needs some data to work, so database size will not reach zero.\n\nThis operation can take a few minutes to complete.</string>
     <string name="ClearMediaCache">Clear Cache</string>
     <string name="CacheClear">Clear</string>
     <string name="CalculatingSize">Calculating...</string>
@@ -3130,8 +3130,8 @@
     <!--passcode view-->
     <string name="Passcode">Passcode Lock</string>
     <string name="ChangePasscode">Change Passcode</string>
-    <string name="ChangePasscodeInfo">When you set up an additional passcode, a lock icon will appear on the chats page. Tap it to lock and unlock your Telegram app.\n\nNote: if you forget the passcode, you\'ll need to delete and reinstall the app. All secret chats will be lost.</string>
-    <string name="ChangePasscodeInfoShort">When you set up a passcode, a lock icon will apear on the chats page. Tap it to lock and unlock the app.</string>
+    <string name="ChangePasscodeInfo">When you set up an additional passcode, a lock icon will appear on the chats page. Tap it to lock and unlock your Relay app.\n\nNote: if you forget the passcode, you\'ll need to delete and reinstall the app.</string>
+    <string name="ChangePasscodeInfoShort">When you set up a passcode, a lock icon will appear on the chats page. Tap it to lock and unlock the app.</string>
     <string name="EnablePasscode">Enable passcode</string>
     <string name="ConfirmCreatePasscode">Re-enter your passcode</string>
     <string name="PasscodeSwitchToPassword">Switch to password</string>
@@ -3146,7 +3146,7 @@
     <string name="DisablePasscodeConfirmMessage">Are you sure you want to turn off passcode?</string>
     <string name="DisablePasscodeTurnOff">Turn Off</string>
     <string name="EnterNewPasscode">Enter your new passcode</string>
-    <string name="EnterYourTelegramPasscode">Enter your Telegram passcode</string>
+    <string name="EnterYourTelegramPasscode">Enter your Relay passcode</string>
     <string name="AutoLock">Auto-lock</string>
     <string name="AutoLockInfo">Require passcode if away for a time.</string>
     <string name="AutoLockInTime">in %1$s</string>
@@ -3581,7 +3581,7 @@
     <string name="IncomingCalls">Incoming calls</string>
     <string name="IncomingCallsSystemSetting">Internal calls notifications</string>
     <string name="InternalNotificationsSystemSetting">Internal notifications</string>
-    <string name="IncomingCallsSystemSettingDescription">You can change ringtone sound in Telegram -> Settings -> Notifications and Sounds.</string>
+    <string name="IncomingCallsSystemSettingDescription">You can change ringtone sound in Relay -> Settings -> Notifications and Sounds.</string>
     <string name="OutgoingCallsCount_one">%1$d outgoing call</string>
     <string name="OutgoingCallsCount_other">%1$d outgoing calls</string>
     <string name="IncomingCallsCount_one">%1$d incoming call</string>
@@ -4163,7 +4163,7 @@
     <string name="SlideUpToLock">Slide up to lock recording</string>
     <string name="NotificationsChartTitle">Notifications</string>
     <string name="TotalDeviceFreeSize">%s Free</string>
-    <string name="ClearTelegramCache">Clear Telegram Cache</string>
+    <string name="ClearTelegramCache">Clear Relay Cache</string>
     <string name="StatisticOverview">Overview</string>
     <string name="ViewsPerPost">Views Per Post</string>
     <string name="ViewsPerStory">Views Per Story</string>
@@ -4173,8 +4173,8 @@
     <string name="SharesPerPost">Shares Per Post</string>
     <string name="EnabledNotifications">Enabled Notifications</string>
     <string name="ClearLocalDatabase">Clear Local Database</string>
-    <string name="TelegramCacheSize">%s Telegram Cache</string>
-    <string name="LocalDatabaseSize">%s Telegram Local Database</string>
+    <string name="TelegramCacheSize">%s Relay Cache</string>
+    <string name="LocalDatabaseSize">%s Relay Local Database</string>
     <string name="CacheWasCleared">%s freed on your device!</string>
     <string name="TotalDeviceSize">%s Other Data</string>
     <string name="GroupMembersChartTitle">Group members</string>
@@ -5273,7 +5273,7 @@
     <string name="ChatThemeSaveDialogText">Do you want to apply the new theme for this chat?</string>
     <string name="ChatThemeSaveDialogApply">Apply</string>
     <string name="ChatThemeSaveDialogDiscard">Discard</string>
-    <string name="OptimizingTelegram">Optimizing Telegram...</string>
+    <string name="OptimizingTelegram">Optimizing Relay...</string>
     <string name="OptimizingTelegramDescription1">This may take a while, depending on the size of the database. Please keep the app open until the process is finished.</string>
     <string name="OptimizingTelegramDescription2">Sorry for the inconvenience.</string>
     <string name="EnjoyngAnimations">**oo** watching %1$s</string>
@@ -5438,7 +5438,7 @@
     <string name="DidNotGetTheCodePhone">Get code on this phone</string>
     <string name="MigrateOldFolderButton">Move Files Now</string>
     <string name="MigrateOldFolderTitle">Migrate Files to Scoped Storage</string>
-    <string name="MigrateOldFolderDescription">Due to a change made by **Google**, we need to move the files you downloaded using **Telegram** to a new folder.\n\nThis may take a few moments. You can continue using the app while the files are moved.</string>
+    <string name="MigrateOldFolderDescription">Due to a change made by **Google**, we need to move the files you downloaded using **Relay** to a new folder.\n\nThis may take a few moments. You can continue using the app while the files are moved.</string>
     <string name="MigratingFiles">Migrating files</string>
     <string name="ReactionsCount_one">%1$d reaction</string>
     <string name="ReactionsCount_other">%1$d reactions</string>
@@ -5548,9 +5548,9 @@
     <string name="ResumeAll">Resume all</string>
     <string name="DownloadedFiles">Downloaded files</string>
     <string name="ManageDeviceStorage">Manage Device Storage</string>
-    <string name="RemoveDocumentsAlertMessage">They will be deleted from your disk, but will remain accessible in the cloud.</string>
+    <string name="RemoveDocumentsAlertMessage">They will be deleted from your disk, but will remain accessible on the server.</string>
 
-    <string name="DownloadedFilesMessage">Telegram lets you store all documents you send and receive in the cloud and save storage space on your device.</string>
+    <string name="DownloadedFilesMessage">Files you send and receive stay on your Mattermost server, so you can save storage space on your device.</string>
     <string name="ClearDownloadsList">Clear Download List</string>
     <string name="SearchEmptyViewDownloads">No recent downloads</string>
     <string name="ForceSetPasswordAlertMessageShort_one">If you do not set a password, you will only be able to log into your account via SMS once every %1$s day. Do you want to proceed without a password?</string>
@@ -5582,7 +5582,7 @@
     <string name="SoundOnHint">You will receive notifications with sound.</string>
     <string name="SoundOffHint">"You will receive silent notifications. "</string>
     <string name="NotificationsSound">Notification Sound</string>
-    <string name="TelegramTones">Telegram tones</string>
+    <string name="TelegramTones">Relay tones</string>
     <string name="SystemTones">System tones</string>
     <string name="UploadSound">Upload sound</string>
     <string name="NotificationsSoundPrivate">Private Chats Sound</string>
@@ -6195,7 +6195,7 @@
     <string name="DeleteAllProxies">Delete All Proxies</string>
     <string name="DeleteAllProxiesConfirm">Are you sure you want to delete all proxies?</string>
     <string name="AccDescrSendAs">Send as %1$s</string>
-    <string name="SessionsSettingsInfo">Review the list of devices where you are logged into your Telegram account.</string>
+    <string name="SessionsSettingsInfo">Review the list of devices where you are logged into your Mattermost account.</string>
     <string name="SendMediaPermissionPhotos">Photos</string>
     <string name="TapAndHoldToDeleteReaction">Tap and hold to delete reaction.</string>
     <string name="PollV2YouCanAddXCountriesOnly">You can add **%d** countries only</string>
@@ -6379,7 +6379,7 @@
     <string name="SdCardAlert">Storing on SD card will make Relay slow. Proceed anyway?</string>
     <string name="Proceed">Proceed</string>
     <string name="SdCardError">SD Card Error</string>
-    <string name="SdCardErrorDescription">Telegram is unable to save data on your SD card.</string>
+    <string name="SdCardErrorDescription">Relay is unable to save data on your SD card.</string>
     <string name="DoNotUseSDCard">Do not use SD card</string>
     <string name="NextMediaTap">Show next media on Tap</string>
     <string name="NextMediaTapInfo">Tap near the edge of the screen while viewing media to navigate between photos</string>
@@ -8352,11 +8352,11 @@
     <string name="ViewChannelProfile">View Channel Info ></string>
     <string name="BuyUsernameOnFragment">Buy on Fragment</string>
     <string name="ViewChannel">View Channel</string>
-    <string name="UnlockToUse">Unlock to use Telegram</string>
+    <string name="UnlockToUse">Unlock to use Relay</string>
     <string name="UsePIN">Use PIN</string>
     <string name="EnterPINorFingerprint">Enter your PIN or use a fingerprint</string>
     <string name="EnterPIN">Enter your PIN</string>
-    <string name="AppLocked">Telegram Locked</string>
+    <string name="AppLocked">Relay Locked</string>
     <string name="ShowSensitiveContent">Show 18+ Content</string>
     <string name="ShowSensitiveContentInfo">Do not hide media that contain content suitable only for adults</string>
     <string name="ConfirmSensitiveContentTitle">18+ Content</string>
@@ -8619,7 +8619,7 @@
     <string name="WebRecentClearTitle">Clear recent searches?</string>
     <string name="WebRecentClearText">Do you want to clear your recent search queries?</string>
     <string name="SearchEngine">Search Engine</string>
-    <string name="OpenInTelegramBrowser">Open in Telegram</string>
+    <string name="OpenInTelegramBrowser">Open in Relay</string>
     <string name="OpenInTelegramBrowser2">Open In-App</string>
     <string name="OpenInSystemBrowser">Open in...</string>
     <string name="OpenInSystemBrowser2">Open in Browser</string>
@@ -8705,15 +8705,15 @@
     <string name="BrowserSettingsTitle">Web Browser</string>
     <string name="BrowserSettingsEnable">Enable In-App Browser</string>
     <string name="BrowserSettingsCustomTabsTitle">Open external links in</string>
-    <string name="BrowserSettingsCustomTabs">New Pages within Telegram</string>
+    <string name="BrowserSettingsCustomTabs">New Pages within Relay</string>
     <string name="BrowserSettingsNoCustomTabs">New Tabs in External Browser</string>
-    <string name="BrowserSettingsNoCustomTabsInfo">You can choose to open external link without leaving Telegram.</string>
-    <string name="BrowserSettingsEnableInfo">Open links inside Telegram without starting an external browser.</string>
+    <string name="BrowserSettingsNoCustomTabsInfo">You can choose to open external link without leaving Relay.</string>
+    <string name="BrowserSettingsEnableInfo">Open links inside Relay without starting an external browser.</string>
     <string name="BrowserSettingsCacheClear">Clear Cache</string>
     <string name="BrowserSettingsCookiesClear">Clear Cookies</string>
     <string name="BrowserSettingsCacheClearText">Are you sure you want to clear browser cache%s?</string>
     <string name="BrowserSettingsCookiesClearText">Are you sure you want to clear browser cookies%s?\n\nThis might log you out from website account sessions.</string>
-    <string name="BrowserSettingsCookiesInfo">Delete all cookies and cache from the Telegram in-app browser and miniapps.</string>
+    <string name="BrowserSettingsCookiesInfo">Delete all cookies and cache from the Relay in-app browser.</string>
     <string name="BrowserSettingsHistoryShow">View History</string>
     <string name="BrowserSettingsHistoryClear">Clear History</string>
     <string name="BrowserSettingsHistoryPages_one">%d page</string>
@@ -8743,7 +8743,7 @@
     <string name="BrowserExternalCheck">Always open links from **%s** in browser</string>
     <string name="BrowserAlwaysOpenExternal">Always open this site in Browser</string>
     <string name="BrowserAlwaysOpenInApp">Always open this site in-app</string>
-    <string name="BrowserExternalRestricted">Telegram will now open links from this website in the external browser. You can change this in **Settings.**</string>
+    <string name="BrowserExternalRestricted">Relay will now open links from this website in the external browser. You can change this in **Settings.**</string>
     <string name="StoryEditCover">Edit Cover</string>
     <string name="StoryEditCoverInfo">Choose a frame from the story to show in your Profile.</string>
     <string name="StoryEditCoverMenu">Edit Cover</string>
@@ -10711,8 +10711,8 @@
     <string name="BotAuthLoggedInFailNoDomain">Link has expired.</string>
 
     <string name="GalleryAccessAllowAccess">Allow Access to Photos</string>
-    <string name="GalleryAccessAllowAccessTextNonPremium">Share an unlimited number of photos\nand videos of up to 2 GB each.</string>
-    <string name="GalleryAccessAllowAccessTextPremium">Share an unlimited number of photos\nand videos of up to 4 GB each.</string>
+    <string name="GalleryAccessAllowAccessTextNonPremium">Share photos and videos from your gallery.</string>
+    <string name="GalleryAccessAllowAccessTextPremium">Share photos and videos from your gallery.</string>
     <string name="GalleryAccessAllowAccessButton">Allow Access</string>
     <string name="GalleryAccessAllowAccessOpenCamera">Open Camera</string>
     <string name="GalleryAccessAllowAccessCamera">Allow Access to Camera</string>
@@ -11710,6 +11710,8 @@
     <string name="RelayErrorMfa">The verification code is incorrect or has expired.</string>
     <string name="RelayErrorLoginTitle">Can\'t Log In</string>
     <string name="RelayErrorEmptyFields">Enter your email or username and your password.</string>
+    <!-- Relay polish 2b: UI, copy and branding -->
+    <string name="RelayGalleryAccessText">Share photos and videos of up to %1$s each.</string>
     <!-- Relay for Android (branding and settings, A6) -->
     <!-- Relay A7c: reactions, composer, profile and status, notifications -->
     <string name="RelayKeepConnected">Keep connected in background</string>

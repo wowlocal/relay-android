@@ -183,7 +183,8 @@ public class RelayLoginActivity extends BaseFragment {
         return view;
     }
 
-    private EditTextBoldCursor field(Context context, OutlineTextContainerView outline, String label, String contentDescription, int inputType, int imeAction, Runnable onAction) {
+    /** Polish 2b: {@code viewId} names the control for tests (resource id); TalkBack reads {@code label} (iOS P1). */
+    private EditTextBoldCursor field(Context context, OutlineTextContainerView outline, String label, int viewId, int inputType, int imeAction, Runnable onAction) {
         outline.setText(label);
         EditTextBoldCursor field = new EditTextBoldCursor(context);
         field.setCursorSize(AndroidUtilities.dp(20));
@@ -200,7 +201,8 @@ public class RelayLoginActivity extends BaseFragment {
         field.setInputType(inputType);
         field.setImeOptions(imeAction | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
         field.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
-        field.setContentDescription(contentDescription);
+        field.setId(viewId);
+        field.setContentDescription(label);
         field.setOnFocusChangeListener((v, hasFocus) -> outline.animateSelection(hasFocus ? 1f : 0f));
         field.setOnEditorActionListener((textView, action, event) -> {
             if (action == imeAction) {
@@ -214,10 +216,11 @@ public class RelayLoginActivity extends BaseFragment {
         return field;
     }
 
-    private ButtonWithCounterView button(Context context, String text, String contentDescription, Runnable onClick) {
+    private ButtonWithCounterView button(Context context, String text, int viewId, Runnable onClick) {
         ButtonWithCounterView button = new ButtonWithCounterView(context, true, null).setRound();
         button.setText(text, false);
-        button.setContentDescription(contentDescription);
+        button.setId(viewId);
+        button.setContentDescription(text);
         button.setOnClickListener(v -> onClick.run());
         return button;
     }
@@ -242,7 +245,7 @@ public class RelayLoginActivity extends BaseFragment {
         page.addView(subtitle(context, LocaleController.getString(R.string.RelayServerSubtitle)), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 32, 10, 32, 0));
 
         serverOutline = new OutlineTextContainerView(context);
-        serverField = field(context, serverOutline, LocaleController.getString(R.string.RelayServerField), "relay_server_field",
+        serverField = field(context, serverOutline, LocaleController.getString(R.string.RelayServerField), R.id.relay_server_field,
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
                 EditorInfo.IME_ACTION_GO, this::onConnect);
         serverField.setHint(LocaleController.getString(R.string.RelayServerHint));
@@ -253,7 +256,7 @@ public class RelayLoginActivity extends BaseFragment {
         }
         page.addView(serverOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 28, 16, 0));
 
-        connectButton = button(context, LocaleController.getString(R.string.RelayConnect), "relay_connect_button", this::onConnect);
+        connectButton = button(context, LocaleController.getString(R.string.RelayConnect), R.id.relay_connect_button, this::onConnect);
         page.addView(connectButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48, 16, 20, 16, 0));
 
         serverFooter = footer(context);
@@ -270,19 +273,19 @@ public class RelayLoginActivity extends BaseFragment {
         page.addView(loginSubtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 32, 10, 32, 0));
 
         loginIdOutline = new OutlineTextContainerView(context);
-        loginIdField = field(context, loginIdOutline, LocaleController.getString(R.string.RelayLoginIdField), "relay_login_field",
+        loginIdField = field(context, loginIdOutline, LocaleController.getString(R.string.RelayLoginIdField), R.id.relay_login_field,
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS,
                 EditorInfo.IME_ACTION_NEXT, () -> passwordField.requestFocus());
         page.addView(loginIdOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 28, 16, 0));
 
         passwordOutline = new OutlineTextContainerView(context);
-        passwordField = field(context, passwordOutline, LocaleController.getString(R.string.RelayPasswordField), "relay_password_field",
+        passwordField = field(context, passwordOutline, LocaleController.getString(R.string.RelayPasswordField), R.id.relay_password_field,
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD,
                 EditorInfo.IME_ACTION_DONE, this::onLogin);
         passwordField.setTransformationMethod(PasswordTransformationMethod.getInstance());
         page.addView(passwordOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 16, 16, 0));
 
-        loginButton = button(context, LocaleController.getString(R.string.RelayLogIn), "relay_login_button", this::onLogin);
+        loginButton = button(context, LocaleController.getString(R.string.RelayLogIn), R.id.relay_login_button, this::onLogin);
         page.addView(loginButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48, 16, 20, 16, 0));
 
         loginFooter = footer(context);
@@ -296,10 +299,10 @@ public class RelayLoginActivity extends BaseFragment {
         mfaSubtitle = subtitle(context, "");
         page.addView(mfaSubtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 32, 10, 32, 0));
         mfaOutline = new OutlineTextContainerView(context);
-        mfaField = field(context, mfaOutline, LocaleController.getString(R.string.RelayMfaField), "relay_mfa_field",
+        mfaField = field(context, mfaOutline, LocaleController.getString(R.string.RelayMfaField), R.id.relay_mfa_field,
                 InputType.TYPE_CLASS_NUMBER, EditorInfo.IME_ACTION_DONE, this::onVerifyMfa);
         page.addView(mfaOutline, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 16, 28, 16, 0));
-        mfaButton = button(context, LocaleController.getString(R.string.RelayVerify), "relay_mfa_button", this::onVerifyMfa);
+        mfaButton = button(context, LocaleController.getString(R.string.RelayVerify), R.id.relay_mfa_button, this::onVerifyMfa);
         page.addView(mfaButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48, 16, 20, 16, 0));
         return page;
     }

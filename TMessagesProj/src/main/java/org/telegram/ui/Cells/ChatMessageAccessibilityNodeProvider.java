@@ -304,7 +304,7 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                 if (cell.currentMessageObject.messageOwner.reactions != null && cell.currentMessageObject.messageOwner.reactions.results != null) {
                     if (cell.currentMessageObject.messageOwner.reactions.results.size() == 1) {
                         TLRPC.ReactionCount reaction = cell.currentMessageObject.messageOwner.reactions.results.get(0);
-                        String emoticon = reaction.reaction instanceof TLRPC.TL_reactionEmoji ? ((TLRPC.TL_reactionEmoji) reaction.reaction).emoticon : "";
+                        String emoticon = reactionLabel(cell.currentAccount, reaction.reaction);
                         if (reaction.count == 1) {
                             sb.append("\n");
                             boolean isMe = false;
@@ -330,17 +330,14 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                         }
                     } else {
                         sb.append(getString("Reactions", R.string.Reactions)).append((": "));
-                        final int count = cell.currentMessageObject.messageOwner.reactions.results.size();
-                        for (int i = 0; i < count; ++i) {
-                            TLRPC.ReactionCount reactionCount = cell.currentMessageObject.messageOwner.reactions.results.get(i);
-                            String emoticon = reactionCount.reaction instanceof TLRPC.TL_reactionEmoji ? ((TLRPC.TL_reactionEmoji) reactionCount.reaction).emoticon : "";
-                            if (reactionCount != null) {
-                                sb.append(emoticon).append(" ").append(reactionCount.count + "");
-                                if (i + 1 < count) {
-                                    sb.append(", ");
-                                }
+                        // Polish 2b: every reaction, custom emoji included (by its emoji), comma separated.
+                        final ArrayList<String> parts = new ArrayList<>();
+                        for (TLRPC.ReactionCount reactionCount : cell.currentMessageObject.messageOwner.reactions.results) {
+                            if (reactionCount != null && reactionCount.count > 0) {
+                                parts.add(reactionLabel(cell.currentAccount, reactionCount.reaction) + " " + reactionCount.count);
                             }
                         }
+                        sb.append(TextUtils.join(", ", parts));
                         sb.append("\n");
                     }
                 }
@@ -1043,5 +1040,20 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
             }
             return links[id];
         }
+    }
+
+    /** The emoji of a reaction: the emoticon, or a custom emoji's alt emoji (else "Reaction"). Polish 2b. */
+    private static String reactionLabel(int account, TLRPC.Reaction reaction) {
+        if (reaction instanceof TLRPC.TL_reactionEmoji) {
+            return ((TLRPC.TL_reactionEmoji) reaction).emoticon;
+        }
+        if (reaction instanceof TLRPC.TL_reactionCustomEmoji) {
+            TLRPC.Document document = org.telegram.ui.Components.AnimatedEmojiDrawable.findDocument(account, ((TLRPC.TL_reactionCustomEmoji) reaction).document_id);
+            String emoticon = document != null ? MessageObject.findAnimatedEmojiEmoticon(document, null) : null;
+            if (!TextUtils.isEmpty(emoticon)) {
+                return emoticon;
+            }
+        }
+        return getString("Reactions", R.string.Reactions);
     }
 }

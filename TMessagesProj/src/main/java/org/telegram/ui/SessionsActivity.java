@@ -760,6 +760,15 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
         session.system_version = "SDK " + Build.VERSION.SDK_INT;
         session.app_name = "Telegram Android";
         session.app_version = "";
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Polish 2b: this device's row (when the session list has no current entry) says Relay, not Telegram.
+            session.app_name = "Relay for Android";
+            session.app_version = org.telegram.relay.ui.RelayAboutActivity.versionString();
+            session.country = "";
+            session.region = "";
+            session.ip = "";
+            return session;
+        }
         try {
             final PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
             session.app_version = pInfo.versionName + " (" + pInfo.versionCode + ")";

@@ -612,7 +612,7 @@ public class SharedConfig {
             hasCameraCache = preferences.contains("cameraCache");
             roundCamera16to9 = true;
             repeatMode = preferences.getInt("repeatMode", 0);
-            fontSize = preferences.getInt("fons_size", AndroidUtilities.isTablet() && !AndroidUtilities.isFold() ? 18 : 16);
+            fontSize = preferences.getInt("fons_size", relayDefaultFontSize(AndroidUtilities.isTablet() && !AndroidUtilities.isFold() ? 18 : 16));
             fontSizeIsDefault = !preferences.contains("fons_size");
             bubbleRadius = preferences.getInt("bubbleRadius", 17);
             ivFontSize = preferences.getInt("iv_font_size", fontSize);
@@ -708,10 +708,39 @@ public class SharedConfig {
         }
     }
 
+    /**
+     * Relay (polish 2b): while the in-app text size was never changed, message text follows the system font size
+     * (Android Settings → Display → Font size), as iOS P2 expects. Telegram keeps a fixed default.
+     */
+    public static int relayDefaultFontSize(int base) {
+        if (!org.telegram.relay.RelayConfig.ENABLED) {
+            return base;
+        }
+        float scale = 1f;
+        try {
+            scale = android.provider.Settings.System.getFloat(ApplicationLoader.applicationContext.getContentResolver(), android.provider.Settings.System.FONT_SCALE, 1f);
+        } catch (Exception ignore) {
+        }
+        return Math.max(12, Math.min(30, Math.round(base * scale)));
+    }
+
+    /** Relay: re-reads the system font size (activity start); true when the default message text size changed. */
+    public static boolean relayApplySystemFontScale() {
+        if (!org.telegram.relay.RelayConfig.ENABLED || !fontSizeIsDefault) {
+            return false;
+        }
+        int size = relayDefaultFontSize(AndroidUtilities.isTablet() && !AndroidUtilities.isFold() ? 18 : 16);
+        if (size == fontSize) {
+            return false;
+        }
+        fontSize = size;
+        return true;
+    }
+
     public static void updateTabletConfig() {
         if (fontSizeIsDefault) {
             SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
-            fontSize = preferences.getInt("fons_size", AndroidUtilities.isTablet() && !AndroidUtilities.isFold() ? 18 : 16);
+            fontSize = preferences.getInt("fons_size", relayDefaultFontSize(AndroidUtilities.isTablet() && !AndroidUtilities.isFold() ? 18 : 16));
             ivFontSize = preferences.getInt("iv_font_size", fontSize);
         }
     }

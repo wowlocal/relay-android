@@ -984,6 +984,15 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.notificationsCountUpdated || id == NotificationCenter.updateInterfaces) {
             checkUnreadCount(fragmentView != null && fragmentView.isAttachedToWindow());
+            if (id == NotificationCenter.updateInterfaces && tabs != null && tabs[INDEX_PROFILE] != null) {
+                // Polish 2b: the own picture arrives after the first sync; show it instead of the initials.
+                final TLRPC.User self = getMessagesController().getUser(getUserConfig().getClientUserId());
+                final long photoId = self != null && self.photo != null ? self.photo.photo_id : 0;
+                if (photoId != shownProfilePhotoId) {
+                    shownProfilePhotoId = photoId;
+                    tabs[INDEX_PROFILE].updateUserAvatar(currentAccount);
+                }
+            }
         } else if (id == NotificationCenter.appUpdateLoading) {
             if (updateLayout != null) {
                 updateLayout.updateFileProgress(null);
@@ -1035,6 +1044,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     }
 
     private NotificationCenter.ObserversGroup observersGroup;
+    private long shownProfilePhotoId = -1;
 
     @Override
     public boolean onFragmentCreate() {

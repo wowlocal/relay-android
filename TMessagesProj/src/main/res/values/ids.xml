@@ -67,4 +67,12 @@
     <item name="tag_view_on_post_draw_root_state" type="id" />
     <item name="theme_bind" type="id" />
     <item name="theme_generation" type="id" />
+    <!-- Relay polish 2b: login controls (uiautomator resource ids; TalkBack reads their labels) -->
+    <item name="relay_server_field" type="id" />
+    <item name="relay_connect_button" type="id" />
+    <item name="relay_login_field" type="id" />
+    <item name="relay_password_field" type="id" />
+    <item name="relay_login_button" type="id" />
+    <item name="relay_mfa_field" type="id" />
+    <item name="relay_mfa_button" type="id" />
 </resources>

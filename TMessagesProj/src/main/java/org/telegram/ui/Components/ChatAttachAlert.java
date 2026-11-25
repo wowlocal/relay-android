@@ -3530,7 +3530,15 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
             public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
                 super.onInitializeAccessibilityNodeInfo(info);
                 if (currentAttachLayout == photoLayout) {
-                    info.setText(LocaleController.formatPluralString("AccDescrSendPhotos", photoLayout.getSelectedItemsCount()));
+                    // Polish 2b: "Send 1 video" / "Send 2 media", not always "photo".
+                    int videos = 0;
+                    for (Object entry : photoLayout.getSelectedPhotos().values()) {
+                        if (entry instanceof MediaController.PhotoEntry && ((MediaController.PhotoEntry) entry).isVideo) {
+                            videos++;
+                        }
+                    }
+                    final int total = photoLayout.getSelectedItemsCount();
+                    info.setText(LocaleController.formatPluralString(videos == 0 ? "AccDescrSendPhotos" : videos >= total ? "ShareSendVideos" : "ShareSendItems", total));
                 } else if (currentAttachLayout == documentLayout) {
                     info.setText(LocaleController.formatPluralString("AccDescrSendFiles", documentLayout.getSelectedItemsCount()));
                 } else if (currentAttachLayout == audioLayout) {
@@ -6555,7 +6563,8 @@ public class ChatAttachAlert extends BottomSheet implements NotificationCenter.N
 
     private boolean shownAiButton;
     private void showAiButton(boolean show_) {
-        final boolean show = show_ && (baseFragment instanceof ChatActivity && !((ChatActivity) baseFragment).isSecretChat());
+        final boolean show = show_ && org.telegram.relay.RelayFeatures.AI_EDITOR // Relay: no Telegram AI editor
+            && (baseFragment instanceof ChatActivity && !((ChatActivity) baseFragment).isSecretChat());
 
         if (shownAiButton == show) return;
         if (show) {

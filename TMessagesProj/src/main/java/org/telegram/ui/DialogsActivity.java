@@ -507,6 +507,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private boolean downloadsItemVisible;
     public ActionBarMenuItem searchItem;
     private ActionBarMenuItem optionsItem;
+    private ActionBarMenuItem relayThreadsItem; // Relay A7a; hidden with the other items while searching (polish 2b)
     private ActionBarMenuItem speedItem;
     public static boolean switchingTheme;
     private ActionBarMenuItem doneItem;
@@ -3363,7 +3364,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT && org.telegram.relay.RelayConfig.ENABLED && folderId == 0) {
             // Relay A7a: Threads (collapsed reply threads), with the unread followed-threads badge.
-            org.telegram.relay.ui.RelayThreadsUi.attachChatListButton(this, menu, () -> {
+            relayThreadsItem = org.telegram.relay.ui.RelayThreadsUi.attachChatListButton(this, menu, () -> {
                 int tab = filterTabsView != null ? filterTabsView.getCurrentTabId() : -1;
                 java.util.ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
                 return tab >= 0 && tab < filters.size() ? filters.get(tab).id : 0;
@@ -3613,6 +3614,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     ArrayList<MessagesController.DialogFilter> dialogFilters = getMessagesController().getDialogFilters();
                     if (tabId < 0 || tabId >= dialogFilters.size()) {
                         return 0;
+                    }
+                    if (dialogFilters.get(tabId).isDefault()) {
+                        // Polish 2b (QA-06): FilterTabsView asks while adding the "All Chats" tab, before it can find it
+                        // as the default tab; without this the rebuilt chat list (language or device locale change)
+                        // showed All Chats without its counter until the next unread change.
+                        return getMessagesStorage().getMainUnreadCount();
                     }
                     return getMessagesController().getDialogFilters().get(tabId).unreadCount;
                 }
@@ -13781,6 +13788,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();
         final float factor = factor1 * factor2 * factor3;
         FragmentFloatingButton.setAnimatedVisibility(optionsItem, factor);
+        FragmentFloatingButton.setAnimatedVisibility(relayThreadsItem, factor);
     }
 
     private void checkUi_itemPasscodeVisibility() {
