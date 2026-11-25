@@ -218,6 +218,11 @@ final class RelayFiles {
             }
         } else if (location instanceof TLRPC.TL_inputDocumentFileLocation) {
             String fileId = account.db().mmId(RelayDatabase.KIND_FILE, location.id);
+            if (fileId == null && RelayEmoji.isEmojiDocumentId(location.id)) {
+                // A7c: emoji documents (reactions, emoji statuses, custom emoji in text).
+                byte[] emoji = RelayEmoji.of(account).chunk(location.id, offset, limit);
+                return emoji != null ? uploadFile(emoji) : RelayTl.error(400, "FILE_ID_INVALID");
+            }
             if (fileId == null) {
                 return RelayTl.error(400, "FILE_ID_INVALID");
             }

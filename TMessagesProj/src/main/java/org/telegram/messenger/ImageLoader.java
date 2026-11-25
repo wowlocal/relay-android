@@ -2196,12 +2196,15 @@ public class ImageLoader {
             FileLoader.getInstance(a).setDelegate(new FileLoader.FileLoaderDelegate() {
                 @Override
                 public void fileUploadProgressChanged(FileUploadOperation operation, final String location, long uploadedSize, long totalSize, final boolean isEncrypted) {
+                    // Relay (A7c): the local part is a tenth of the ring; the bridge's POST /files fills the rest.
+                    uploadedSize = org.telegram.relay.bridge.RelayUploadProgress.localProgress(operation.getCurrentFileIdForRelay(), location, uploadedSize, totalSize);
+                    final long uploadedSizeFinal = uploadedSize;
                     fileProgresses.put(location, new long[]{uploadedSize, totalSize});
                     long currentTime = SystemClock.elapsedRealtime();
                     if (operation.lastProgressUpdateTime == 0 || operation.lastProgressUpdateTime < currentTime - 100 || uploadedSize == totalSize) {
                         operation.lastProgressUpdateTime = currentTime;
 
-                        AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.fileUploadProgressChanged, location, uploadedSize, totalSize, isEncrypted));
+                        AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.fileUploadProgressChanged, location, uploadedSizeFinal, totalSize, isEncrypted));
                     }
                 }
 

@@ -755,7 +755,8 @@ public class ReactionsEffectOverlay {
             return;
         }
         boolean animationEnabled = MessagesController.getGlobalMainSettings().getBoolean("view_animations", true);
-        if (!animationEnabled) {
+        if (!animationEnabled || org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A7c): no Telegram reaction animations (the reaction set has none); the bubble shows the emoji.
             return;
         }
         if (animationType == ONLY_MOVE_ANIMATION || animationType == LONG_ANIMATION) {

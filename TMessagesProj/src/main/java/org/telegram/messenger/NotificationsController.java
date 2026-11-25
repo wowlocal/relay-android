@@ -1290,6 +1290,9 @@ public class NotificationsController extends BaseController implements Notificat
                     settingsCache.put(dialogId, value);
                 }
 
+                if (value && org.telegram.relay.RelayConfig.ENABLED && !org.telegram.relay.bridge.RelayNotifications.shouldNotify(currentAccount, messageObject)) {
+                    value = false; // Relay (A7c): Mattermost's push level, mute and Do Not Disturb
+                }
                 if (BuildVars.LOGS_ENABLED) {
                     FileLog.d("NotificationsController: process new messages, value is " + value + " ("+dialogId+", "+isChannel+", "+messageObject.isReactionPush+", "+messageObject.isStoryReactionPush+")");
                 }

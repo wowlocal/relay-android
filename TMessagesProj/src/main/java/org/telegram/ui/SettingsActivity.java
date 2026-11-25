@@ -888,6 +888,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private static final int RELAY_ID_ABOUT = 41;
     private static final int RELAY_ID_LOGOUT = 42;
     private static final int RELAY_ID_PASSCODE = 43;
+    private static final int RELAY_ID_STATUS = 44;
+    private static final int RELAY_ID_CUSTOM_STATUS = 45;
 
     /**
      * Relay: the settings list. Mattermost account (server), the local app settings that work
@@ -898,6 +900,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private void fillRelayItems(ArrayList<UItem> items) {
         final org.telegram.relay.account.RelaySession session = org.telegram.relay.account.RelaySessionStore.get(currentAccount);
         if (session != null) {
+            // Relay (A7c): status and custom status (iOS phase3f-settings).
+            final String relayStatus = org.telegram.relay.bridge.RelayProfile.cachedStatus(currentAccount);
+            items.add(SettingCell.Factory.of(RELAY_ID_STATUS, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_recent, getString(R.string.RelayStatus), null, org.telegram.relay.ui.RelayStatusActivity.label(relayStatus)));
+            final CharSequence customStatus = org.telegram.relay.ui.RelayStatusActivity.customStatusText(currentAccount);
+            items.add(SettingCell.Factory.of(RELAY_ID_CUSTOM_STATUS, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.msg_smile_status, getString(R.string.RelayCustomStatus), null, customStatus != null ? customStatus : getString(R.string.RelayCustomStatusSet)));
+            items.add(UItem.asShadow(null));
             items.add(SettingCell.Factory.of(RELAY_ID_SERVER, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.menu_website, getString(R.string.RelaySettingsServer), org.telegram.relay.auth.RelayAuth.displayHost(session.serverUrl)));
             items.add(UItem.asShadow(null));
         }
@@ -927,8 +935,16 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         items.add(UItem.asCustomShadow(versionView));
     }
 
-    private void onRelayClick(int id) {
+    private void onRelayClick(int id, View view) {
         switch (id) {
+            case RELAY_ID_STATUS:
+                org.telegram.relay.ui.RelayStatusActivity.showQuickMenu(this, view, () -> {
+                    if (listView != null && listView.adapter != null) listView.adapter.update(true);
+                });
+                break;
+            case RELAY_ID_CUSTOM_STATUS:
+                presentSettingFragment(new org.telegram.relay.ui.RelayCustomStatusActivity());
+                break;
             case RELAY_ID_SERVER: {
                 final org.telegram.relay.account.RelaySession session = org.telegram.relay.account.RelaySessionStore.get(currentAccount);
                 if (session != null) {
@@ -1017,8 +1033,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             return;
         }
-        if (item.id >= RELAY_ID_SERVER && item.id <= RELAY_ID_PASSCODE) {
-            onRelayClick(item.id);
+        if (item.id >= RELAY_ID_SERVER && item.id <= RELAY_ID_CUSTOM_STATUS) {
+            onRelayClick(item.id, view);
             return;
         }
         switch (item.id) {

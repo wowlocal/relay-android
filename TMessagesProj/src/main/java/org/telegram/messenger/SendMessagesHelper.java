@@ -4440,6 +4440,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.ui.RelayComposerUi.interceptSend(currentAccount, sendMessageParams)) {
+            return; // Relay (A7c): slash command, or an @channel confirmation first
+        }
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
         String message = sendMessageParams.message;

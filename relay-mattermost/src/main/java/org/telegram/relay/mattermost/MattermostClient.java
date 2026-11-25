@@ -763,6 +763,97 @@ public class MattermostClient {
         return download(new Request("GET", UrlCodec.path("emoji", emojiId, "image")).binary(), -1, -1);
     }
 
+    // MARK: - A7c: composer, profile, notifications
+
+    /** {@code GET /emoji/autocomplete?name=}: custom emoji whose name starts with {@code name}. */
+    public List<CustomEmoji> autocompleteEmoji(String name) throws MattermostException {
+        Response response = execute(new Request("GET", "/emoji/autocomplete").query(new QueryBuilder().add("name", name)));
+        return Json.listFromJson(response.text(), CustomEmoji.class);
+    }
+
+    /**
+     * {@code GET /users/autocomplete?in_team=&in_channel=&name=&limit=}: {@code {users: [...], out_of_channel: [...]}}
+     * (with {@code in_channel}); without a channel only {@code users}.
+     */
+    public JsonObject autocompleteUsers(String teamId, String channelId, String name, int limit) throws MattermostException {
+        QueryBuilder query = new QueryBuilder().add("name", name).add("limit", limit > 0 ? limit : 25);
+        if (teamId != null && !teamId.isEmpty()) {
+            query.add("in_team", teamId);
+        }
+        if (channelId != null && !channelId.isEmpty()) {
+            query.add("in_channel", channelId);
+        }
+        Response response = execute(new Request("GET", "/users/autocomplete").query(query));
+        JsonObject object = Json.parseObjectOrNull(response.text());
+        return object != null ? object : new JsonObject();
+    }
+
+    /** {@code GET /teams/{id}/channels/autocomplete?name=}: public and private channels of a team matching a prefix. */
+    public List<Channel> autocompleteChannels(String teamId, String name) throws MattermostException {
+        Response response = execute(new Request("GET", UrlCodec.path("teams", teamId, "channels", "autocomplete")).query(new QueryBuilder().add("name", name)));
+        return Json.listFromJson(response.text(), Channel.class);
+    }
+
+    /**
+     * {@code GET /teams/{id}/commands/autocomplete_suggestions?user_input=&channel_id=&root_id=}: the composer's slash
+     * suggestions, each {@code {Complete, Suggestion, Hint, Description, IconData}}.
+     */
+    public JsonArray commandSuggestions(String teamId, String userInput, String channelId, String rootId) throws MattermostException {
+        QueryBuilder query = new QueryBuilder().add("user_input", userInput).add("channel_id", channelId);
+        if (rootId != null && !rootId.isEmpty()) {
+            query.add("root_id", rootId);
+        }
+        Response response = execute(new Request("GET", UrlCodec.path("teams", teamId, "commands", "autocomplete_suggestions")).query(query));
+        JsonElement element = Json.parse(response.text());
+        return element != null && element.isJsonArray() ? element.getAsJsonArray() : new JsonArray();
+    }
+
+    /** {@code POST /commands/execute}: runs a slash command; the answer is the command response. */
+    public JsonObject executeCommand(String channelId, String teamId, String command, String rootId, String parentId) throws MattermostException {
+        JsonObject body = Json.object("channel_id", channelId, "team_id", teamId, "command", command,
+                "root_id", rootId != null ? rootId : "", "parent_id", parentId != null ? parentId : "");
+        Response response = execute(new Request("POST", "/commands/execute").json(body));
+        JsonObject object = Json.parseObjectOrNull(response.text());
+        return object != null ? object : new JsonObject();
+    }
+
+    /** {@code GET /channels/{id}/timezones}: the distinct time zones of a channel's members. */
+    public List<String> channelTimezones(String channelId) throws MattermostException {
+        Response response = execute(new Request("GET", UrlCodec.path("channels", channelId, "timezones")));
+        List<String> result = new ArrayList<String>();
+        JsonElement element = Json.parse(response.text());
+        if (element != null && element.isJsonArray()) {
+            for (JsonElement item : element.getAsJsonArray()) {
+                if (item.isJsonPrimitive() && !item.getAsString().isEmpty()) {
+                    result.add(item.getAsString());
+                }
+            }
+        }
+        return result;
+    }
+
+    /** {@code PUT /users/me/patch}: changes only the given fields (names, nickname, position, notify_props, timezone…). */
+    public User patchMe(JsonObject patch) throws MattermostException {
+        Response response = execute(new Request("PUT", UrlCodec.path("users", ME, "patch")).json(patch));
+        return Json.fromJson(response.text(), User.class);
+    }
+
+    /** {@code POST /users/{id}/image} (multipart field {@code image}): a new profile picture. */
+    public void setProfileImage(String userId, FileUpload image) throws MattermostException {
+        String boundary = "RelayBoundary" + UUID.randomUUID().toString().replace("-", "");
+        Multipart multipart = new Multipart(boundary);
+        multipart.file("image", image);
+        Request request = new Request("POST", UrlCodec.path("users", userId, "image"));
+        request.multipart = multipart;
+        request.readTimeout = uploadReadTimeoutMillis;
+        execute(request);
+    }
+
+    /** {@code DELETE /users/{id}/image}: back to the generated default picture. */
+    public void deleteProfileImage(String userId) throws MattermostException {
+        execute(new Request("DELETE", UrlCodec.path("users", userId, "image")));
+    }
+
     // MARK: - WebSocket
 
     /** A WebSocket for this server with the current token and user agent; call {@code connect()} on it. */

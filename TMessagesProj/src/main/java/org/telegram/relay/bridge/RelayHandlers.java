@@ -153,6 +153,13 @@ final class RelayHandlers {
         // MARK: files (§8)
         map.put(TLRPC.TL_upload_getFile.class, (bridge, account, req) -> RelayReadPath.of(account).files.getFile((TLRPC.TL_upload_getFile) req));
 
+        // MARK: A7c: reactions, emoji, composer, profile and status, notifications (one block; see each class)
+        RelayEmoji.register(map);
+        RelayReactions.register(map);
+        RelayComposer.register(map);
+        RelayProfile.register(map);
+        RelayNotifications.register(map);
+
         // MARK: config
         map.put(TLRPC.TL_help_getAppConfig.class, (bridge, account, req) -> RelayAppConfig.answer((TLRPC.TL_help_getAppConfig) req));
         WITHOUT_SESSION.add(TLRPC.TL_help_getAppConfig.class);

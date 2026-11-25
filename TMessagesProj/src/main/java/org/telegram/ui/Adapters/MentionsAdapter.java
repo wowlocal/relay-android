@@ -982,6 +982,10 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
             clearStickers();
             return;
         }
+        if (org.telegram.relay.RelayConfig.ENABLED && !usernameOnly && !forSearch && parentFragment != null) {
+            relaySearch(text, position); // Relay (A7c): Mattermost autocomplete
+            return;
+        }
         int searchPostion = position;
         if (text.length() > 0) {
             searchPostion--;
@@ -1676,6 +1680,39 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
         }
     }
 
+    // MARK: Relay (A7c): Mattermost autocomplete (@users, @channel/@here/@all, ~channels, :emoji:, /commands)
+
+    /** Users, {@code RelayComposer.Suggestion}s and emoji {@code KeywordResult}s; non-null while Relay suggests. */
+    private ArrayList<Object> relayResults;
+
+    private void relaySearch(String text, int position) {
+        org.telegram.relay.ui.RelayComposerUi.Token token = org.telegram.relay.ui.RelayComposerUi.token(text, position);
+        if (token == null) {
+            org.telegram.relay.bridge.RelayComposer.cancelSuggestions();
+            if (relayResults != null) {
+                relayResults = null;
+                notifyDataSetChanged();
+            }
+            delegate.needChangePanelVisibility(false);
+            return;
+        }
+        final long did = parentFragment != null ? parentFragment.getDialogId() : dialog_id;
+        org.telegram.relay.bridge.RelayComposer.suggest(currentAccount, did, token.trigger, token.query, results -> {
+            searchResultHashtags = null;
+            searchResultUsernames = null;
+            searchResultUsernamesMap = null;
+            searchResultCommands = null;
+            searchResultSuggestions = null;
+            searchResultBotContext = null;
+            stickers = null;
+            resultStartPosition = token.start;
+            resultLength = token.length;
+            relayResults = results == null || results.isEmpty() ? null : new ArrayList<>(results);
+            notifyDataSetChanged();
+            delegate.needChangePanelVisibility(relayResults != null);
+        });
+    }
+
     public int getResultStartPosition() {
         return resultStartPosition;
     }
@@ -1700,6 +1737,9 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
     }
 
     public int getItemCountInternal() {
+        if (relayResults != null) {
+            return relayResults.size();
+        }
         if (foundContextBot != null && !inlineMediaEnabled) {
             return 1;
         }
@@ -1729,6 +1769,7 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
         }
         foundContextBot = null;
         hintHashtag = null;
+        relayResults = null;
         if (stickers != null) {
             stickers.clear();
         }
@@ -1757,6 +1798,9 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
 
     @Override
     public int getItemViewType(int position) {
+        if (relayResults != null) {
+            return 0;
+        }
         if (hintHashtag != null) {
             if (position < 2) return 6;
             position -= 2;
@@ -1807,6 +1851,9 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
     }
 
     public Object getItem(int i) {
+        if (relayResults != null) {
+            return i >= 0 && i < relayResults.size() ? relayResults.get(i) : null;
+        }
         if (hintHashtag != null) {
             if (i < 2) return null;
             i -= 2;
@@ -1974,6 +2021,20 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+        if (relayResults != null && holder.itemView instanceof MentionCell) {
+            MentionCell cell = (MentionCell) holder.itemView;
+            Object object = position >= 0 && position < relayResults.size() ? relayResults.get(position) : null;
+            if (object instanceof TLRPC.User) {
+                cell.setUser((TLRPC.User) object);
+            } else if (object instanceof MediaDataController.KeywordResult) {
+                cell.setEmojiSuggestion((MediaDataController.KeywordResult) object);
+            } else if (object instanceof org.telegram.relay.bridge.RelayComposer.Suggestion) {
+                org.telegram.relay.bridge.RelayComposer.Suggestion s = (org.telegram.relay.bridge.RelayComposer.Suggestion) object;
+                cell.setBotCommand(s.title, s.description, null, false);
+            }
+            cell.setDivider(USE_DIVIDERS && (isReversed ? position > 0 : position < getItemCount() - 1));
+            return;
+        }
         if (hintHashtag != null) {
             position -= 2;
 //            if (!searchResultHashtags.isEmpty()) position--;

@@ -67,6 +67,7 @@ import java.util.Objects;
 public class UserInfoActivity extends UniversalFragment implements NotificationCenter.NotificationCenterDelegate {
 
     private EditTextCell firstNameEdit;
+    private org.telegram.relay.ui.RelayProfileEdit relayEdit;
     private EditTextCell lastNameEdit;
     private EditTextCell bioEdit;
 
@@ -114,6 +115,10 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
     }
 
     private void updateBioInfo() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            bioInfo = null; // Relay (A7c): the position has no Telegram privacy rule
+            return;
+        }
         final int oldBioInfoHash = bioInfoHash;
         final boolean hasBio = bioEdit != null && !TextUtils.isEmpty(bioEdit.getText());
         if (!hasBio) {
@@ -240,7 +245,7 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             }
         };
         lastNameEdit.hideKeyboardOnEnter();
-        bioEdit = new EditTextCell(context, getString(R.string.EditProfileBioHint2), true, false, getMessagesController().getAboutLimit(), resourceProvider) {
+        bioEdit = new EditTextCell(context, org.telegram.relay.RelayConfig.ENABLED ? getString(R.string.RelayProfilePosition) : getString(R.string.EditProfileBioHint2), true, false, org.telegram.relay.RelayConfig.ENABLED ? 128 : getMessagesController().getAboutLimit(), resourceProvider) {
             @Override
             protected void onTextChanged(CharSequence newText) {
                 super.onTextChanged(newText);
@@ -249,8 +254,19 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             }
         };
         bioEdit.setShowLimitWhenEmpty(true);
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A7c): username and nickname; the "bio" is the Mattermost position.
+            relayEdit = new org.telegram.relay.ui.RelayProfileEdit(context, currentAccount, resourceProvider, () -> checkDone(true));
+            relayEdit.load((me, error) -> {
+                if (me != null) {
+                    currentBio = me.position;
+                    bioEdit.setText(me.position);
+                    checkDone(true);
+                }
+            });
+        }
         updateBioInfo();
-        bioInfo = AndroidUtilities.replaceSingleTag(getString(R.string.EditProfileBioInfo2), this::openBioSettings);
+        bioInfo = org.telegram.relay.RelayConfig.ENABLED ? null : AndroidUtilities.replaceSingleTag(getString(R.string.EditProfileBioInfo2), this::openBioSettings);
 
         super.createView(context);
         this.listView = super.listView;
@@ -349,6 +365,9 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         lastNameRow = items.size();
         items.add(UItem.asCustom(lastNameEdit));
         items.add(UItem.asShadow(-1, null));
+        if (relayEdit != null) {
+            items.add(UItem.asHeader(getString(R.string.RelayProfilePosition))); // Relay (A7c): the bio is the position
+        }
         bioRow = items.size();
         items.add(UItem.asCustom(bioEdit));
         items.add(UItem.asShadow(bioInfo));
@@ -356,6 +375,9 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         // Relay: phone number, Telegram username, birthday, personal channel, business hours and
         // location, chat automation bots are Telegram-only. Name, bio and accounts stay.
         usernameRow = birthdayRow = channelRow = -1;
+        if (relayEdit != null) {
+            relayEdit.fillItems(items);
+        }
         if (!org.telegram.relay.RelayConfig.ENABLED) {
             final TLRPC.User user = getUserConfig().getCurrentUser();
             items.add(UItem.asHeader(getString(R.string.EditAccountInfoHeader)));
@@ -637,7 +659,11 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
 
         firstNameEdit.setText(currentFirstName = user.first_name);
         lastNameEdit.setText(currentLastName = user.last_name);
-        bioEdit.setText(currentBio = userFull.about);
+        if (relayEdit == null) {
+            bioEdit.setText(currentBio = userFull.about);
+        } else if (relayEdit.loadedPosition() != null) {
+            bioEdit.setText(currentBio = relayEdit.loadedPosition());
+        }
         birthday = currentBirthday = userFull.birthday;
         if ((userFull.flags2 & 64) != 0) {
             currentChannel = userFull.personal_channel_id;
@@ -662,7 +688,8 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
             !TextUtils.equals(currentLastName == null ? "" : currentLastName, lastNameEdit.getText().toString()) ||
             !TextUtils.equals(currentBio == null ? "" : currentBio, bioEdit.getText().toString()) ||
             !birthdaysEqual(currentBirthday, birthday) ||
-            currentChannel != (channel != null ? channel.id : 0)
+            currentChannel != (channel != null ? channel.id : 0) ||
+            relayEdit != null && relayEdit.hasChanges()
         );
     }
 
@@ -688,6 +715,27 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         }
 
         doneButton.setLoading(true, true);
+        if (relayEdit != null) {
+            // Relay (A7c): one PUT /users/me/patch for names, position, nickname and username.
+            if (!hasChanges()) {
+                finishFragment();
+                return;
+            }
+            relayEdit.save(firstNameEdit.getText().toString(), lastNameEdit.getText().toString(), bioEdit.getText().toString().trim(), (me, err) -> {
+                if (me == null) {
+                    doneButton.setLoading(false, true);
+                    BulletinFactory.of(this).createErrorBulletin(err != null ? err : getString(R.string.UnknownError)).show();
+                    return;
+                }
+                wasSaved = true;
+                TLRPC.UserFull full = getMessagesController().getUserFull(getUserConfig().getClientUserId());
+                if (full != null) {
+                    full.about = org.telegram.relay.bridge.RelayProfile.about(me);
+                }
+                finishFragment();
+            });
+            return;
+        }
         TLRPC.User user = getUserConfig().getCurrentUser();
         TLRPC.UserFull userFull = getMessagesController().getUserFull(getUserConfig().getClientUserId());
         if (user == null || userFull == null) return;

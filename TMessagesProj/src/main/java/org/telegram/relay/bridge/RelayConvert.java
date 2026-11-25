@@ -161,6 +161,7 @@ final class RelayConvert {
             FormattedText text = format(messageText(post));
             m.message = text.getText();
             ArrayList<TLRPC.MessageEntity> entities = entities(text);
+            RelayEmoji.of(account).addCustomEmojiEntities(text, entities); // A7c: custom emoji images in text
             if (!entities.isEmpty()) {
                 m.entities = entities;
                 m.flags |= TLObject.FLAG_7;
@@ -455,9 +456,7 @@ final class RelayConvert {
         int order = 0;
         for (Map.Entry<String, int[]> entry : counts.entrySet()) {
             TLRPC.TL_reactionCount count = new TLRPC.TL_reactionCount();
-            TLRPC.TL_reactionEmoji emoji = new TLRPC.TL_reactionEmoji();
-            emoji.emoticon = emoticon(entry.getKey());
-            count.reaction = emoji;
+            count.reaction = RelayReactions.tlReaction(account, entry.getKey()); // A7c: custom emoji as documents
             count.count = entry.getValue()[0];
             if (mine.containsKey(entry.getKey())) {
                 count.chosen_order = ++order;

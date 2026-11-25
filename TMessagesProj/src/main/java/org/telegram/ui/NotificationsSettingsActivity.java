@@ -221,7 +221,8 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
 
         otherSectionRow = rowCount++;
         notificationsServiceRow = rowCount++;
-        notificationsServiceConnectionRow = rowCount++;
+        // Relay (A7c): the service row is "Keep connected in background"; Telegram's push connection does not exist.
+        notificationsServiceConnectionRow = org.telegram.relay.RelayConfig.ENABLED ? -1 : rowCount++;
         androidAutoAlertRow = -1;
         repeatRow = rowCount++;
         resetSection2Row = rowCount++;
@@ -765,6 +766,9 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                         }
                     }
                 }
+            } else if (position == notificationsServiceRow && org.telegram.relay.RelayConfig.ENABLED) {
+                enabled = org.telegram.relay.bridge.RelayNotifications.keepConnected();
+                org.telegram.relay.bridge.RelayNotifications.setKeepConnected(!enabled);
             } else if (position == notificationsServiceRow) {
                 SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
                 enabled = preferences.getBoolean("pushService", getMessagesController().keepAliveService);
@@ -1033,6 +1037,8 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                         checkCell.setTextAndCheck(getString("PinnedMessages", R.string.PinnedMessages), preferences.getBoolean("PinnedMessages", true), false);
                     } else if (position == androidAutoAlertRow) {
                         checkCell.setTextAndCheck("Android Auto", preferences.getBoolean("EnableAutoNotifications", false), true);
+                    } else if (position == notificationsServiceRow && org.telegram.relay.RelayConfig.ENABLED) {
+                        checkCell.setTextAndValueAndCheck(getString(R.string.RelayKeepConnected), getString(R.string.RelayKeepConnectedInfo), org.telegram.relay.bridge.RelayNotifications.keepConnected(), true, true);
                     } else if (position == notificationsServiceRow) {
                         checkCell.setTextAndValueAndCheck(getString("NotificationsService", R.string.NotificationsService), getString("NotificationsServiceInfo", R.string.NotificationsServiceInfo), preferences.getBoolean("pushService", getMessagesController().keepAliveService), true, true);
                     } else if (position == notificationsServiceConnectionRow) {

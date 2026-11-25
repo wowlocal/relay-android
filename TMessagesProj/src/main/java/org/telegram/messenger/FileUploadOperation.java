@@ -62,6 +62,11 @@ public class FileUploadOperation {
     public final ArrayList<Integer> uiRequestTokens = new ArrayList<>();
     private int currentPartNum;
     private long currentFileId;
+
+    /** Relay (A7c): the TL file id of this upload (the bridge reports Mattermost upload progress by it). */
+    public long getCurrentFileIdForRelay() {
+        return currentFileId;
+    }
     private long totalFileSize;
     private int totalPartsCount;
     private long readBytesCount;

@@ -824,6 +824,9 @@ public class MediaDataController extends BaseController {
     }
 
     public void preloadDefaultReactions() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            return; // Relay (A7c): reactions are plain emoji, nothing to preload
+        }
         if (reactionsList == null || reactionsCacheGenerated || !LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_REACTIONS)) {
             return;
         }

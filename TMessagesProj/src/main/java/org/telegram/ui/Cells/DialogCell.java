@@ -1553,7 +1553,10 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                             drawVerified = !forbidVerified && user.verified;
                             drawBotVerified = !forbidVerified && !UserObject.isUserSelf(user) && user.bot_verification_icon != 0;
                         }
-                        drawPremium = MessagesController.getInstance(currentAccount).isPremiumUser(user) && UserConfig.getInstance(currentAccount).clientUserId != user.id && user.id != 0;
+                        drawPremium = (MessagesController.getInstance(currentAccount).isPremiumUser(user)
+                            // Relay (A7c): a Mattermost custom status is an emoji status without Premium.
+                            || org.telegram.relay.RelayConfig.ENABLED && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0)
+                            && UserConfig.getInstance(currentAccount).clientUserId != user.id && user.id != 0;
                         if (drawPremium) {
                             Long emojiStatusId = UserObject.getEmojiStatusDocumentId(user);
                             emojiStatus.center = LocaleController.isRTL;
@@ -3413,8 +3416,15 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         user = MessagesController.getInstance(currentAccount).getUser(user.id);
                         if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
                             nameLayoutEllipsizeByGradient = true;
+                            if (org.telegram.relay.RelayConfig.ENABLED && UserConfig.getInstance(currentAccount).clientUserId != user.id) {
+                                drawPremium = true; // Relay (A7c): custom status set live
+                            }
                             emojiStatus.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
                             emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);
+                        } else if (org.telegram.relay.RelayConfig.ENABLED) {
+                            drawPremium = false;
+                            emojiStatus.set((android.graphics.drawable.Drawable) null, animated); // Relay (A7c): status cleared
+                            emojiStatus.setParticles(false, animated);
                         } else {
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);

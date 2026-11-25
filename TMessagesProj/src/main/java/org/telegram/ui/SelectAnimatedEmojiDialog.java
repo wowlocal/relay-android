@@ -4050,7 +4050,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 }
             }
         }
-        if (installedEmojipacks != null && type != TYPE_EXPANDABLE_REACTIONS && type != TYPE_STICKER_SET_EMOJI && type != TYPE_EFFECTS) {
+        if (installedEmojipacks != null && type != TYPE_EXPANDABLE_REACTIONS && (type != TYPE_STICKER_SET_EMOJI || org.telegram.relay.RelayConfig.ENABLED) && type != TYPE_EFFECTS) {
             for (int i = 0, j = 0; i < installedEmojipacks.size(); ++i) {
                 TLRPC.TL_messages_stickerSet set = installedEmojipacks.get(i);
                 if (set == null || set.set == null) {

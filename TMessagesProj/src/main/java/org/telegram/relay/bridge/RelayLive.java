@@ -428,6 +428,16 @@ final class RelayLive implements WebSocketListener {
                     }
                     break;
                 }
+                // A7c: ephemeral posts, new custom emoji, notification settings changed elsewhere, own status.
+                case EPHEMERAL_MESSAGE:
+                    RelayComposer.onEphemeral(this, account, event);
+                    break;
+                case EMOJI_ADDED:
+                    RelayEmoji.of(account).onEmojiAdded(org.telegram.relay.mattermost.Json.decodeEmbedded(event.data.get("emoji"), org.telegram.relay.mattermost.model.CustomEmoji.class));
+                    break;
+                case CHANNEL_MEMBER_UPDATED:
+                    RelayNotifications.onChannelMemberUpdated(this, account, event);
+                    break;
                 case HELLO:
                 default:
                     break;
@@ -892,6 +902,7 @@ final class RelayLive implements WebSocketListener {
         ArrayList<TLRPC.Update> list = new ArrayList<>();
         list.add(name);
         list.add(photo);
+        RelayProfile.addEmojiStatusUpdate(account, tl, list); // A7c: custom status
         updates.deliver(list, new RelayUpdates.Refs().user(user.id));
     }
 
