@@ -152,6 +152,7 @@ final class RelayDirectory {
             default:
                 crt = false;
         }
+        RelayThreadsHooks.setCollapsedThreads(account, crt); // A7a: CRT for the client hooks
         RelayConfig.log(TAG, "directory: " + teams.size() + " teams, " + channels.size() + " channels, " + favorites.size() + " favourites, crt=" + crt + " in " + (System.currentTimeMillis() - started) + " ms");
         return new Snapshot(System.currentTimeMillis(), teams, channels, members, new ArrayList<>(favorites), crt, dmByUser);
     }

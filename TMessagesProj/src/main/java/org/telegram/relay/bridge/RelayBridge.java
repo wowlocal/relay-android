@@ -447,6 +447,7 @@ public final class RelayBridge {
         if (relayAccount != null) {
             live = RelayLive.of(this, relayAccount);
             live.start();
+            RelayThreads.prefetch(account); // A7a: followed threads + unread totals
         } else {
             ConnectionsManager.onConnectionStateChanged(ConnectionsManager.ConnectionStateConnected, account);
         }
@@ -479,6 +480,7 @@ public final class RelayBridge {
         }
         started = false;
         RelayConfig.log(TAG, "stop account=" + account);
+        RelayThreadsHooks.reset(account); // A7a
         RelayLive current = live;
         live = null;
         if (current != null) {

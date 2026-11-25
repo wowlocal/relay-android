@@ -22815,6 +22815,10 @@ public class ChatActivity extends BaseFragment implements
             ArrayList<MessageObject> arr = (ArrayList<MessageObject>) args[1];
             if (isInsideContainer) return;
             if (did == dialog_id) {
+                arr = org.telegram.relay.bridge.RelayThreadsHooks.visibleNewMessages(currentAccount, dialog_id, isThreadChat(), arr); // Relay A7a: CRT
+                if (arr.isEmpty()) {
+                    return;
+                }
                 boolean scheduled = (Boolean) args[2];
                 int mode = (Integer) args[3];
                 if (mode != chatMode && chatMode != MODE_SAVED && chatMode != MODE_SUGGESTIONS) {
@@ -31966,6 +31970,7 @@ public class ChatActivity extends BaseFragment implements
             if (org.telegram.relay.RelayConfig.ENABLED) {
                 // Relay: no Telegram-only message actions (report, translate, stickers/GIFs, gifts, …).
                 org.telegram.relay.RelayFeatures.filterMessageOptions(options, items, icons);
+                org.telegram.relay.ui.RelayThreadsUi.addMessageOptions(this, selectedObject, options, items, icons); // A7a: Follow / Unfollow Thread
             }
 
             if (options.isEmpty() && optionsView == null) {
@@ -34300,6 +34305,13 @@ public class ChatActivity extends BaseFragment implements
 
     private void processSelectedOption(int option) {
         if (selectedObject == null || getParentActivity() == null) {
+            return;
+        }
+        if (org.telegram.relay.ui.RelayThreadsUi.handleMessageOption(this, option, selectedObject)) { // Relay A7a
+            selectedObject = null;
+            selectedObjectGroup = null;
+            selectedObjectToEditCaption = null;
+            closeMenu(true);
             return;
         }
         boolean preserveDim = false;

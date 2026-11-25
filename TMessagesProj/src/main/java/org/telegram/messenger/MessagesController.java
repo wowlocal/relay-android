@@ -11962,6 +11962,7 @@ public class MessagesController extends BaseController implements NotificationCe
             FileLog.d("processLoadedMessages size " + messagesRes.messages.size() + " in chat " + dialogId + " topic_id " + threadMessageId + " count " + count + " max_id " + max_id + " cache " + isCache + " guid " + classGuid + " load_type " + load_type + " last_message_id " + last_message_id + " index " + loadIndex + " firstUnread " + first_unread + " unread_count " + unread_count + " last_date " + last_date + " queryFromServer " + queryFromServer + " isTopic " + isTopic + " mode " + mode);
         }
         Timer.Task t1 = Timer.start(loaderLogger, "processLoadedMessages");
+        org.telegram.relay.bridge.RelayThreadsHooks.filterMainHistory(currentAccount, dialogId, mode, threadMessageId, messagesRes.messages); // Relay A7a: CRT
         if (mode == 0 && messagesRes.messages != null) {
             checkDialogRepliedMessages(dialogId, messagesRes.messages);
         }
@@ -14711,7 +14712,9 @@ public class MessagesController extends BaseController implements NotificationCe
         getConnectionsManager().sendRequest(req, null);
     }
 
-    public void markDialogAsRead(long dialogId, int maxPositiveId, int maxNegativeId, int maxDate, boolean popup, long threadId, int countDiff, boolean readNow, int scheduledCount) {
+    public void markDialogAsRead(long dialogId, int maxPositiveIdArg, int maxNegativeId, int maxDate, boolean popup, long threadId, int countDiff, boolean readNow, int scheduledCount) {
+        // Relay A7a: with collapsed threads, reading a megagroup reads its hidden replies too.
+        final int maxPositiveId = threadId == 0 ? org.telegram.relay.bridge.RelayThreadsHooks.readMaxId(currentAccount, dialogId, maxPositiveIdArg) : maxPositiveIdArg;
         boolean createReadTask;
 
         if (threadId != 0) {

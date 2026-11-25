@@ -168,6 +168,10 @@ final class RelayHandlers {
         // (RelayAuth.onTelegramLogout); this only answers the request.
         map.put(TLRPC.TL_auth_logOut.class, (bridge, account, req) -> new TLRPC.TL_auth_loggedOut());
         WITHOUT_SESSION.add(TLRPC.TL_auth_logOut.class);
+
+        // A7a: threads (CRT), permalinks / Copy Link, jump to date.
+        RelayThreads.register(map);
+        RelayPermalinks.register(map);
     }
 
     /** The TL user for an InputUser: self from {@code /users/me}, others from the cache or {@code /users/{id}}. */

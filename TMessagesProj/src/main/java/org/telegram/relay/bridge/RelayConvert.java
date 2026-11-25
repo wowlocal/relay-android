@@ -157,8 +157,14 @@ final class RelayConvert {
         m.date = date;
         m.out = out;
 
+        // A7a: a plain forward (only a permalink, with the server's permalink embed) shows as Telegram's
+        // "Forwarded from <author>" with the forwarded post's text (RelayForwards).
+        Post forwarded = RelayForwards.forwardedPost(post);
+        if (forwarded != null) {
+            RelayForwards.setHeader(m, forwarded, account, usersOut);
+        }
         if (part == layout.textPart) {
-            FormattedText text = format(messageText(post));
+            FormattedText text = format(messageText(forwarded != null ? forwarded : post));
             m.message = text.getText();
             ArrayList<TLRPC.MessageEntity> entities = entities(text);
             RelayEmoji.of(account).addCustomEmojiEntities(text, entities); // A7c: custom emoji images in text
@@ -191,8 +197,17 @@ final class RelayConvert {
         }
         if (replyToId != 0) {
             TLRPC.TL_messageReplyHeader reply = new TLRPC.TL_messageReplyHeader();
-            reply.reply_to_msg_id = replyToId;
-            reply.flags |= TLObject.FLAG_4;
+            boolean collapsed = !directMessage && RelayThreadsHooks.collapsedThreads(account.account);
+            if (!collapsed) {
+                reply.reply_to_msg_id = replyToId;
+                reply.flags |= TLObject.FLAG_4;
+            }
+            if (!directMessage) {
+                // A7a: the thread root is the reply's top message (Telegram's thread view keys on it). With
+                // collapsed threads the reply shows only in its thread, so it quotes nothing (as iOS).
+                reply.reply_to_top_id = replyToId;
+                reply.flags |= TLObject.FLAG_1;
+            }
             m.reply_to = reply;
             m.flags |= TLObject.FLAG_3;
         }

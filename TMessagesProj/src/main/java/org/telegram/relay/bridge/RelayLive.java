@@ -361,6 +361,7 @@ final class RelayLive implements WebSocketListener {
             return;
         }
         lastEventAt = System.currentTimeMillis();
+        RelayThreads.of(account).onEvent(event); // A7a: thread cache, thread_* events, CRT preference
         try {
             switch (event.type) {
                 case POSTED:
@@ -980,6 +981,19 @@ final class RelayLive implements WebSocketListener {
     // MARK: channels
 
     /** A megagroup the client has no dialog for: {@code updateChannel} makes it ask for the channel's difference. */
+    /** A7a: makes the client reload a megagroup's history (collapsed threads switched): updateChannelTooLong → channelDifferenceTooLong. */
+    void reloadChannel(Channel channel) {
+        if (channel.isDirect() || !path.isKnown(channel.id)) {
+            return;
+        }
+        path.markTooLong(-path.directory.dialogId(channel));
+        TL_update.TL_updateChannelTooLong u = new TL_update.TL_updateChannelTooLong();
+        u.channel_id = -path.directory.dialogId(channel);
+        ArrayList<TLRPC.Update> list = new ArrayList<>();
+        list.add(u);
+        updates.deliver(list, new RelayUpdates.Refs().chat(path.directory.tlChannel(channel)));
+    }
+
     void announce(Channel channel) {
         if (channel.isDirect()) {
             return;

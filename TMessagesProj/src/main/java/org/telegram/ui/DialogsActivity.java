@@ -3361,6 +3361,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         });
         fragmentSearchFieldWatcher.setDoNotCloseAfterFieldEmpty();
 
+        if (initialDialogsType == DIALOGS_TYPE_DEFAULT && org.telegram.relay.RelayConfig.ENABLED && folderId == 0) {
+            // Relay A7a: Threads (collapsed reply threads), with the unread followed-threads badge.
+            org.telegram.relay.ui.RelayThreadsUi.attachChatListButton(this, menu, () -> {
+                int tab = filterTabsView != null ? filterTabsView.getCurrentTabId() : -1;
+                java.util.ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
+                return tab >= 0 && tab < filters.size() ? filters.get(tab).id : 0;
+            });
+        }
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT) {
             optionsItem = menu.addItem(4, R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));

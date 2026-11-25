@@ -56,6 +56,8 @@ public class RelayDebugHooks extends ContentProvider {
     public static final String ACTION_REACT = "org.relaychat.DEBUG_REACT";
     /** {@code --es url <url>}: opens a link the way an in-app tap does ({@code Browser.openUrl}). */
     public static final String ACTION_OPEN_URL = "org.relaychat.DEBUG_OPEN_URL";
+    /** A7a: {@code --es op ui_state|jump_date|clipboard [--ei date <unix>]} (see {@code RelayDebugA7a}). */
+    public static final String ACTION_A7A = "org.relaychat.DEBUG_A7A";
 
     @Override
     public boolean onCreate() {
@@ -73,6 +75,7 @@ public class RelayDebugHooks extends ContentProvider {
         filter.addAction(ACTION_SEND_MEDIA);
         filter.addAction(ACTION_REACT);
         filter.addAction(ACTION_OPEN_URL);
+        filter.addAction(ACTION_A7A);
         BroadcastReceiver receiver = new Receiver();
         if (Build.VERSION.SDK_INT >= 33) {
             context.getApplicationContext().registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
@@ -115,6 +118,13 @@ public class RelayDebugHooks extends ContentProvider {
                 int account = UserConfig.selectedAccount;
                 Log.i(TAG, "DEBUG_DUMP account=" + account);
                 RelayBridge.get(account).logSummary();
+                return;
+            }
+            if (ACTION_A7A.equals(action)) {
+                String op = intent.getStringExtra("op");
+                String dateExtra = intent.getStringExtra("date");
+                int date = dateExtra != null ? Integer.parseInt(dateExtra.trim()) : intent.getIntExtra("date", 0);
+                AndroidUtilities.runOnUIThread(() -> org.telegram.relay.RelayDebugA7a.run(UserConfig.selectedAccount, op, date));
                 return;
             }
             if (ACTION_DUMP_DIALOGS.equals(action)) {
