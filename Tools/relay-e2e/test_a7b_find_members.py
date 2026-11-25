@@ -654,13 +654,15 @@ def scenario_dm_gm(d, check, ctx):
     texts = d.screen_texts()
     check.ok("New Group Message: people picker", "Alice Anderson" in texts, str(texts[:8]))
     a6.tap_text(d, "Alice Anderson")
-    a6.tap_text(d, "Bob Brennan")
+    third = ("%s %s" % (bob.me.get("first_name", ""), bob.me.get("last_name", ""))).strip()  # bob, or dave with --user bob
+    a6.tap_text(d, third)
     a6.tap_desc(d, "Next")
     time.sleep(5)
     gm = carol.call("POST", "/channels/group", [carol.me["id"], alice.me["id"], bob.me["id"]])
     texts = d.screen_texts()
     shot(d, "group-message")
-    check.ok("New Group Message → the GM chat opens", any("alice, bob, carol" in t for t in texts), str(texts[:8]))
+    title = ", ".join(sorted([carol.me["username"], alice.me["username"], bob.me["username"]]))
+    check.ok("New Group Message → the GM chat opens", any(title in t for t in texts), str(texts[:8]))
     text = "[relay-e2e a7b] gm %s" % ctx["stamp"]
     a5.send_text(d, text)
     time.sleep(4)

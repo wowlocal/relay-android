@@ -180,9 +180,8 @@ final class RelayConvert {
                 m.entities = entities;
                 m.flags |= TLObject.FLAG_7;
             }
-            boolean system = post.type != null && post.type.startsWith("system_");
-            if (!out && !system && mentionsMe(text, directMessage)) {
-                // Mattermost counts no mentions in system posts ("@alice added to the channel by @bob").
+            if (!out && mentionsMe(text, directMessage)) {
+                // (Mattermost counts "@alice added to the channel by @bob" as a mention of alice too.)
                 m.mentioned = true;
                 // Polish 2a (QA-16): Telegram counts a mention (the chat list's "@") only for mentioned messages that
                 // are also "media unread" (MessagesStorage.putMessages); a read message is not counted either way.

@@ -423,6 +423,7 @@ def main():
         for cid in favs_set:
             try_call(alice, "POST", "/users/%s/preferences/delete" % alice.me["id"],
                      [{"user_id": alice.me["id"], "category": "favorite_channel", "name": cid, "value": "true"}])
+        d.shell("cmd statusbar collapse", check=False)
     print(check.summary())
     sys.exit(0 if check.passed else 1)
 

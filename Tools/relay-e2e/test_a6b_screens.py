@@ -45,7 +45,8 @@ FORBIDDEN = a6.FORBIDDEN + [
     (r"add to contacts|share contact|edit contact|delete contact", "Contacts"),
     (r"disable sharing|enable sharing", "Sharing restrictions"),
     (r"statistic", "Statistics"),
-    (r"video chat|voice chat|live stream|start video", "Video chat"),
+    # A8: Relay calls and video chats are features (Video Call, Voice Chat, call records); RTMP streams are not.
+    (r"live stream", "Video chat"),
     (r"saved gifs|save as sticker|add to stickers|add to favorites", "Stickers/GIFs"),
     (r"privacy and security|privacy settings", "Privacy"),
     (r"chat history for new|^chat history", "Chat history"),
@@ -55,7 +56,8 @@ FORBIDDEN = a6.FORBIDDEN + [
 ]
 FORBIDDEN_RX = [(re.compile(p, re.I), label) for p, label in FORBIDDEN]
 # Text on screen that is ours (seeded messages) or legitimately mentions a forbidden word.
-ALLOWED = re.compile(r"^\[relay-e2e a6b\]|Autoplay GIFs|Telegram for Android|GNU General Public License|trademark|Boost\.Regex", re.I)
+ALLOWED = re.compile(r"^\[relay-e2e a6b\]|Autoplay GIFs|Telegram for Android|GNU General Public License|trademark|Boost\.Regex"
+                     r"|^Video Call$|^Voice Call$", re.I)  # A8: Relay calls in DMs
 
 
 def forbidden_hits(texts):
