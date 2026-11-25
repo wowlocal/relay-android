@@ -50,12 +50,15 @@ final class RelayConvert {
         final int parts;
         final int textPart;
         final boolean service;
+        /** A8: the calls plugin's record post ({@code custom_relay_call}): Telegram's call service message. */
+        final org.telegram.relay.calls.RelayCallRecord callRecord;
 
         Layout(Post post) {
             this.post = post;
             List<FileInfo> images = new ArrayList<>();
             List<FileInfo> others = new ArrayList<>();
-            service = post.isSystemMessage();
+            callRecord = org.telegram.relay.calls.RelayCallRecord.of(post);
+            service = post.isSystemMessage() || callRecord != null;
             if (!service) {
                 // Polish 1: a plain forward shows the forwarded post's files too (iOS PostLayout, ForwardedPost.content).
                 for (FileInfo file : orderedFiles(RelayForwards.content(post))) {
@@ -144,6 +147,10 @@ final class RelayConvert {
             service.flags |= TLObject.FLAG_8;
             service.date = date;
             service.out = out;
+            if (layout.callRecord != null) {
+                service.action = layout.callRecord.action(account);
+                return service;
+            }
             TLRPC.TL_messageActionCustomAction action = new TLRPC.TL_messageActionCustomAction();
             action.message = serviceText(post);
             service.action = action;
