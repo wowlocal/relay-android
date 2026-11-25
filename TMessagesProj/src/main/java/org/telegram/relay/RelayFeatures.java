@@ -42,8 +42,15 @@ public final class RelayFeatures {
     public static final boolean PHONE_CONTACTS = false;
     /** Secret (end-to-end) chats. */
     public static final boolean SECRET_CHATS = false;
-    /** Telegram calls and video chats (LiveKit calls come in A8). */
+    /** Telegram's own calls network (tgcalls, Telegram's call servers, call privacy, call log). */
     public static final boolean TG_CALLS = false;
+    /**
+     * A8: Relay calls (LiveKit through the {@code org.relaychat.calls} plugin) with Telegram's call UI: 1:1 calls in
+     * DMs (VoIPFragment, incoming call ring), camera, screen sharing.
+     */
+    public static final boolean RELAY_CALLS = true;
+    /** A8: channel and group-message calls with Telegram's video chat UI (GroupCallActivity, join panel). */
+    public static final boolean RELAY_GROUP_CALLS = true;
     /** Bots, mini apps, attach-menu bots, side-menu bots, bot menu button. */
     public static final boolean BOT_WEBAPPS = false;
     /** Inline bots (@gif, @bing …). */
@@ -97,8 +104,7 @@ public final class RelayFeatures {
         ChatActivity.OPTION_ADD_TO_STICKERS_OR_MASKS,
         ChatActivity.OPTION_ADD_TO_GIFS,
         ChatActivity.OPTION_ADD_CONTACT,
-        ChatActivity.OPTION_CALL,
-        ChatActivity.OPTION_CALL_AGAIN,
+        // A8: "Call back" / "Call again" on call messages stay (Relay calls); rating goes to Telegram only.
         ChatActivity.OPTION_RATE_CALL,
         ChatActivity.OPTION_ADD_STICKER_TO_FAVORITES,
         ChatActivity.OPTION_DELETE_STICKER_FROM_FAVORITES,

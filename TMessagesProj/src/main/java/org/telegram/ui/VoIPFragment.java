@@ -2445,7 +2445,8 @@ public class VoIPFragment implements
     }
 
     private void updateKeyView(boolean animated) {
-        if (emojiLoaded) {
+        if (emojiLoaded || org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay: LiveKit calls are not end-to-end encrypted with Telegram's key, so there is no emoji key.
             return;
         }
         VoIPService service = VoIPService.getSharedInstance();

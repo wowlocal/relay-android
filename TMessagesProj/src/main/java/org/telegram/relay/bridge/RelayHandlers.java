@@ -164,6 +164,9 @@ final class RelayHandlers {
         map.put(TLRPC.TL_help_getAppConfig.class, (bridge, account, req) -> RelayAppConfig.answer((TLRPC.TL_help_getAppConfig) req));
         WITHOUT_SESSION.add(TLRPC.TL_help_getAppConfig.class);
 
+        // MARK: calls (A8): Telegram's phone.* flow over the Relay calls plugin.
+        RelayCallsTl.register(map);
+
         // MARK: auth. The Mattermost logout and the wipe run from MessagesController.performLogout
         // (RelayAuth.onTelegramLogout); this only answers the request.
         map.put(TLRPC.TL_auth_logOut.class, (bridge, account, req) -> new TLRPC.TL_auth_loggedOut());

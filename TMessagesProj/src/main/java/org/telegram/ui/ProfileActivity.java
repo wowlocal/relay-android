@@ -12663,9 +12663,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             giftAction = org.telegram.relay.RelayFeatures.GIFTS && giftAction;
             addStoryAction = org.telegram.relay.RelayFeatures.STORIES && addStoryAction;
             if (!org.telegram.relay.RelayFeatures.TG_CALLS) {
-                otherItem.hideSubItem(call_item);
-                callItemVisible = videoCallItemVisible = false;
-                voiceChatAction = streamAction = false;
+                // A8: Relay calls keep the DM call buttons (userFull.phone_calls_available) and the video chat of
+                // channels; Telegram's live streams have no Relay backing.
+                if (!org.telegram.relay.RelayFeatures.RELAY_CALLS) {
+                    otherItem.hideSubItem(call_item);
+                    callItemVisible = videoCallItemVisible = false;
+                }
+                if (!org.telegram.relay.RelayFeatures.RELAY_GROUP_CALLS) {
+                    voiceChatAction = false;
+                }
+                streamAction = false;
             }
         }
 

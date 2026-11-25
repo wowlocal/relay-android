@@ -72,4 +72,44 @@ public final class RelayCallsDebug {
             });
         });
     }
+
+    /** Telegram's call button path for a DM user (main thread). */
+    public static void call(int account, String username, boolean video) {
+        org.telegram.messenger.MessagesController mc = org.telegram.messenger.MessagesController.getInstance(account);
+        org.telegram.tgnet.TLRPC.User user = mc.getUser(username);
+        android.app.Activity activity = org.telegram.ui.LaunchActivity.instance;
+        if (user == null || activity == null) {
+            Log.w(TAG, "DEBUG_CALL: user " + username + " found=" + (user != null) + " activity=" + (activity != null));
+            return;
+        }
+        org.telegram.tgnet.TLRPC.UserFull full = mc.getUserFull(user.id);
+        Log.i(TAG, "DEBUG_CALL " + username + " video=" + video + " full=" + (full != null));
+        org.telegram.ui.Components.voip.VoIPHelper.startCall(user, video, true, activity, full, org.telegram.messenger.AccountInstance.getInstance(account));
+    }
+
+    /** {@code DEBUG_CALL_STATE state=<VoIPService state> …} (main thread). */
+    public static void logState() {
+        org.telegram.messenger.voip.VoIPService s = org.telegram.messenger.voip.VoIPService.getSharedInstance();
+        StringBuilder out = new StringBuilder("DEBUG_CALL_STATE");
+        if (s == null) {
+            out.append(" service=none");
+        } else {
+            out.append(" state=").append(s.getCallState()).append(" mic_muted=").append(s.isMicMute())
+                    .append(" video=").append(s.getVideoState(false)).append(" screen=").append(s.getVideoState(true))
+                    .append(" group=").append(s.groupCall != null);
+        }
+        RelayCallManager.DirectSession d = RelayCallManager.direct;
+        if (d != null) {
+            out.append(" relay=").append(d.call.snapshot());
+        }
+        RelayGroupSession g = RelayGroupSession.current;
+        if (g != null && g.call != null) {
+            out.append(" relay_group=").append(g.call.snapshot());
+        }
+        RelayLiveKitEngine e = RelayVoip.currentEngine();
+        if (e != null) {
+            out.append(" media=").append(e.snapshot());
+        }
+        Log.i(TAG, out.toString());
+    }
 }

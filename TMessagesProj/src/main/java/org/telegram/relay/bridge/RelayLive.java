@@ -343,11 +343,24 @@ final class RelayLive implements WebSocketListener {
             Utilities.stageQueue.postRunnable(() -> MessagesController.getInstance(account.account).getDifference());
         }
         fireOnline();
+        // A8: events are not replayed after a reconnect: the call manager fetches the live calls.
+        org.telegram.relay.calls.RelayCallManager calls = org.telegram.relay.calls.RelayCallManager.of(account.account);
+        if (calls != null) {
+            calls.onSocketConnected();
+        }
     }
 
     @Override
     public void onEvent(MattermostWebSocket source, WebSocketEvent event) {
         if (source != socket) {
+            return;
+        }
+        // A8: the calls plugin's events (custom_org.relaychat.calls_*) go to the account's call manager.
+        if (org.telegram.relay.mattermost.calls.RelayCallsEvent.isRelayCallsEvent(event.event)) {
+            org.telegram.relay.calls.RelayCallManager calls = org.telegram.relay.calls.RelayCallManager.of(account.account);
+            if (calls != null) {
+                calls.onSocketEvent(event);
+            }
             return;
         }
         long receivedAt = System.currentTimeMillis();

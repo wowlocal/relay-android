@@ -472,6 +472,8 @@ public final class RelayDirectCall {
             return;
         }
         scheduleRingExpiry();
+        // The call has its id now (the app answers Telegram's requestCall with it).
+        notifyObservers();
         connectMedia(join);
     }
 

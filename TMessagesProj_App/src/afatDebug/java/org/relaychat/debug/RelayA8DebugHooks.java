@@ -24,6 +24,10 @@ import org.telegram.relay.calls.RelayCallsDebug;
  */
 public class RelayA8DebugHooks extends ContentProvider {
     public static final String ACTION_CALL_PROBE = "org.relaychat.DEBUG_CALL_PROBE";
+    /** {@code --es user <username> [--ez video true]}: Telegram's call button path (VoIPHelper.startCall). */
+    public static final String ACTION_CALL = "org.relaychat.DEBUG_CALL";
+    /** Logs VoIPService's state: {@code DEBUG_CALL_STATE state=<n> …}. */
+    public static final String ACTION_CALL_STATE = "org.relaychat.DEBUG_CALL_STATE";
 
     @Override
     public boolean onCreate() {
@@ -33,12 +37,18 @@ public class RelayA8DebugHooks extends ContentProvider {
         }
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_CALL_PROBE);
+        filter.addAction(ACTION_CALL);
+        filter.addAction(ACTION_CALL_STATE);
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context c, Intent intent) {
                 int account = UserConfig.selectedAccount;
                 if (ACTION_CALL_PROBE.equals(intent.getAction())) {
                     RelayCallsDebug.probe(account, intent.getStringExtra("channel"), intent.getIntExtra("seconds", 20));
+                } else if (ACTION_CALL.equals(intent.getAction())) {
+                    org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> RelayCallsDebug.call(account, intent.getStringExtra("user"), intent.getBooleanExtra("video", false)));
+                } else if (ACTION_CALL_STATE.equals(intent.getAction())) {
+                    org.telegram.messenger.AndroidUtilities.runOnUIThread(RelayCallsDebug::logState);
                 }
             }
         };

@@ -894,7 +894,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
 		if (videoCall) {
 			if (Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-				captureDevice[CAPTURE_DEVICE_CAMERA] = NativeInstance.createVideoCapturer(localSink[CAPTURE_DEVICE_CAMERA], isFrontFaceCamera ? 1 : 0);
+				captureDevice[CAPTURE_DEVICE_CAMERA] = NativeInstance.createCapturer(localSink[CAPTURE_DEVICE_CAMERA], isFrontFaceCamera ? 1 : 0);
 				if (chatID != 0) {
 					videoState[CAPTURE_DEVICE_CAMERA] = Instance.VIDEO_STATE_PAUSED;
 				} else {
@@ -1302,7 +1302,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 	public void switchCamera() {
 		if (tgVoip[CAPTURE_DEVICE_CAMERA] == null || !tgVoip[CAPTURE_DEVICE_CAMERA].hasVideoCapturer() || switchingCamera) {
 			if (captureDevice[CAPTURE_DEVICE_CAMERA] != 0 && !switchingCamera) {
-				NativeInstance.switchCameraCapturer(captureDevice[CAPTURE_DEVICE_CAMERA], !isFrontFaceCamera);
+				NativeInstance.switchCapturerCamera(captureDevice[CAPTURE_DEVICE_CAMERA], !isFrontFaceCamera);
 			}
 			return;
 		}
@@ -1336,7 +1336,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 				tgVoip[CAPTURE_DEVICE_CAMERA].clearVideoCapturer();
 			}
 			if (captureDevice[CAPTURE_DEVICE_CAMERA] != 0) {
-				NativeInstance.destroyVideoCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
+				NativeInstance.destroyCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
 				captureDevice[CAPTURE_DEVICE_CAMERA] = 0;
 			}
 		}
@@ -1345,7 +1345,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 				if (captureDevice[index] != 0) {
 					return;
 				}
-				captureDevice[index] = NativeInstance.createVideoCapturer(localSink[index], deviceType);
+				captureDevice[index] = NativeInstance.createCapturer(localSink[index], deviceType);
 				createGroupInstance(CAPTURE_DEVICE_SCREEN, false, true);
 				setVideoState(true, Instance.VIDEO_STATE_ACTIVE);
 				AccountInstance.getInstance(currentAccount).getNotificationCenter().postNotificationName(NotificationCenter.groupCallScreencastStateChanged);
@@ -1365,7 +1365,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 					return;
 				}
 			}
-			captureDevice[index] = NativeInstance.createVideoCapturer(localSink[index], deviceType);
+			captureDevice[index] = NativeInstance.createCapturer(localSink[index], deviceType);
 		}
 	}
 
@@ -1393,7 +1393,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 			tgVoip[CAPTURE_DEVICE_CAMERA].clearVideoCapturer();
 		}
 		if (captureDevice[CAPTURE_DEVICE_CAMERA] != 0) {
-			NativeInstance.destroyVideoCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
+			NativeInstance.destroyCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
 			captureDevice[CAPTURE_DEVICE_CAMERA] = 0;
 		}
 	}
@@ -1404,9 +1404,9 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 		if (tgVoip[trueIndex] == null) {
 			if (captureDevice[index] != 0) {
 				videoState[trueIndex] = state;
-				NativeInstance.setVideoStateCapturer(captureDevice[index], videoState[trueIndex]);
+				NativeInstance.setCapturerVideoState(captureDevice[index], videoState[trueIndex]);
 			} else if (state == Instance.VIDEO_STATE_ACTIVE && currentState != STATE_BUSY && currentState != STATE_ENDED) {
-				captureDevice[index] = NativeInstance.createVideoCapturer(localSink[trueIndex], screencast ? 2 : isFrontFaceCamera ? 1 : 0);
+				captureDevice[index] = NativeInstance.createCapturer(localSink[trueIndex], screencast ? 2 : isFrontFaceCamera ? 1 : 0);
 				videoState[trueIndex] = Instance.VIDEO_STATE_ACTIVE;
 			}
 			return;
@@ -1414,7 +1414,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 		videoState[trueIndex] = state;
 		tgVoip[trueIndex].setVideoState(videoState[trueIndex]);
 		if (captureDevice[index] != 0) {
-			NativeInstance.setVideoStateCapturer(captureDevice[index], videoState[trueIndex]);
+			NativeInstance.setCapturerVideoState(captureDevice[index], videoState[trueIndex]);
 		}
 		if (!screencast) {
 			if (groupCall != null) {
@@ -3614,13 +3614,13 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
 			boolean newAvailable = "2.7.7".compareTo(privateCall.protocol.library_versions.get(0)) <= 0;
 			if (captureDevice[CAPTURE_DEVICE_CAMERA] != 0 && !newAvailable) {
-				NativeInstance.destroyVideoCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
+				NativeInstance.destroyCapturer(captureDevice[CAPTURE_DEVICE_CAMERA]);
 				captureDevice[CAPTURE_DEVICE_CAMERA] = 0;
 				videoState[CAPTURE_DEVICE_CAMERA] = Instance.VIDEO_STATE_INACTIVE;
 			}
 			if (!isOutgoing) {
 				if (videoCall && (Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)) {
-					captureDevice[CAPTURE_DEVICE_CAMERA] = NativeInstance.createVideoCapturer(localSink[CAPTURE_DEVICE_CAMERA], isFrontFaceCamera ? 1 : 0);
+					captureDevice[CAPTURE_DEVICE_CAMERA] = NativeInstance.createCapturer(localSink[CAPTURE_DEVICE_CAMERA], isFrontFaceCamera ? 1 : 0);
 					videoState[CAPTURE_DEVICE_CAMERA] = Instance.VIDEO_STATE_ACTIVE;
 				} else {
 					videoState[CAPTURE_DEVICE_CAMERA] = Instance.VIDEO_STATE_INACTIVE;
@@ -4352,7 +4352,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 		for (int a = 0; a < captureDevice.length; a++) {
 			if (captureDevice[a] != 0) {
 				if (destroyCaptureDevice[a]) {
-					NativeInstance.destroyVideoCapturer(captureDevice[a]);
+					NativeInstance.destroyCapturer(captureDevice[a]);
 				}
 				captureDevice[a] = 0;
 			}
