@@ -41,6 +41,8 @@ final class RelayGroupInstance extends RelayInstanceBase {
     }
 
     private final Map<Long, Output> outputs = new HashMap<>();
+    /** Remote videos attached to Telegram's renderers right now (debug state). */
+    static volatile int attachedVideos;
     private final Runnable engineObserver = this::refresh;
     private final Runnable levelsTick = new Runnable() {
         @Override
@@ -104,9 +106,14 @@ final class RelayGroupInstance extends RelayInstanceBase {
                 stateListener.onStateUpdated(state, false);
             }
         }
+        int attached = 0;
         for (Output o : outputs.values()) {
             attach(o, s);
+            if (o.attachedSid != null) {
+                attached++;
+            }
         }
+        attachedVideos = attached;
     }
 
     private void attach(Output o, RelayGroupCall.Snapshot s) {

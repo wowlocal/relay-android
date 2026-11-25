@@ -45,6 +45,15 @@ public final class RelayVoip {
 
     /** Releases the media session once no call and no capturer use it. */
     static void releaseIfIdle() {
+        if (!RelayCallManager.hasActiveCall()) {
+            // A screen share ends with its call; with VoIPService gone every capturer is stale (Telegram does not
+            // always destroy them).
+            if (org.telegram.messenger.voip.VoIPService.getSharedInstance() == null) {
+                capturers.clear();
+            } else {
+                capturers.values().removeIf(Capturer::isScreen);
+            }
+        }
         if (engine == null || RelayCallManager.hasActiveCall() || !capturers.isEmpty()) {
             return;
         }

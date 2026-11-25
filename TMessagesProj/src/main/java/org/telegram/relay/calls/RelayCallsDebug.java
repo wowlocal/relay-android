@@ -104,6 +104,7 @@ public final class RelayCallsDebug {
         }
         RelayGroupSession g = RelayGroupSession.current;
         if (g != null && g.call != null) {
+            out.append(" group_videos=").append(RelayGroupInstance.attachedVideos);
             out.append(" relay_group=").append(g.call.snapshot());
         }
         RelayLiveKitEngine e = RelayVoip.currentEngine();
