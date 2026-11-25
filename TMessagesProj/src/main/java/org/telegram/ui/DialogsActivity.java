@@ -9819,7 +9819,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
         }
         if (clearItem != null) {
-            if (canClearCacheCount != 0 && canClearCacheCount != count || canClearHistoryCount != 0 && canClearHistoryCount != count || communitiesCount > 0) {
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                clearItem.setVisibility(View.GONE); // Relay (polish 2a): Mattermost cannot clear a chat's history
+            } else if (canClearCacheCount != 0 && canClearCacheCount != count || canClearHistoryCount != 0 && canClearHistoryCount != count || communitiesCount > 0) {
                 clearItem.setVisibility(View.GONE);
             } else {
                 clearItem.setVisibility(View.VISIBLE);
@@ -11913,7 +11915,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (getParentActivity() == null) return false;
 
         boolean onlyMyself = !selectedDialogs.isEmpty();
-        boolean canSchedule = true;
+        boolean canSchedule = !org.telegram.relay.RelayConfig.ENABLED; // Relay (polish 2a): no scheduled posts
         for (int i = 0; i < selectedDialogs.size(); ++i) {
             final long did = selectedDialogs.get(i);
             if (onlyMyself && did != getUserConfig().getClientUserId())

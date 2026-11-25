@@ -361,6 +361,7 @@ final class RelayReadPath {
                 }
             }
         }
+        RelayFavorites.of(account).noteDelivered(snapshot.favorites); // polish 2a
         return peerDialogs(bridge, pinned, true);
     }
 
@@ -473,6 +474,17 @@ final class RelayReadPath {
     }
 
     /** {@code channelDifferenceTooLong} for one megagroup: its dialog and newest message (new or reloaded chat). */
+    private final java.util.Map<String, Long> announcedLive = new java.util.concurrent.ConcurrentHashMap<>();
+
+    void noteAnnouncedLive(String channelId) {
+        announcedLive.put(channelId, System.currentTimeMillis());
+    }
+
+    private boolean consumeAnnouncedLive(String channelId) {
+        Long at = announcedLive.remove(channelId);
+        return at != null && System.currentTimeMillis() - at < 60_000;
+    }
+
     TLObject channelTooLong(Channel channel) throws Exception {
         RelayDirectory.Snapshot snapshot = directory.get(5_000);
         Set<String> users = new LinkedHashSet<>();
@@ -481,6 +493,11 @@ final class RelayReadPath {
         res.isFinal = true;
         res.timeout = 30;
         res.flags |= TLObject.FLAG_1;
+        if (!rows.isEmpty() && consumeAnnouncedLive(channel.id)) {
+            // Polish 2a (QA-16): a chat that just appeared live (joined / added) counts its mentions from the live
+            // posts that follow (mentioned + media_unread); the server's count here would count them twice.
+            rows.get(0).dialog.unread_mentions_count = 0;
+        }
         if (rows.isEmpty()) {
             TLRPC.TL_dialog d = new TLRPC.TL_dialog();
             d.peer = directory.peer(channel);
@@ -687,6 +704,8 @@ final class RelayReadPath {
             full.video_calls_available = true;
             full.phone_calls_private = false;
         }
+        // Polish 2a (QA-11): Mattermost pins posts in DMs too (iOS H5): Telegram's "Pin" in a private chat.
+        full.can_pin_message = dmChannel != null || mmId.equals(account.session.userId);
         TLRPC.TL_users_userFull res = new TLRPC.TL_users_userFull();
         res.full_user = full;
         TLRPC.TL_user fresh = account.tlUser(mmId);

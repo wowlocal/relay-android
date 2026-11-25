@@ -102,6 +102,68 @@ public final class RelayNotifications {
         return push != null && !push.isEmpty() ? push : "mention";
     }
 
+    // MARK: - Session start (polish 2a)
+
+    static final String KV_NOTIFY_SINCE = "notify_since";
+    /** Account → server time (s) of the first start after login: older posts are history and never notify. */
+    private static final ConcurrentHashMap<Integer, Integer> notifySince = new ConcurrentHashMap<>();
+
+    /** The bridge started (login or cold start): remembers when this login's session began (kept until logout). */
+    static void noteSessionStart(RelayAccount account) {
+        try {
+            String stored = account.db().kv(KV_NOTIFY_SINCE);
+            int since;
+            if (stored == null) {
+                since = RelayStubs.now(account.account);
+                account.db().putKv(KV_NOTIFY_SINCE, Integer.toString(since));
+                RelayConfig.log(TAG, "notifications: posts before " + since + " are history (new session)");
+            } else {
+                since = Integer.parseInt(stored);
+            }
+            notifySince.put(account.account, since);
+        } catch (Throwable t) {
+            RelayConfig.logError(TAG, "notify since", t);
+        }
+    }
+
+    /** Logout (bridge stop): the next login starts a new session. */
+    static void forgetSession(int accountNum) {
+        notifySince.remove(accountNum);
+    }
+
+    /** Server time (s) from which posts may notify; 0 when unknown. */
+    static int notifySince(RelayAccount account) {
+        Integer since = notifySince.get(account.account);
+        if (since == null) {
+            noteSessionStart(account);
+            since = notifySince.get(account.account);
+        }
+        return since != null ? since : 0;
+    }
+
+    /**
+     * Polish 2a: a stored unread message that {@code NotificationsController.processLoadedUnreadMessages} would show
+     * again (at every start and after each chat-list load). Only posts of this session that Mattermost would push:
+     * the history synced at login never notifies (as iOS, which gets only pushes for new posts).
+     */
+    public static boolean shouldNotifyStored(int accountNum, MessageObject message) {
+        if (!RelayConfig.ENABLED) {
+            return true;
+        }
+        if (message == null || message.messageOwner == null || message.isOutOwner()) {
+            return false;
+        }
+        RelayAccount account = RelayAccount.get(accountNum);
+        if (account == null) {
+            return false;
+        }
+        int since = notifySince(account);
+        if (since == 0 || message.messageOwner.date < since) {
+            return false;
+        }
+        return decide(accountNum, account, message, false);
+    }
+
     // MARK: - Decision
 
     /** Whether a new message may notify (Mattermost's rules); true when the bridge cannot tell. */
@@ -109,12 +171,21 @@ public final class RelayNotifications {
         if (!RelayConfig.ENABLED || message == null || message.messageOwner == null || message.isOutOwner()) {
             return true;
         }
-        if (RelayHooks.isRenumbered(accountNum, message.getDialogId(), message.getId())) {
-            return false; // Polish 1: an old post re-inserted at a new id (RelayRenumber)
-        }
         RelayAccount account = RelayAccount.get(accountNum);
         if (account == null) {
             return true;
+        }
+        int since = notifySince(account);
+        if (since != 0 && message.messageOwner.date < since) {
+            RelayConfig.log(TAG, "notification skipped: history from before the session (" + message.messageOwner.date + " < " + since + ")");
+            return false; // Polish 2a: history synced at login
+        }
+        return decide(accountNum, account, message, true);
+    }
+
+    private static boolean decide(int accountNum, RelayAccount account, MessageObject message, boolean unknown) {
+        if (RelayHooks.isRenumbered(accountNum, message.getDialogId(), message.getId())) {
+            return false; // Polish 1: an old post re-inserted at a new id (RelayRenumber)
         }
         try {
             UserStatus status = account.status(account.session.userId);
@@ -123,9 +194,14 @@ public final class RelayNotifications {
                 return false;
             }
             RelayReadPath path = RelayReadPath.of(account);
+            if (path.directory.peek() == null && !unknown) {
+                // Stored posts at a cold start, before the sidebar is loaded (no network on the notification queue):
+                // left out; the reload after the chat list loads (MessagesStorage.putDialogs) decides with the props.
+                return false;
+            }
             String channelId = path.directory.channelIdOf(message.getDialogId());
             if (channelId == null) {
-                return true;
+                return unknown;
             }
             Map<String, String> props = memberProps(account, channelId);
             String level = props.get("push");
@@ -152,7 +228,7 @@ public final class RelayNotifications {
             return result;
         } catch (Throwable t) {
             RelayConfig.logError(TAG, "shouldNotify", t);
-            return true;
+            return unknown;
         }
     }
 

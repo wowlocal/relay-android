@@ -575,6 +575,8 @@ def scenario_pin_save(d, check, ctx):
         p = res["posts"][pid]
         if p.get("type", "").startswith("system_"):
             continue
+        if p.get("user_id") == carol.me["id"]:
+            continue  # polish 2a: own posts are not mentions (Mattermost's Recent Mentions)
         rest_mentions.add(p["root_id"] if crt_on and p.get("root_id") and p["channel_id"] not in dm_channels else pid)
     app_mentions = items(lines[-1]) if lines else []
     check.ok("Recent Mentions includes the new mention", posts["mention"] in app_mentions, str(app_mentions[:5]))
@@ -731,7 +733,8 @@ def main():
     carol = Rest(args.user, password)
     alice = Rest("alice", password)
     dave = Rest("dave", password)
-    bob = Rest("bob", password)
+    # The GM's third member: bob, or dave when bob is the app's user (--user bob).
+    bob = Rest("bob" if args.user != "bob" else "dave", password)
     team = next(t for t in carol.call("GET", "/users/me/teams") if t["name"] == "engineering")["id"]
     ctx = {"carol": carol, "alice": alice, "dave": dave, "bob": bob, "team": team, "stamp": stamp, "cleanup_posts": [],
            "title": "Relay E2E A7b %s" % stamp, "name": "relay-e2e-a7b-%s" % stamp,

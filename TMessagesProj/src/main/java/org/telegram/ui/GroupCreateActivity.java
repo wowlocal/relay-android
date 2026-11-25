@@ -267,8 +267,23 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
         getNotificationCenter().addWeakObserver(this, NotificationCenter.chatDidCreated);
 
         getUserConfig().loadGlobalTTl();
+        if (org.telegram.relay.RelayConfig.ENABLED && addToGroup && (chatId != 0 || channelId != 0)) {
+            // Relay (polish 2a): Add Members offers the channel's team only (Mattermost adds team members to channels).
+            relayTeamFilter = true;
+            org.telegram.relay.bridge.RelayFinding.teamUsersOf(currentAccount, chatId != 0 ? chatId : channelId, (users, error) -> {
+                relayTeamUsers = users != null ? users : new HashSet<>();
+                if (adapter != null) {
+                    adapter.relayApplyTeamFilter();
+                    adapter.notifyDataSetChanged();
+                }
+            });
+        }
         return super.onFragmentCreate();
     }
+
+    /** Relay (polish 2a): Add Members lists the members of the channel's team only; null until loaded. */
+    private boolean relayTeamFilter;
+    private HashSet<Long> relayTeamUsers;
 
     @Override
     public void onFragmentDestroy() {
@@ -1258,6 +1273,10 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                 contacts.add(user);
                 addedContacts.add(user.id);
             }
+            if (relayTeamFilter) {
+                relayAllContacts = new ArrayList<>(contacts);
+                relayApplyTeamFilter();
+            }
             if (isNeverShare || isAlwaysShare || isCall) {
                 ArrayList<TLRPC.Dialog> dialogs = getMessagesController().getAllDialogs();
                 if (isCall) {
@@ -1305,6 +1324,21 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                 }
                 notifyDataSetChanged();
             });
+        }
+
+        private ArrayList<TLObject> relayAllContacts;
+
+        /** Relay (polish 2a): keeps the users of the channel's team (none until the team is loaded). */
+        void relayApplyTeamFilter() {
+            if (relayAllContacts == null) {
+                return;
+            }
+            contacts.clear();
+            for (TLObject object : relayAllContacts) {
+                if (object instanceof TLRPC.User && relayTeamUsers != null && relayTeamUsers.contains(((TLRPC.User) object).id)) {
+                    contacts.add(object);
+                }
+            }
         }
 
         private String firstLetter(String string) {
@@ -1659,7 +1693,9 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
 
             if (!TextUtils.isEmpty(query)){
                 Utilities.searchQueue.postRunnable(searchRunnable = () -> AndroidUtilities.runOnUIThread(() -> {
-                    searchAdapterHelper.queryServerSearch(query, true, isAlwaysShare || isNeverShare, true, false, false, 0, false, 0, 0);
+                    if (!relayTeamFilter) { // Relay (polish 2a): the team's users are all local; no directory search
+                        searchAdapterHelper.queryServerSearch(query, true, isAlwaysShare || isNeverShare, true, false, false, 0, false, 0, 0);
+                    }
                     Utilities.searchQueue.postRunnable(searchRunnable = () -> {
                         String search1 = query.trim().toLowerCase();
                         if (search1.isEmpty()) {

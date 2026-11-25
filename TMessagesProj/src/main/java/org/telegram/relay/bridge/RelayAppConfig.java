@@ -12,7 +12,7 @@ final class RelayAppConfig {
     private RelayAppConfig() {
     }
 
-    static final int VERSION = 1;
+    static final int VERSION = 2; // 2: message_length_limit_* (polish 2a)
     static final int HASH = 0x52450000 | VERSION;
 
     /** Mattermost's default {@code MaxPostSize} (runes). */
@@ -35,6 +35,9 @@ final class RelayAppConfig {
         number(json, "channels_limit_premium", 10000);
         number(json, "channels_public_limit_default", 10000);
         number(json, "channels_public_limit_premium", 10000);
+        // Polish 2a: one message = one post up to MaxPostSize (Telegram split at 4,096: getMaxMessageLength).
+        number(json, "message_length_limit_default", MAX_POST_SIZE);
+        number(json, "message_length_limit_premium", MAX_POST_SIZE);
         number(json, "caption_length_limit_default", MAX_POST_SIZE);
         number(json, "caption_length_limit_premium", MAX_POST_SIZE);
         number(json, "about_length_limit_default", 1024);

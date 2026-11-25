@@ -2096,6 +2096,9 @@ public class ChatObject {
     }
 
     public static boolean isBoostSupported(TLRPC.Chat chat) {
+        if (org.telegram.relay.RelayConfig.ENABLED && !org.telegram.relay.RelayFeatures.BOOSTS_STATS) {
+            return false; // Relay (polish 2a): no boosts (premium.getBoostsStatus showed "Unknown error: RELAY_UNSUPPORTED")
+        }
         return (isChannelAndNotMegaGroup(chat) || isMegagroup(chat)) && !isMonoForum(chat) && !false;
     }
 

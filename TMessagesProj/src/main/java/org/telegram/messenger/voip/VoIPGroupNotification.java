@@ -135,6 +135,28 @@ public class VoIPGroupNotification {
     public static State currentState;
     private static HashSet<Integer> ignoreCalls;
     private static Runnable missRunnable;
+    /**
+     * Relay (polish 2a): a Mattermost group-message ring (org.telegram.relay.calls.RelayGroupRing) with this incoming
+     * group call UI; {@code dialogId} is the caller (name and photo on the screen). No Telegram invite message.
+     */
+    public static void requestRelay(Context context, int account, long dialogId, String names, long call_id, int msg_id, boolean video) {
+        if (Build.VERSION.SDK_INT < 26 || currentCallId == call_id || currentState != null && currentState.call_id == call_id) return;
+        if (VoIPService.getSharedInstance() != null) {
+            return;
+        }
+        currentCallId = call_id;
+        currentState = new State(account, dialogId, call_id, msg_id, video, null, new ArrayList<>());
+        showNotification(context, account, call_id, msg_id, dialogId, names);
+        if (missRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(missRunnable);
+        }
+        // The plugin decides when a ring is missed (RelayGroupRing hides it); this only stops a ring left over.
+        AndroidUtilities.runOnUIThread(missRunnable = () -> {
+            org.telegram.relay.calls.RelayGroupRing.expired(msg_id);
+            hide(context, account, msg_id);
+        }, Math.max(MessagesController.getInstance(account).callRingTimeout, 60_000));
+    }
+
     public static void request(Context context, int account, long dialogId, String names, long call_id, int msg_id, boolean video) {
         if (Build.VERSION.SDK_INT < 26 || currentCallId == call_id || currentState != null && currentState.call_id == call_id) return;
 
@@ -357,6 +379,13 @@ public class VoIPGroupNotification {
         currentCallId = 0;
         final NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         nm.cancel(VoIPService.ID_INCOMING_CALL_PRENOTIFICATION);
+        if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.calls.RelayGroupRing.isRelayRing(msg_id)) {
+            if (VoIPFragment.getInstance() != null) {
+                VoIPFragment.getInstance().finish();
+            }
+            org.telegram.relay.calls.RelayGroupRing.answer(account, msg_id); // Relay: the GM's video chat
+            return;
+        }
 
         final TLRPC.TL_inputGroupCallInviteMessage call = new TLRPC.TL_inputGroupCallInviteMessage();
         call.msg_id = msg_id;
@@ -373,6 +402,13 @@ public class VoIPGroupNotification {
         nm.cancel(VoIPService.ID_INCOMING_CALL_PRENOTIFICATION);
         VoIPPreNotificationService.stopRinging();
 
+        if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.calls.RelayGroupRing.isRelayRing(msg_id)) {
+            org.telegram.relay.calls.RelayGroupRing.decline(account, msg_id); // Relay: decline on the calls plugin
+            if (VoIPFragment.getInstance() != null) {
+                VoIPFragment.getInstance().finish();
+            }
+            return;
+        }
         final TL_phone.declineConferenceCallInvite req = new TL_phone.declineConferenceCallInvite();
         req.msg_id = msg_id;
         ConnectionsManager.getInstance(account).sendRequest(req, (res, err) -> {

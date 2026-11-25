@@ -43,7 +43,9 @@ from test_a4_live import Rest, open_chat, wait_until  # noqa: E402
 CALLS_REPO = os.path.expanduser(os.environ.get("RELAY_CALLS_REPO", "~/Developer/relay-calls-integration/ios-device"))
 PEER = os.path.join(CALLS_REPO, "tools", "relay-calls-peer.py")
 PEER_PY = os.path.expanduser(os.environ.get("RELAY_PEER_PYTHON", "~/Developer/relay-calls-integration/media-probe-venv/bin/python"))
-CHANNEL_NAME = "relay-a8-calls"
+# The app's user (default dave; RELAY_A8_USER=alice when dave is busy on another device).
+APP_USER = os.environ.get("RELAY_A8_USER", "dave")
+CHANNEL_NAME = "relay-a8-calls" if APP_USER == "dave" else "relay-a8-calls-" + APP_USER
 OUT_DIR = os.environ.get("RELAY_A8_OUT", "/tmp/relay-a8-calls")
 # Usernames → Mattermost ids: the peer names remote users by id until it has looked them up.
 USER_IDS = {}
@@ -90,7 +92,7 @@ class Peer:
     def wait(self, event, timeout=30, **fields):
         return wait_until(lambda: self.find(event, **fields), timeout=timeout)
 
-    def remote_stats(self, user="dave"):
+    def remote_stats(self, user=APP_USER):
         """The newest stats entry of a remote user (dict) or None."""
         for e in reversed(list(self.events)):
             if e.get("event") == "stats":
@@ -99,7 +101,7 @@ class Peer:
                         return r
         return None
 
-    def wait_stats(self, pred, timeout=30, user="dave"):
+    def wait_stats(self, pred, timeout=30, user=APP_USER):
         def ok():
             s = self.remote_stats(user)
             return s if s is not None and pred(s) else None
@@ -289,9 +291,9 @@ def main():
     check = relaye2e.Check("A8 calls")
     d = relaye2e.Device()
     password = relaye2e.mm_password()
-    dave = Rest("dave", password)
+    dave = Rest(APP_USER, password)
     bob = Rest("bob", password)
-    USER_IDS.update({"dave": dave.me["id"], "bob": bob.me["id"]})
+    USER_IDS.update({APP_USER: dave.me["id"], "bob": bob.me["id"]})
     dm = dave.call("POST", "/channels/direct", [dave.me["id"], bob.me["id"]])
     team = dave.get("/users/me/teams")[0]
     channel = ensure_channel(dave, bob, team["id"])
@@ -312,7 +314,7 @@ def main():
             d.launch()
             time.sleep(6)
             d.logcat_clear()
-            d.broadcast("org.relaychat.DEBUG_LOGIN", server=relaye2e.MM_URL, user="dave", password=password)
+            d.broadcast("org.relaychat.DEBUG_LOGIN", server=relaye2e.MM_URL, user=APP_USER, password=password)
             check.ok("login as dave", d.wait_log(r"DEBUG_LOGIN ok", timeout=40, tags=["RelayDebug"]))
             time.sleep(10)
         else:
@@ -323,7 +325,7 @@ def main():
         t1 = int(time.time() * 1000)
         open_chat(d, dm["id"], 5)
         check.ok("DM header has Telegram's Call button (Bob is callable)", d.wait_for(desc="Call", timeout=10) is not None)
-        p1 = Peer("outgoing", "--user", "bob", "answer", "--from", "dave", "--timeout", "60", "--duration", "120", "--report", "2")
+        p1 = Peer("outgoing", "--user", "bob", "answer", "--from", APP_USER, "--timeout", "60", "--duration", "120", "--report", "2")
         peers.append(p1)
         time.sleep(3)
         tap_text(d, "Call", desc=True)
@@ -333,20 +335,20 @@ def main():
         names = " ".join(d.screen_texts())
         check.ok("outgoing: the call screen shows Bob, the timer and End Call", "Bob Brennan" in names and "End Call" in names and re.search(r"Relay Call, \d+ seconds?", names) is not None, names[:200])
         shot(d, "outgoing-established")
-        sub = p1.wait("track_subscribed", timeout=20, source="microphone", user="dave")
+        sub = p1.wait("track_subscribed", timeout=20, source="microphone", user=APP_USER)
         check.ok("outgoing: the peer subscribed to dave's microphone", sub is not None)
         frames = p1.wait_stats(lambda s: (s.get("audio") or {}).get("frames", 0) > 50, timeout=20)
         check.ok("outgoing: dave's audio frames reach the peer", frames is not None, str((frames or {}).get("audio")))
         tap_text(d, "Mute")
-        check.ok("outgoing: Mute → the peer sees dave's microphone muted", p1.wait("track_muted", timeout=15, source="microphone", user="dave") is not None)
+        check.ok("outgoing: Mute → the peer sees dave's microphone muted", p1.wait("track_muted", timeout=15, source="microphone", user=APP_USER) is not None)
         check.ok("outgoing: VoIPService reports the microphone muted", call_state(d).get("mic_muted") == "true")
         tap_text(d, "Unmute")
-        check.ok("outgoing: Unmute → unmuted again", p1.wait("track_unmuted", timeout=15, source="microphone", user="dave") is not None)
+        check.ok("outgoing: Unmute → unmuted again", p1.wait("track_unmuted", timeout=15, source="microphone", user=APP_USER) is not None)
         tap_text(d, "Start Video")
         time.sleep(2)
         shot(d, "video-preview")
         share_video(d)
-        cam = p1.wait("track_subscribed", timeout=25, source="camera", user="dave")
+        cam = p1.wait("track_subscribed", timeout=25, source="camera", user=APP_USER)
         check.ok("outgoing: Share Video → the peer receives dave's camera", cam is not None)
         moving = p1.wait_stats(lambda s: (s.get("camera") or {}).get("frames", 0) > 5, timeout=20)
         check.ok("outgoing: camera frames flow to the peer", moving is not None, str((moving or {}).get("camera")))
@@ -368,7 +370,7 @@ def main():
         t2 = int(time.time() * 1000)
         d.key("KEYCODE_HOME")
         time.sleep(1)
-        p2 = Peer("incoming", "--user", "bob", "ring", "dave", "--timeout", "40", "--duration", "35", "--report", "2")
+        p2 = Peer("incoming", "--user", "bob", "ring", APP_USER, "--timeout", "40", "--duration", "35", "--report", "2")
         peers.append(p2)
         note = wait_until(lambda: call_notification(d), timeout=20, step=1)
         check.ok("incoming: Telegram's incoming call notification (category call)", note is not None)
@@ -393,7 +395,7 @@ def main():
         d.shell("cmd statusbar collapse", check=False)
 
         # MARK: 3. Incoming call, declined
-        p3 = Peer("declined", "--user", "bob", "ring", "dave", "--timeout", "40", "--report", "5")
+        p3 = Peer("declined", "--user", "bob", "ring", APP_USER, "--timeout", "40", "--report", "5")
         peers.append(p3)
         check.ok("decline: ringing", wait_until(lambda: call_notification(d), timeout=20, step=1) is not None)
         decline = ring_action(d, "Decline")
@@ -407,7 +409,7 @@ def main():
         # MARK: 4. Missed
         if not args.skip_missed:
             t4 = int(time.time() * 1000)
-            p4 = Peer("missed", "--user", "bob", "ring", "dave", "--timeout", "75", "--report", "10")
+            p4 = Peer("missed", "--user", "bob", "ring", APP_USER, "--timeout", "75", "--report", "10")
             peers.append(p4)
             check.ok("missed: ringing", wait_until(lambda: call_notification(d), timeout=20, step=1) is not None)
             summary = p4.done(timeout=90)
@@ -438,12 +440,12 @@ def main():
         shot(d, "join-panel")
         if join:
             d.tap_node(join)
-        joined = p5.wait("participant_joined", timeout=25, user="dave")
+        joined = p5.wait("participant_joined", timeout=25, user=APP_USER)
         check.ok("channel: the peer sees dave join", joined is not None)
         st = wait_state(d, 3, timeout=25)
         check.ok("channel: Telegram's video chat is connected (state 3)", st is not None and st.get("group") == "true", (st or {}).get("raw", "")[:200])
         texts = " ".join(d.screen_texts())
-        check.ok("channel: participants list shows bob and dave", "Bob Brennan" in texts and "Dave" in texts, texts[:200])
+        check.ok("channel: participants list shows bob and dave", "Bob Brennan" in texts and APP_USER.capitalize() in texts, texts[:200])
         videos = wait_until(lambda: (lambda st: st if int(st.get("group_videos", "0") or 0) > 0 else None)(call_state(d)), timeout=15, step=1)
         check.ok("channel: bob's camera tile renders (video output attached)", videos is not None)
         check.ok("channel: bob shows as speaking", d.wait_for(text="speaking", timeout=10) is not None or "speaking" in texts)
@@ -451,22 +453,22 @@ def main():
         unmute = d.wait_for(text="Unmute", timeout=5)
         if unmute:
             d.tap_node(unmute)
-        mic = p5.wait("track_subscribed", timeout=20, source="microphone", user="dave")
+        mic = p5.wait("track_subscribed", timeout=20, source="microphone", user=APP_USER)
         check.ok("channel: Unmute → the peer receives dave's microphone", mic is not None)
         frames = p5.wait_stats(lambda s: (s.get("audio") or {}).get("frames", 0) > 50, timeout=20)
         check.ok("channel: dave's audio frames flow", frames is not None)
         tap_text(d, "Camera")
         time.sleep(3)
-        check.ok("channel: the video preview does not publish the camera yet", p5.find("track_subscribed", source="camera", user="dave") is None)
+        check.ok("channel: the video preview does not publish the camera yet", p5.find("track_subscribed", source="camera", user=APP_USER) is None)
         share_video(d)
-        check.ok("channel: Share Video → the peer receives dave's camera", p5.wait("track_subscribed", timeout=25, source="camera", user="dave") is not None)
+        check.ok("channel: Share Video → the peer receives dave's camera", p5.wait("track_subscribed", timeout=25, source="camera", user=APP_USER) is not None)
         time.sleep(3)
         shot(d, "group-video")
         # Camera off (Telegram's Camera button stops a running camera), then the preview's PHONE SCREEN tab and the
         # system's consent dialog for the screen.
         tap_text(d, "Camera")
-        check.ok("channel: Camera again → dave's camera stops for the peer", p5.wait("track_unsubscribed", timeout=15, source="camera", user="dave") is not None
-                 or p5.wait("track_muted", timeout=5, source="camera", user="dave") is not None)
+        check.ok("channel: Camera again → dave's camera stops for the peer", p5.wait("track_unsubscribed", timeout=15, source="camera", user=APP_USER) is not None
+                 or p5.wait("track_muted", timeout=5, source="camera", user=APP_USER) is not None)
         time.sleep(2)
         tap_text(d, "Camera")
         time.sleep(2)
@@ -483,7 +485,7 @@ def main():
                 tap_text(d, "Entire screen", timeout=5)
                 time.sleep(1)
             tap_text(d, "Start", timeout=8)
-            screen_ok = p5.wait("track_subscribed", timeout=25, source="screen", user="dave") is not None
+            screen_ok = p5.wait("track_subscribed", timeout=25, source="screen", user=APP_USER) is not None
         check.ok("channel: screen share → the peer receives dave's screen", screen_ok)
         if screen_ok:
             check.ok("channel: screen frames flow", p5.wait_stats(lambda s: (s.get("screen") or {}).get("frames", 0) > 3, timeout=20) is not None)
@@ -491,7 +493,7 @@ def main():
         leave = wait_until(lambda: d.find(text="Leave"), timeout=10)
         if leave:
             d.tap_node(leave)
-        check.ok("channel: Leave → the peer sees dave leave", p5.wait("participant_left", timeout=20, user="dave") is not None)
+        check.ok("channel: Leave → the peer sees dave leave", p5.wait("participant_left", timeout=20, user=APP_USER) is not None)
         check.ok("channel: the app left the video chat", wait_no_call(d, 20) is not None)
         p5.stop()
 

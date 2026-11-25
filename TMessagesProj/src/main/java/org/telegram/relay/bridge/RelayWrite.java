@@ -366,7 +366,7 @@ final class RelayWrite {
                 return RelayTl.error(400, "MESSAGE_NOT_MODIFIED");
             }
             JsonObject patch = new JsonObject();
-            patch.addProperty("message", markdown(r.message, r.entities));
+            patch.addProperty("message", keepShortcodes(unit.layout.post.message, markdown(r.message, r.entities)));
             Post post = account.client.patchPost(unit.layout.post.id, patch);
             path.history.rememberPost(post);
             List<RelayHistory.Unit> units = live.mappedUnits(channel.id, post);
@@ -591,6 +591,44 @@ final class RelayWrite {
         String existingFileId;
     }
 
+    private static final java.util.regex.Pattern SHORTCODE = java.util.regex.Pattern.compile(":([a-z0-9_+\\-]+):");
+
+    /**
+     * Polish 2a (QA-25): the editor shows a post's {@code :shortcode:} as its emoji, so an edit sent the Unicode emoji
+     * back. Each built-in shortcode of the original post takes back one occurrence of its emoji in the edited text.
+     */
+    static String keepShortcodes(String original, String edited) {
+        if (original == null || edited == null || original.indexOf(':') < 0) {
+            return edited;
+        }
+        java.util.regex.Matcher m = SHORTCODE.matcher(original);
+        String out = edited;
+        int from = 0;
+        while (m.find()) {
+            String unicode = org.telegram.relay.mattermost.text.EmojiTable.unicode(m.group(1));
+            if (unicode == null) {
+                continue;
+            }
+            int at = out.indexOf(unicode, from);
+            if (at < 0) {
+                String bare = unicode.replace("\uFE0F", "");
+                at = bare.isEmpty() ? -1 : out.indexOf(bare, from);
+                if (at < 0) {
+                    continue;
+                }
+                unicode = bare;
+            }
+            out = out.substring(0, at) + m.group() + out.substring(at + unicode.length());
+            from = at + m.group().length();
+        }
+        return out;
+    }
+
+    /** Telegram's generated upload names: {@code <id>_<id>.<ext>} (or none). */
+    static boolean isGeneratedName(String name) {
+        return name == null || name.isEmpty() || "file".equals(name) || name.matches("-?\\d+_-?\\d+(\\.\\w+)?");
+    }
+
     private Upload prepare(TLRPC.InputMedia media) throws Exception {
         Upload upload = new Upload();
         if (media instanceof TLRPC.TL_inputMediaUploadedPhoto) {
@@ -626,7 +664,16 @@ final class RelayWrite {
                 upload.props = new JsonObject();
                 upload.props.add("relay_voice", marker);
             } else {
-                upload.name = name != null ? name : (media.file.name != null && !media.file.name.isEmpty() ? media.file.name : "file");
+                String fallback = media.file.name != null && !media.file.name.isEmpty() ? media.file.name : "file";
+                if (name == null && (upload.video != null || upload.mime.startsWith("video/")) && isGeneratedName(fallback)) {
+                    // Polish 2a (QA-12): Telegram names gallery videos after its upload id ("-2147483648_-210005.mp4"),
+                    // which web and iOS users see; a readable name, as photos and voice messages get.
+                    int dot = fallback.lastIndexOf('.');
+                    String ext = dot > 0 && dot < fallback.length() - 1 ? fallback.substring(dot + 1) : "mp4";
+                    upload.name = "Video " + stamp() + "." + ext;
+                } else {
+                    upload.name = name != null ? name : fallback;
+                }
             }
         } else if (media instanceof TLRPC.TL_inputMediaPhoto && ((TLRPC.TL_inputMediaPhoto) media).id != null) {
             upload.existingFileId = account.db().mmId(RelayDatabase.KIND_FILE, ((TLRPC.TL_inputMediaPhoto) media).id.id);

@@ -459,4 +459,33 @@ public final class RelayFinding {
             return true;
         }, callback);
     }
+
+    /**
+     * Polish 2a: the users (TL ids) of the channel's team, for Add Members (Mattermost adds only team members to a
+     * channel; iOS I5). Empty for a DM or GM.
+     */
+    public static void teamUsersOf(int account, long chatId, Callback<java.util.HashSet<Long>> callback) {
+        async(account, "team users", (bridge, a) -> {
+            java.util.HashSet<Long> ids = new java.util.HashSet<>();
+            String channelId = a.db().mmId(RelayDatabase.KIND_CHANNEL, Math.abs(chatId));
+            Channel channel = channelId != null ? RelayReadPath.of(a).directory.channel(channelId) : null;
+            if (channel == null || channel.teamId == null || channel.teamId.isEmpty()) {
+                return ids;
+            }
+            for (int page = 0; page < 25; page++) {
+                List<org.telegram.relay.mattermost.model.User> users = MattermostDirectory.usersInTeam(a.client, channel.teamId, page, 200);
+                for (org.telegram.relay.mattermost.model.User user : users) {
+                    if (!user.isDeactivated()) {
+                        a.rememberUser(user);
+                        ids.add(a.userTlId(user.id));
+                    }
+                }
+                if (users.size() < 200) {
+                    break;
+                }
+            }
+            RelayConfig.log(TAG, "team users of " + channel.name + ": " + ids.size());
+            return ids;
+        }, callback);
+    }
 }

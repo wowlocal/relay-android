@@ -65,6 +65,7 @@ public final class RelayBridge {
         // A7b: search, pinning, saved posts, directory, membership.
         RelaySearch.register(handlers);
         RelayMembers.register(handlers);
+        RelayFavorites.register(handlers); // polish 2a: pinned chats = favourites
         RelayStubs.register(stubs);
     }
 
@@ -448,9 +449,23 @@ public final class RelayBridge {
         // A4: the WebSocket drives the connection state ("Connecting…" until it is up).
         RelayAccount relayAccount = RelayAccount.get(account);
         if (relayAccount != null) {
+            RelayNotifications.noteSessionStart(relayAccount); // polish 2a: history before this login never notifies
             live = RelayLive.of(this, relayAccount);
             live.start();
             RelayThreads.prefetch(account); // A7a: followed threads + unread totals
+            // Polish 2a: the client caches the team folders for good; reload them once per start (channels joined or
+            // created while the app was closed or on another device).
+            postDelayed(() -> RelayFavorites.of(relayAccount).scheduleFolders(this), 3000);
+            // Polish 2a: the stored notifications are rebuilt once the sidebar (notify props) is known; at a cold start
+            // MessagesStorage loads them before it, and Relay leaves out what it cannot decide yet.
+            post(() -> {
+                try {
+                    RelayReadPath.of(relayAccount).directory.get(30_000);
+                    org.telegram.messenger.MessagesStorage.getInstance(account).loadUnreadMessages();
+                } catch (Throwable t) {
+                    RelayConfig.logError(TAG, "notifications reload", t);
+                }
+            });
         } else {
             ConnectionsManager.onConnectionStateChanged(ConnectionsManager.ConnectionStateConnected, account);
         }
@@ -484,6 +499,7 @@ public final class RelayBridge {
         started = false;
         RelayConfig.log(TAG, "stop account=" + account);
         RelayThreadsHooks.reset(account); // A7a
+        RelayNotifications.forgetSession(account); // polish 2a
         RelayLive current = live;
         live = null;
         if (current != null) {

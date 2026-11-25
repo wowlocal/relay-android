@@ -492,7 +492,12 @@ final class RelayMembers {
             } catch (MattermostException e) {
                 RelayConfig.logError(TAG, "add member " + userId + " to " + channel.name, e);
                 if (req.users.size() == 1) {
-                    return RelayTl.error(e.getStatusCode() == 403 ? 403 : 400, e.getStatusCode() == 403 ? "CHAT_ADMIN_REQUIRED" : "USER_NOT_MUTUAL_CONTACT");
+                    // Polish 2a: Mattermost's reasons, not Telegram's "contacts" alert (AlertsCreator.showAddUserAlert).
+                    String appId = e.getAppError() != null ? e.getAppError().id : null;
+                    if (appId != null && appId.startsWith("app.team.get_member")) {
+                        return RelayTl.error(400, "RELAY_NOT_IN_TEAM");
+                    }
+                    return RelayTl.error(e.getStatusCode() == 403 ? 403 : 400, e.getStatusCode() == 403 ? "CHAT_ADMIN_REQUIRED" : "RELAY_ADD_MEMBER_FAILED");
                 }
                 TLRPC.TL_missingInvitee missing = new TLRPC.TL_missingInvitee();
                 missing.user_id = input.user_id;

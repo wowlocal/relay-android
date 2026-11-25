@@ -6838,6 +6838,12 @@ public class AlertsCreator {
         AlertDialog.Builder builder = new AlertDialog.Builder(fragment.getParentActivity());
         builder.setTitle(LocaleController.getString(R.string.AppName));
         switch (error.text) {
+            case "RELAY_NOT_IN_TEAM": // Relay (polish 2a): Mattermost's reasons instead of Telegram's contacts text
+                builder.setMessage(LocaleController.getString(R.string.RelayAddMemberNotInTeam));
+                break;
+            case "RELAY_ADD_MEMBER_FAILED":
+                builder.setMessage(LocaleController.getString(R.string.RelayAddMemberFailed));
+                break;
             case "PEER_FLOOD":
                 builder.setMessage(LocaleController.getString(R.string.NobodyLikesSpam2));
                 builder.setNegativeButton(LocaleController.getString(R.string.MoreInfo), (dialogInterface, i) -> MessagesController.getInstance(fragment.getCurrentAccount()).openByUserName("spambot", fragment, 1));

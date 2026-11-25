@@ -456,6 +456,14 @@ final class RelayLive implements WebSocketListener {
                 case CHANNEL_MEMBER_UPDATED:
                     RelayNotifications.onChannelMemberUpdated(this, account, event);
                     break;
+                // Polish 2a: favourites changed elsewhere → pinned chats and team folders.
+                case PREFERENCE_CHANGED:
+                case PREFERENCES_CHANGED:
+                case PREFERENCES_DELETED:
+                case SIDEBAR_CATEGORY_UPDATED:
+                case SIDEBAR_CATEGORY_ORDER_UPDATED:
+                    RelayFavorites.onEvent(this, account, event);
+                    break;
                 case HELLO:
                 default:
                     break;
@@ -1031,12 +1039,16 @@ final class RelayLive implements WebSocketListener {
             return;
         }
         path.noteKnown(Collections.singletonList(channel.id));
+        if (!catchingUp) {
+            path.noteAnnouncedLive(channel.id); // polish 2a: its mentions arrive as live posts (no double count)
+        }
         TL_update.TL_updateChannel u = new TL_update.TL_updateChannel();
         u.channel_id = -path.directory.dialogId(channel);
         ArrayList<TLRPC.Update> list = new ArrayList<>();
         list.add(u);
         updates.deliver(list, new RelayUpdates.Refs().chat(path.directory.tlChannel(channel)));
         RelayConfig.log(TAG, "live: new chat " + channel.name);
+        RelayFavorites.of(account).scheduleFolders(bridge); // polish 2a: into its team folder
     }
 
     private void onChannelUpdated(Channel channel) throws MattermostException {
@@ -1065,7 +1077,11 @@ final class RelayLive implements WebSocketListener {
         }
         path.directory.invalidate();
         Channel channel = path.directory.get(0).channels.get(channelId);
-        if (channel == null || channel.isDirect() || path.isKnown(channelId)) {
+        if (channel == null || channel.isDirect()) {
+            return;
+        }
+        if (path.isKnown(channelId)) {
+            RelayFavorites.of(account).scheduleFolders(bridge); // polish 2a: joined through this app (Join, New Channel)
             return;
         }
         announce(channel);
@@ -1112,7 +1128,19 @@ final class RelayLive implements WebSocketListener {
      *
      * @return true when the gap is too large (answer differenceTooLong)
      */
+    /** True while {@link #catchUp} runs (announced chats get their counts from the dialog, not from live posts). */
+    private volatile boolean catchingUp;
+
     boolean catchUp() throws Exception {
+        catchingUp = true;
+        try {
+            return catchUpInternal();
+        } finally {
+            catchingUp = false;
+        }
+    }
+
+    private boolean catchUpInternal() throws Exception {
         long started = System.currentTimeMillis();
         catchUpNeeded = false;
         String stored = account.db().kv(KV_SYNC_AT);
