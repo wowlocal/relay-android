@@ -128,8 +128,20 @@ public final class RelayThreadsUi {
         icons.add(at, unfollow ? R.drawable.msg_mute : R.drawable.msg_unmute);
     }
 
-    /** Handles the options added above; true when consumed. */
+    /**
+     * Handles the options added above; true when consumed. Also Reply in a megagroup's main history with
+     * collapsed threads: the reply would leave the main history at once, so Reply opens the thread instead
+     * (Mattermost's reply arrow opens the thread too).
+     */
     public static boolean handleMessageOption(ChatActivity chat, int option, MessageObject message) {
+        if (option == ChatActivity.OPTION_REPLY && message != null && !chat.isThreadChat() && message.getDialogId() < 0
+                && RelayThreadsHooks.collapsedThreads(chat.getCurrentAccount()) && message.messageOwner != null && message.messageOwner.action == null
+                && message.getId() > 0 && !message.scheduled) {
+            // Any part of a root post (the bridge resolves the post), or a reply's root.
+            int root = message.getReplyTopMsgId() != 0 ? message.getReplyTopMsgId() : message.getId();
+            openThread(chat, chat.getCurrentAccount(), message.getDialogId(), root, 0);
+            return true;
+        }
         if (option != OPTION_FOLLOW_THREAD && option != OPTION_UNFOLLOW_THREAD) {
             return false;
         }

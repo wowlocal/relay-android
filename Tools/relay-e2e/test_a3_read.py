@@ -291,8 +291,12 @@ def main():
         # iOS channel: replies, edited.
         open_chat(d, ios["id"])
         nodes = d.dump()
-        check.ok("iOS channel shows reply headers", any(n.desc.startswith("Reply,") for n in nodes))
-        ios_posts = alice.get("/channels/%s/posts?per_page=10" % ios["id"])
+        if crt:
+            # A7a: collapsed reply threads keep replies out of a channel's main history (they live in the thread view).
+            check.ok("iOS channel hides thread replies (collapsed threads)", not any(n.desc.startswith("Reply,") for n in nodes))
+        else:
+            check.ok("iOS channel shows reply headers", any(n.desc.startswith("Reply,") for n in nodes))
+        ios_posts = alice.get("/channels/%s/posts?per_page=10%s" % (ios["id"], "&collapsedThreads=true" if crt else ""))
         ios_texts = " ".join(t.replace("\n", " ") for t in d.screen_texts(nodes))
         ios_newest = [ios_posts["posts"][i] for i in ios_posts["order"]][:4]
         hits = [p for p in ios_newest if strip_md(p["message"])[:20] in ios_texts]
@@ -319,7 +323,7 @@ def main():
         posts_desc = [m[0] for m in mapped if m]
         want, page = [], None
         while len(want) < len(posts_desc):
-            q = "/channels/%s/posts?per_page=200" % firehose["id"] + ("&before=" + page if page else "")
+            q = "/channels/%s/posts?per_page=200" % firehose["id"] + ("&before=" + page if page else "") + ("&collapsedThreads=true" if crt else "")
             res = alice.get(q)
             if not res["order"]:
                 break
@@ -332,19 +336,25 @@ def main():
         avg = sum(times) / len(times) if times else 0
         check.ok("firehose pages answer fast (avg %.0f ms, max %d ms)" % (avg, max(times) if times else 0), avg < 300)
 
-        # 5. Reply → original (root 120 posts back: a permalink island).
+        # 5. Reply → original (root 120 posts back: a permalink island). With collapsed threads (A7a) the replies
+        # are in the thread view and the root is in the main history with its "119 Replies" footer.
         d.logcat_clear()
         open_chat(d, architecture["id"])
-        reply = next((n for n in d.dump() if n.desc.startswith("Reply,") and 250 < n.bounds[1] < 1200), None)
-        root_visible = False
+        if crt:
+            texts = d.screen_texts()
+            check.ok("collapsed threads: the RFC root is in the main history, its replies are not",
+                     any("RFC: Message ID allocation" in t for t in texts) and not any(t.startswith("Reply,") for t in texts))
+        reply = None if crt else next((n for n in d.dump() if n.desc.startswith("Reply,") and 250 < n.bounds[1] < 1200), None)
+        if not crt and reply is None:
+            check.ok("tapping a reply loads its root around the root's id", False, "no reply header")
         if reply:
             d.tap_node(reply)
             time.sleep(4)
             root_visible = any("RFC: Message ID allocation" in t for t in d.screen_texts())
-        around = d.wait_log(r"getHistory architecture offset=(\d+) add=-10 limit=20", timeout=5, tags=["RelayBridge"])
-        check.ok("tapping a reply loads its root around the root's id", reply is not None and around is not None and root_visible,
-                 around.group(0) if around else "")
-        shot(d, "reply-jump")
+            around = d.wait_log(r"getHistory architecture offset=(\d+) add=-10 limit=20", timeout=5, tags=["RelayBridge"])
+            check.ok("tapping a reply loads its root around the root's id", around is not None and root_visible,
+                     around.group(0) if around else "")
+            shot(d, "reply-jump")
 
         # 6. Media: photos and a ranged document download.
         open_chat(d, media["id"], wait=6)

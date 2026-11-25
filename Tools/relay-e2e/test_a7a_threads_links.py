@@ -274,6 +274,15 @@ def main():
         copied = m.group(1) if m else None
         check.ok("Copy Link text == REST permalink", copied == expected, "%s vs %s" % (copied, expected))
 
+        # Reply in the main history opens the thread (the reply would leave the main history at once).
+        time.sleep(2)
+        ok = long_press_menu(d, "thread root %d" % t0, "Reply")
+        time.sleep(2.5)
+        st = ui_state(d)
+        check.ok("message menu Reply (main history, CRT) opens the thread", ok and st["thread"] == (root_ids[0][0] if root_ids else -1),
+                 "thread=%s" % st["thread"])
+        leave_thread(d)
+
         # MARK: 4. Threads list + unread badge.
         to_chat_list(d)
         time.sleep(1)

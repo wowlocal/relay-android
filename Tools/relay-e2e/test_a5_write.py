@@ -311,6 +311,7 @@ def main():
             latencies.append(("channel send → sent", lat))
         ok = message_menu(d, "root by bob %d" % t0, "Reply")
         check.ok("context menu: Reply", ok)
+        time.sleep(1.5)  # with collapsed threads (A7a) Reply opens the thread view
         send_text(d, "%s reply one %d" % (PROBE, t0))
         r1 = wait_until(lambda: find_post(bob, sandbox["id"], "reply one %d" % t0), timeout=10)
         check.ok("reply is a thread reply (root_id = bob's post)", r1 and r1[0]["root_id"] == root["id"], str(r1[0]["root_id"] if r1 else None))
@@ -320,6 +321,8 @@ def main():
         r2 = wait_until(lambda: find_post(bob, sandbox["id"], "reply two %d" % t0), timeout=10)
         check.ok("reply to a reply stays in the thread (CRT)", r2 and r2[0]["root_id"] == root["id"])
         shot(d, "thread-reply")
+        # With collapsed threads (A7a) Reply opened the thread view: back to the channel's main history.
+        open_chat(d, sandbox["id"])
 
         # 3. Edit and delete.
         ok = message_menu(d, "channel text %d" % t0, "Edit")
