@@ -64,7 +64,7 @@ public class RelayCustomStatusActivity extends UniversalFragment {
     public View createView(Context context) {
         setHasOwnBackground(true);
         CustomStatus current = RelayProfile.cachedCustomStatus(currentAccount);
-        textEdit = new EditTextCell(context, getString(R.string.RelayCustomStatusHint), false, false, 100, resourceProvider);
+        textEdit = new EditTextCell(context, getString(R.string.RelayCustomStatusHint), false, false, -1, resourceProvider);
         textEdit.hideKeyboardOnEnter();
         if (current != null) {
             if (current.emoji != null && !current.emoji.isEmpty()) {

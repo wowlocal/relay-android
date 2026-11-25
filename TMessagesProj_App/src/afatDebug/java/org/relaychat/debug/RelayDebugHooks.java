@@ -254,6 +254,10 @@ public class RelayDebugHooks extends ContentProvider {
             if (count.reaction instanceof TLRPC.TL_reactionEmoji) {
                 out.append(((TLRPC.TL_reactionEmoji) count.reaction).emoticon).append('=').append(count.count)
                         .append(count.chosen_order != 0 ? "*" : "").append(' ');
+            } else if (count.reaction instanceof TLRPC.TL_reactionCustomEmoji) {
+                // A7c: Mattermost custom emoji (Relay emoji documents)
+                out.append("doc:").append(((TLRPC.TL_reactionCustomEmoji) count.reaction).document_id).append('=').append(count.count)
+                        .append(count.chosen_order != 0 ? "*" : "").append(' ');
             }
         }
         return out.toString().trim();

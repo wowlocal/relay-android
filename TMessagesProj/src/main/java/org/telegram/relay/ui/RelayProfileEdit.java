@@ -31,7 +31,7 @@ public final class RelayProfileEdit {
 
     public RelayProfileEdit(Context context, int account, Theme.ResourcesProvider resourcesProvider, Runnable onChange) {
         this.account = account;
-        username = new EditTextCell(context, getString(R.string.RelayProfileUsername), false, false, 64, resourcesProvider) {
+        username = new EditTextCell(context, getString(R.string.RelayProfileUsername), false, false, -1, resourcesProvider) {
             @Override
             protected void onTextChanged(CharSequence newText) {
                 super.onTextChanged(newText);
@@ -40,7 +40,7 @@ public final class RelayProfileEdit {
         };
         username.setDivider(true);
         username.hideKeyboardOnEnter();
-        nickname = new EditTextCell(context, getString(R.string.RelayProfileNickname), false, false, 64, resourcesProvider) {
+        nickname = new EditTextCell(context, getString(R.string.RelayProfileNickname), false, false, -1, resourcesProvider) {
             @Override
             protected void onTextChanged(CharSequence newText) {
                 super.onTextChanged(newText);

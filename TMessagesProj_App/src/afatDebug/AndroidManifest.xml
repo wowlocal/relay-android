@@ -7,5 +7,10 @@
             android:name="org.relaychat.debug.RelayDebugHooks"
             android:authorities="${applicationId}.relaydebug"
             android:exported="false" />
+        <!-- A7c test hooks (avatar upload through Telegram's uploader). -->
+        <provider
+            android:name="org.relaychat.debug.RelayA7cDebugHooks"
+            android:authorities="${applicationId}.relaydebuga7c"
+            android:exported="false" />
     </application>
 </manifest>

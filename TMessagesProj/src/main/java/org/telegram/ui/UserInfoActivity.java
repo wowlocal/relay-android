@@ -365,6 +365,9 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         lastNameRow = items.size();
         items.add(UItem.asCustom(lastNameEdit));
         items.add(UItem.asShadow(-1, null));
+        if (relayEdit != null) {
+            items.add(UItem.asHeader(getString(R.string.RelayProfilePosition))); // Relay (A7c): the bio is the position
+        }
         bioRow = items.size();
         items.add(UItem.asCustom(bioEdit));
         items.add(UItem.asShadow(bioInfo));
