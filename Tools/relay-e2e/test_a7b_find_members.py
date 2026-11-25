@@ -677,7 +677,9 @@ def scenario_dm_gm(d, check, ctx):
     target = ctx["dm_target"]
     open_new_message(d)
     node = d.find(text=target["name"])
-    if node is None:
+    for _ in range(6):  # the directory is sorted by presence: on a phone the person can be a few screens down
+        if node is not None:
+            break
         a6.swipe(d)
         node = d.find(text=target["name"])
     check.ok("New Message lists %s" % target["name"], node is not None)

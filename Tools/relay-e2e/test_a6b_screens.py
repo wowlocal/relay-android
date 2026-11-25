@@ -253,6 +253,10 @@ def scenario_dm(d, check, seeded):
         check.ok("permalink: no 'Open this link?' alert", d.find(text="Open") is None)
     else:
         check.ok("permalink message visible", False)
+    # The permalink opened its target post (scrolled the chat): open the DM again at its bottom.
+    back(d)
+    d.broadcast("org.relaychat.DEBUG_OPEN_CHAT", channel=seeded["dm"])
+    time.sleep(3)
     d.logcat_clear()
     if tap_message(d, "t.me/durov", dx=0.1):
         m = d.wait_log(r"browser: t\.me", timeout=8, tags=["RelayLinks"])
