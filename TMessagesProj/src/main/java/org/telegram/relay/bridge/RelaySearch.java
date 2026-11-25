@@ -365,9 +365,14 @@ final class RelaySearch {
 
     /** Posts found by a post search in the given teams (merged by id, newest first). */
     List<Post> searchPosts(Collection<String> teamIds, String terms, boolean isOr, Found into) throws MattermostException {
+        return searchPosts(teamIds, terms, isOr, false, into);
+    }
+
+    /** {@code includeArchived}: a search inside an archived channel (other searches leave archived channels out, as iOS). */
+    List<Post> searchPosts(Collection<String> teamIds, String terms, boolean isOr, boolean includeArchived, Found into) throws MattermostException {
         Map<String, Post> byId = new LinkedHashMap<>();
         for (String teamId : teamIds) {
-            PostList list = MattermostDirectory.searchPosts(account.client, teamId, terms, isOr, timeZoneOffset(), 0, SEARCH_PAGE);
+            PostList list = MattermostDirectory.searchPosts(account.client, teamId, terms, isOr, includeArchived, timeZoneOffset(), 0, SEARCH_PAGE);
             List<Post> page = list.getOrderedPosts();
             if (page.size() >= SEARCH_PAGE && into != null) {
                 into.more = true;
@@ -483,7 +488,7 @@ final class RelaySearch {
                     break;
                 }
                 String teamId = teamOf(channel);
-                posts = teamId == null ? new ArrayList<Post>() : searchPosts(Collections.singletonList(teamId), terms(q, channel.id, fromUsername, minDate, maxDate), false, null);
+                posts = teamId == null ? new ArrayList<Post>() : searchPosts(Collections.singletonList(teamId), terms(q, channel.id, fromUsername, minDate, maxDate), false, channel.isArchived(), null);
                 break;
             }
             case MediaDataController.MEDIA_URL: {

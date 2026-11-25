@@ -61,10 +61,15 @@ public final class MattermostDirectory {
      * {@code before:/after:/on:}.
      */
     public static PostSearchResults searchPosts(MattermostClient client, String teamId, String terms, boolean isOrSearch, int timeZoneOffset, int page, int perPage) throws MattermostException {
+        return searchPosts(client, teamId, terms, isOrSearch, false, timeZoneOffset, page, perPage);
+    }
+
+    /** {@link #searchPosts} that also searches archived channels ({@code includeDeletedChannels}). */
+    public static PostSearchResults searchPosts(MattermostClient client, String teamId, String terms, boolean isOrSearch, boolean includeDeletedChannels, int timeZoneOffset, int page, int perPage) throws MattermostException {
         JsonObject body = Json.object(
                 "terms", terms,
                 "is_or_search", isOrSearch,
-                "include_deleted_channels", true,
+                "include_deleted_channels", includeDeletedChannels,
                 "time_zone_offset", timeZoneOffset,
                 "page", page,
                 "per_page", perPage);

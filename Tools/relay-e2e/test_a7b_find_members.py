@@ -76,7 +76,7 @@ class Rest:
 
     def search(self, team_id, terms, is_or=False):
         res = self.call("POST", "/teams/%s/posts/search" % team_id, {"terms": terms, "is_or_search": is_or, "page": 0, "per_page": 100,
-                                                                     "time_zone_offset": tz_offset(), "include_deleted_channels": True})
+                                                                     "time_zone_offset": tz_offset(), "include_deleted_channels": False})
         return [p for p in res["order"] if not res["posts"][p].get("type", "").startswith("system_")]
 
     def channel_by_name(self, team_id, name):
