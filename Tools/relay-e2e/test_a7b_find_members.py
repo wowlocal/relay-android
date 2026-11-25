@@ -705,13 +705,13 @@ def scenario_archive(d, check, ctx):
             d.tap_node(buttons[-1])  # the dialog's button (the first one is its title)
         time.sleep(4)
     channel = carol.call("GET", "/channels/%s" % ch["id"])
-    check.ok("archive (app) → REST delete_at set", channel.get("delete_at", 0) > 0)
+    ctx["archived"] = channel.get("delete_at", 0) > 0
+    check.ok("archive (app) → REST delete_at set", ctx["archived"])
     open_chat(d, ch["id"])
     time.sleep(2)
     texts = d.screen_texts()
     shot(d, "archived-readonly")
     check.ok("archived channel is read-only (notice, no composer)", any("archived" in t for t in texts) and "Message" not in texts, str(texts[-8:]))
-    ctx["archived"] = True
     go_chat_list(d)
 
 
