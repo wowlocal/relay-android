@@ -206,17 +206,24 @@ def ring_action(d, label, timeout=20):
     """Answer / Decline on Telegram's incoming call notification. The heads-up is a System UI window that
     uiautomator does not dump, so the notification shade is opened and its action button tapped."""
     deadline = time.time() + timeout
+    # A dump while the shade still animates sees the home screen (and can leave it there): settle first.
+    d.shell("cmd statusbar expand-notifications", check=False)
+    last_expand = time.time()
+    time.sleep(4)
     while time.time() < deadline:
-        n = d.find(text=label)
-        if n is None:
-            d.shell("cmd statusbar expand-notifications", check=False)
-            time.sleep(1.5)
-            n = d.find(text=label)
+        nodes = d.dump()
+        # The shade's action text carries an icon placeholder and bidi marks around the label.
+        n = d.find(text=label, nodes=nodes) or d.find(text=label, contains=True, nodes=nodes)
         if n:
             d.tap_node(n)
             return n
-        d.shell("cmd statusbar collapse", check=False)
+        if time.time() - last_expand > 9:
+            d.shell("cmd statusbar expand-notifications", check=False)
+            last_expand = time.time()
+            time.sleep(4)
         time.sleep(1)
+    print("ring_action: no %r in %s" % (label, " | ".join(d.screen_texts())[:300]))
+    d.shell("cmd statusbar collapse", check=False)
     return None
 
 
@@ -353,7 +360,7 @@ def main():
         call_id = (summary or {}).get("call_id")
         post, rc = wait_until(lambda: (lambda r: r if r[1] and rc_ended(r[1]) else None)(record_for(dave, dm["id"], call_id, t1)), timeout=20) or (None, None)
         check.ok("outgoing: call record post on the server (custom_relay_call, ended, duration)", rc is not None and rc.get("duration_ms", 0) > 0, str(rc))
-        msg = d.wait_for(text="Outgoing Video Call", contains=True, timeout=10) or d.wait_for(text="Outgoing Call", contains=True, timeout=5)
+        msg = d.wait_for(text="Outgoing Call", desc="Outgoing Call", contains=True, timeout=10)
         check.ok("outgoing: the chat shows Telegram's call service message", msg is not None)
         shot(d, "call-messages")
 
@@ -394,6 +401,7 @@ def main():
         summary = p3.done(timeout=30)
         reason = ((summary or {}).get("end") or {}).get("end_reason") or ((summary or {}).get("call") or {}).get("end_reason")
         check.ok("decline: the caller's call ended declined", reason == "declined", str(reason))
+        d.shell("cmd statusbar collapse", check=False)
         check.ok("decline: no call notification left", wait_until(lambda: call_notification(d) is None, timeout=10) is not None)
 
         # MARK: 4. Missed
@@ -408,10 +416,13 @@ def main():
             check.ok("missed: the notification went away", wait_until(lambda: call_notification(d) is None, timeout=15) is not None)
             _, rc = wait_until(lambda: (lambda r: r if r[1] and rc_ended(r[1]) else None)(record_for(dave, dm["id"], (summary or {}).get("call_id"), t4)), timeout=20) or (None, None)
             check.ok("missed: call record missed", rc is not None and rc.get("end_reason") == "missed", str(rc))
+            d.shell("cmd statusbar collapse", check=False)
             d.launch()
-            time.sleep(2)
-            open_chat(d, dm["id"], 4)
-            check.ok("missed: the chat shows Missed Call", d.wait_for(text="Missed Call", contains=True, timeout=10) is not None)
+            time.sleep(3)
+            open_chat(d, dm["id"], 5)
+            shot(d, "missed")
+            check.ok("missed: the chat shows Missed Call", d.wait_for(text="Missed Call\nReceived", desc="Missed Call\nReceived", contains=True, timeout=10) is not None,
+                     " | ".join(d.screen_texts())[:200])
 
         # MARK: 5. Channel call (video chat)
         p5 = Peer("channel", "--user", "bob", "channel", CHANNEL_NAME, "--camera", "--duration", "150", "--report", "2")

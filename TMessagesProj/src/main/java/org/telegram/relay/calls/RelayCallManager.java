@@ -366,7 +366,9 @@ public final class RelayCallManager {
             d.discardedSent = true;
             RelayDirectCall.State state = d.call.state();
             if (!d.outgoing && state == RelayDirectCall.State.RINGING) {
-                d.call.decline(req.reason instanceof TLRPC.TL_phoneCallDiscardReasonBusy ? "busy" : "declined");
+                // Telegram declines a ring with reason "busy" (its servers show "declined" for that): the user
+                // declined. A ring this device cannot take never gets this far (it is declined busy by the manager).
+                d.call.decline("declined");
             } else {
                 d.call.hangup();
             }
