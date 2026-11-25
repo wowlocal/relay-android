@@ -12800,7 +12800,8 @@ public class MessagesStorage extends BaseController {
 
                     if (updateDialog) {
                         TLRPC.Message lastMessage = messagesMap.get(message.dialog_id);
-                        if (lastMessage == null || message.date > lastMessage.date || lastMessage.id > 0 && message.id > lastMessage.id || lastMessage.id < 0 && message.id < lastMessage.id) {
+                        if ((lastMessage == null || message.date > lastMessage.date || lastMessage.id > 0 && message.id > lastMessage.id || lastMessage.id < 0 && message.id < lastMessage.id)
+                                && !org.telegram.relay.bridge.RelayThreadsHooks.notDialogTop(currentAccount, message.dialog_id, message)) { // Relay polish1: CRT preview
                             messagesMap.put(message.dialog_id, message);
                         }
                         if (topicId != 0 && message.dialog_id != selfId) {

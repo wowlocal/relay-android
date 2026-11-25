@@ -87,8 +87,14 @@ final class RelayFiles {
         photo.date = date;
         photo.dc_id = RelayUsers.DC_ID;
         int[] thumb = thumbnailSize(file.width, file.height);
-        photo.sizes.add(size("s", thumb[0], thumb[1], 0));
         int[] big = fit(file.width, file.height, 1280);
+        if (thumb[0] >= big[0] && thumb[1] >= big[1]) {
+            // Polish 1: a photo no larger than Mattermost's thumbnail box (e.g. 64×48). With 's' and 'y' the same size
+            // Telegram picked 's' as the bubble's image (the first of equal sizes) and never loaded the original: the
+            // bubble stayed blank. 's' is declared smaller (it is only the blurred placeholder), so 'y' is the image.
+            thumb = new int[]{Math.max(1, big[0] / 2), Math.max(1, big[1] / 2)};
+        }
+        photo.sizes.add(size("s", thumb[0], thumb[1], 0));
         if (file.size > 0 && file.size <= MAX_PHOTO_ORIGINAL) {
             photo.sizes.add(size("y", big[0], big[1], (int) file.size));
         } else {
@@ -144,6 +150,14 @@ final class RelayFiles {
             int[] thumb = thumbnailSize(file.width, file.height);
             doc.thumbs.add(size("m", thumb[0], thumb[1], 0));
             doc.flags |= TLObject.FLAG_0;
+        } else if (doc.mime_type.startsWith("video/")) {
+            // Polish 1: the frame RelayVideoProbe took of a video from another client.
+            TLRPC.DocumentAttribute video = doc.attributes.get(doc.attributes.size() - 1);
+            int[] thumb = RelayVideoProbe.thumbnailSize(account, file.id, video.w, video.h);
+            if (thumb != null) {
+                doc.thumbs.add(size("m", thumb[0], thumb[1], 0));
+                doc.flags |= TLObject.FLAG_0;
+            }
         }
         return doc;
     }
@@ -226,8 +240,11 @@ final class RelayFiles {
             if (fileId == null) {
                 return RelayTl.error(400, "FILE_ID_INVALID");
             }
+            byte[] probed;
             if (location.thumb_size == null || location.thumb_size.isEmpty()) {
                 chunk = rangeChunk(fileId, offset, limit);
+            } else if ((probed = RelayVideoProbe.thumbnail(account, fileId)) != null) {
+                chunk = slice(probed, offset, limit); // Polish 1: a video's probed frame
             } else {
                 chunk = wholeChunk("t:" + fileId, offset, limit, () -> account.client.fileThumbnail(fileId));
             }

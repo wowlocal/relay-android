@@ -10669,7 +10669,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 getMessagesController().checkIfFolderEmpty(folderId);
             };
             createUndoView();
-            if (undoView[0] != null) {
+            if (undoView[0] != null && !org.telegram.relay.RelayConfig.ENABLED) { // Relay polish1: leave/delete from chat info completes now (no undo bar)
                 if (!ChatObject.isForum(chat)) {
                     UndoView undoView = getUndoView();
                     if (undoView != null) {

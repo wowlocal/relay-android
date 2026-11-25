@@ -36,6 +36,12 @@ import urllib.request
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import relaye2e  # noqa: E402
 
+
+def screen_size(d):
+    """The size apps get: "Override size" (when set) comes after "Physical size" in `wm size`."""
+    sizes = re.findall(r"(\d+)x(\d+)", d.shell("wm size"))
+    return (int(sizes[-1][0]), int(sizes[-1][1])) if sizes else (1080, 2400)
+
 PROBE = "[relay-e2e a3]"
 EXTERNAL_FILES = "/sdcard/Android/data/%s/files/Telegram/Telegram Files" % relaye2e.PACKAGE
 REST_URL = "http://localhost:%d" % relaye2e.MM_PORT
@@ -307,15 +313,20 @@ def main():
         d.logcat_clear()
         open_chat(d, firehose["id"])
         t0 = time.time()
-        for _ in range(args.swipes):
-            d.shell("input swipe 400 400 400 1350 60", check=False)
-        time.sleep(4)
+        w, h = screen_size(d)  # the swipes scale with the screen (750x1536 override, 1080x2400 phones)
+        lines = []
+        for _round in range(3):  # denser screens scroll less per fling: fling on until 1,000+ messages are loaded
+            for _ in range(args.swipes):
+                d.shell("input swipe %d %d %d %d 60" % (w // 2, int(h * 0.26), w // 2, int(h * 0.88)), check=False)
+            time.sleep(4)
+            lines += [l for l in d.logcat("RelayBridge").splitlines() if "getHistory firehose" in l]  # the dump clears logcat
+            entries, client = dump_dialog_map(d, firehose["id"])
+            if len(set(client)) > 1050:
+                break
         scroll_seconds = time.time() - t0
-        lines = [l for l in d.logcat("RelayBridge").splitlines() if "getHistory firehose" in l]
         times = [int(re.search(r"in (\d+) ms", l).group(1)) for l in lines]
         pages = len(lines)
         shot(d, "firehose")
-        entries, client = dump_dialog_map(d, firehose["id"])
         client_desc = sorted(set(client), reverse=True)
         check.ok("no duplicate message ids in the client", len(client) == len(set(client)))
         mapped = [entries.get(mid) for mid in client_desc]
@@ -362,10 +373,10 @@ def main():
         zip_node = None
         for _ in range(12):
             found = d.find(text="simulator-diagnostics.zip", contains=True)
-            if found and 200 < found.bounds[1] < 1150:
+            if found and int(h * 0.13) < found.bounds[1] < int(h * 0.75):
                 zip_node = found
                 break
-            d.shell("input swipe 400 600 400 900 300", check=False)
+            d.shell("input swipe %d %d %d %d 300" % (w // 2, int(h * 0.39), w // 2, int(h * 0.59)), check=False)
             time.sleep(1)
         zip_info = next(f for p in alice.get("/channels/%s/posts?per_page=60" % media["id"])["posts"].values()
                         for f in ((p.get("metadata") or {}).get("files") or []) if f["name"] == "simulator-diagnostics.zip")

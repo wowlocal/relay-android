@@ -8481,6 +8481,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                                     msgObj.messageOwner.flags |= 33554432;
                                 }
                                 msgObj.messageOwner.entities = message.entities;
+                                if (org.telegram.relay.RelayConfig.ENABLED && message.message != null) {
+                                    msgObj.messageOwner.message = message.message; // Relay polish1: the server's markdown rendering (text + entities)
+                                }
                                 msgObj.messageOwner.quick_reply_shortcut_id = message.quick_reply_shortcut_id;
                                 if (msgObj.messageOwner.quick_reply_shortcut_id != 0) {
                                     msgObj.messageOwner.flags |= 1073741824;

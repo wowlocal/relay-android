@@ -179,6 +179,8 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
     private int topReactionsEndRow;
     private int recentReactionsSectionRow;
     private int popularSectionRow;
+    private int relayStandardStartRow = -1; // Relay polish1: first Unicode emoji row when custom emoji come first
+    private int relayEmojiSectionRow = -1; // Relay polish1: "Emoji" header above them
     private int giftsSectionRow;
     private int giftsStartRow;
     private int giftsEndRow;
@@ -808,7 +810,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
         layoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override
             public int getSpanSize(int position) {
-                if (positionToSection.indexOfKey(position) >= 0 || positionToButton.indexOfKey(position) >= 0 || position == recentReactionsSectionRow || position == stickersSectionRow || position == giftsSectionRow || position == popularSectionRow || position == longtapHintRow || position == searchRow || position == topicEmojiHeaderRow) {
+                if (positionToSection.indexOfKey(position) >= 0 || positionToButton.indexOfKey(position) >= 0 || position == recentReactionsSectionRow || position == stickersSectionRow || position == giftsSectionRow || position == popularSectionRow || position == relayEmojiSectionRow || position == longtapHintRow || position == searchRow || position == topicEmojiHeaderRow) {
                     return layoutManager.getSpanCount();
                 } else if (position >= stickersStartRow && position < stickersEndRow) {
                     return 8;
@@ -2591,7 +2593,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 return VIEW_TYPE_BUTTON;
             } else if (position == longtapHintRow) {
                 return VIEW_TYPE_HINT;
-            } else if (positionToSection.indexOfKey(position) >= 0 || position == recentReactionsSectionRow || position == stickersSectionRow || position == giftsSectionRow || position == popularSectionRow || position == topicEmojiHeaderRow) {
+            } else if (positionToSection.indexOfKey(position) >= 0 || position == recentReactionsSectionRow || position == stickersSectionRow || position == giftsSectionRow || position == popularSectionRow || position == relayEmojiSectionRow || position == topicEmojiHeaderRow) {
                 return VIEW_TYPE_HEADER;
             }
             if (position == defaultTopicIconRow) {
@@ -2639,6 +2641,10 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 header.closeIcon.setVisibility(View.GONE);
                 if (position == popularSectionRow) {
                     header.setText(LocaleController.getString(R.string.PopularReactions), false);
+                    return;
+                }
+                if (position == relayEmojiSectionRow) {
+                    header.setText(LocaleController.getString(R.string.Emoji), false); // Relay polish1
                     return;
                 }
                 if (position == giftsSectionRow) {
@@ -2834,8 +2840,10 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     if (imageView.imageReceiver != null) {
                         imageView.imageReceiver.clearImage();
                     }
-                } else if (type == TYPE_STICKER_SET_EMOJI && position - (searchRow != -1 ? 1 : 0) - (longtapHintRow != -1 ? 1 : 0) < standardEmojis.size()) {
-                    int pos = position - (searchRow != -1 ? 1 : 0) - (longtapHintRow != -1 ? 1 : 0) - (includeEmpty ? 1 : 0);
+                } else if (type == TYPE_STICKER_SET_EMOJI && (relayStandardStartRow >= 0
+                        ? position >= relayStandardStartRow && position - relayStandardStartRow < standardEmojis.size() // Relay polish1
+                        : position - (searchRow != -1 ? 1 : 0) - (longtapHintRow != -1 ? 1 : 0) < standardEmojis.size())) {
+                    int pos = relayStandardStartRow >= 0 ? position - relayStandardStartRow : position - (searchRow != -1 ? 1 : 0) - (longtapHintRow != -1 ? 1 : 0) - (includeEmpty ? 1 : 0);
                     String emoji = standardEmojis.get(pos);
                     imageView.notDraw = false;
                     imageView.isFirstReactions = false;
@@ -4041,7 +4049,11 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 emojiTabs.showGifts(false);
             }
         }
-        if (type == TYPE_STICKER_SET_EMOJI) {
+        // Relay polish1: the full reaction picker lists the server's custom emoji first, then "Emoji" (Unicode).
+        final boolean relayCustomFirst = org.telegram.relay.RelayConfig.ENABLED && type == TYPE_STICKER_SET_EMOJI;
+        relayStandardStartRow = -1;
+        relayEmojiSectionRow = -1;
+        if (type == TYPE_STICKER_SET_EMOJI && !relayCustomFirst) {
             for (String[] section : EmojiData.dataColored) {
                 for (String emoji : section) {
                     standardEmojis.add(emoji);
@@ -4088,6 +4100,21 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     j++;
                 }
             }
+        }
+        if (relayCustomFirst) {
+            if (!packs.isEmpty()) {
+                relayEmojiSectionRow = totalCount++;
+                rowHashCodes.add(9212L);
+            }
+            relayStandardStartRow = totalCount;
+            for (String[] section : EmojiData.dataColored) {
+                for (String emoji : section) {
+                    standardEmojis.add(emoji);
+                    rowHashCodes.add(13334 + 322L * emoji.hashCode());
+                    totalCount++;
+                }
+            }
+            org.telegram.relay.RelayConfig.log("RelayEmoji", "full picker: " + packs.size() + " custom pack(s) first, emoji from row " + relayStandardStartRow);
         }
         if (featuredEmojiPacks != null && !showStickers && type != TYPE_EXPANDABLE_REACTIONS && type != TYPE_STICKER_SET_EMOJI && type != TYPE_EFFECTS) {
             final int maxlen = SPAN_COUNT_FOR_EMOJI * EXPAND_MAX_LINES;

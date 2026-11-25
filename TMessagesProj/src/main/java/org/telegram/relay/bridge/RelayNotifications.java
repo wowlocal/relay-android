@@ -109,6 +109,9 @@ public final class RelayNotifications {
         if (!RelayConfig.ENABLED || message == null || message.messageOwner == null || message.isOutOwner()) {
             return true;
         }
+        if (RelayHooks.isRenumbered(accountNum, message.getDialogId(), message.getId())) {
+            return false; // Polish 1: an old post re-inserted at a new id (RelayRenumber)
+        }
         RelayAccount account = RelayAccount.get(accountNum);
         if (account == null) {
             return true;

@@ -122,6 +122,15 @@ public final class RelayThreadsHooks {
     }
 
     /**
+     * Polish 1: with collapsed threads a megagroup's chat-list preview is its newest root post (iOS); a thread reply
+     * never becomes the dialog's top message ({@code MessagesController.updateInterfaceWithMessages},
+     * {@code MessagesStorage.putMessages}). The bridge's dialogs follow the same rule ({@code RelayReadPath.previewUnit}).
+     */
+    public static boolean notDialogTop(int account, long dialogId, TLRPC.Message message) {
+        return hidesReplies(account, dialogId) && isThreadReply(message);
+    }
+
+    /**
      * {@code MessagesController.markDialogAsRead}: reading a megagroup's main history reads its hidden replies
      * too (Mattermost marks the whole channel viewed), so the local read mark covers the chat's top message.
      */
@@ -130,10 +139,13 @@ public final class RelayThreadsHooks {
             return maxPositiveId;
         }
         TLRPC.Dialog dialog = MessagesController.getInstance(account).dialogs_dict.get(dialogId);
-        if (dialog != null && dialog.top_message > maxPositiveId) {
-            return dialog.top_message;
+        int max = maxPositiveId;
+        if (dialog != null && dialog.top_message > max) {
+            max = dialog.top_message;
         }
-        return maxPositiveId;
+        // Polish 1: the top message is the newest root now; hidden replies after it are read too.
+        int newest = RelayHooks.newestMessageId(account, dialogId);
+        return Math.max(max, newest);
     }
 
     /** {@code ChatMessageCell}: Telegram's comment footer ("N Replies") on thread roots of a megagroup's main history. */

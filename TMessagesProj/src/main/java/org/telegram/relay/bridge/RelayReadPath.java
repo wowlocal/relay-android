@@ -188,7 +188,8 @@ final class RelayReadPath {
             row.channel = channel;
             row.member = member;
             row.dialogId = directory.dialogId(channel);
-            RelayHistory.Unit topUnit = newest.units.get(0);
+            RelayHistory.Unit newestUnit = newest.units.get(0);
+            RelayHistory.Unit topUnit = previewUnit(channel, newest.units); // Polish 1: CRT previews the newest root
             ArrayList<TLRPC.Message> top = messages(channel, Collections.singletonList(topUnit), usersOut);
             row.top = top.get(0);
 
@@ -196,7 +197,7 @@ final class RelayReadPath {
             d.peer = directory.peer(channel);
             d.top_message = topUnit.localId;
             int unreadCount = RelayDirectory.unreadCount(snapshot, channel, member);
-            int readInbox = topUnit.localId;
+            int readInbox = newestUnit.localId;
             if (unreadCount > 0 && member != null) {
                 readInbox = 1;
                 Post boundary = null;
@@ -236,6 +237,24 @@ final class RelayReadPath {
         }
         RelayConfig.log(TAG, "dialog rows: " + rows.size() + " chats in " + (System.currentTimeMillis() - started) + " ms");
         return rows;
+    }
+
+    /**
+     * Polish 1: the chat list's preview (dialog {@code top_message}). With collapsed threads a megagroup previews its
+     * newest root post, as iOS does (replies live in their threads); DMs keep replies inline, so their newest post.
+     * Falls back to the newest message when the page has no root.
+     */
+    RelayHistory.Unit previewUnit(Channel channel, List<RelayHistory.Unit> newestFirst) {
+        RelayHistory.Unit newest = newestFirst.get(0);
+        if (channel.isDirect() || !RelayThreadsHooks.collapsedThreads(account.account)) {
+            return newest;
+        }
+        for (RelayHistory.Unit unit : newestFirst) {
+            if (!unit.layout.post.isReply()) {
+                return unit;
+            }
+        }
+        return newest;
     }
 
     static TLRPC.TL_peerNotifySettings notifySettings(ChannelMember member) {

@@ -17,5 +17,10 @@
             android:name="org.relaychat.debug.RelayFindingDebugHooks"
             android:authorities="${applicationId}.relaydebug.a7b"
             android:exported="false" />
+        <!-- Polish 1 test hooks (forced id renumber, chat dump, keep-alive, logout, profile). -->
+        <provider
+            android:name="org.relaychat.debug.RelayPolish1DebugHooks"
+            android:authorities="${applicationId}.relaydebugpolish1"
+            android:exported="false" />
     </application>
 </manifest>

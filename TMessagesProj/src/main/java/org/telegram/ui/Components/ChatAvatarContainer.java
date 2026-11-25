@@ -987,7 +987,7 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
             emojiStatusDrawable.setColor(getThemedColor(Theme.key_profile_verifiedBackground));
             titleTextView.setRightDrawable(emojiStatusDrawable);
             rightDrawableIsScamOrVerified = false;
-            rightDrawableContentDescription = getString(R.string.AccDescrPremium);
+            rightDrawableContentDescription = org.telegram.relay.RelayConfig.ENABLED ? getString(R.string.RelayCustomStatus) : getString(R.string.AccDescrPremium); // Relay polish1
         } else {
             titleTextView.setRightDrawable(null);
             rightDrawableContentDescription = null;

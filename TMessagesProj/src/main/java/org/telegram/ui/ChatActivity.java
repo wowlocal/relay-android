@@ -5139,7 +5139,7 @@ public class ChatActivity extends BaseFragment implements
                             final DialogsActivity fragment = new DialogsActivity(args);
                             fragment.setDelegate(ChatActivity.this);
                             presentFragment(fragment);
-                        } else {
+                        } else if (!org.telegram.relay.ui.RelayThreadsUi.replyInThread(ChatActivity.this, getSlidingMessageObject())) { // Relay polish1: CRT swipe = thread
                             showFieldPanelForReply(getSlidingMessageObject());
                         }
                     }
@@ -7524,12 +7524,12 @@ public class ChatActivity extends BaseFragment implements
                             span = new AnimatedEmojiSpan(documentId, fontMetrics);
                         }
                         emoji.setSpan(span, 0, emoji.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        chatActivityEnterView.replaceWithText(start, len, emoji, false);
+                        chatActivityEnterView.replaceWithText(start, len, org.telegram.relay.RelayConfig.ENABLED ? TextUtils.concat(emoji, " ") : emoji, false); // Relay polish1: trailing space
                     } catch (Exception ignore) {
                         chatActivityEnterView.replaceWithText(start, len, code, true);
                     }
                 } else {
-                    chatActivityEnterView.replaceWithText(start, len, code, true);
+                    chatActivityEnterView.replaceWithText(start, len, org.telegram.relay.RelayConfig.ENABLED ? code + " " : code, true); // Relay polish1: trailing space
                 }
                 mentionContainer.updateVisibility(false);
             }
@@ -8152,7 +8152,8 @@ public class ChatActivity extends BaseFragment implements
                 selectedMessagesCanStarIds[a].clear();
             }
             hideActionMode();
-            if (messageObject != null && (messageObject.messageOwner.id > 0 || messageObject.messageOwner.id < 0 && currentEncryptedChat != null)) {
+            if (messageObject != null && (messageObject.messageOwner.id > 0 || messageObject.messageOwner.id < 0 && currentEncryptedChat != null)
+                    && !org.telegram.relay.ui.RelayThreadsUi.replyInThread(ChatActivity.this, messageObject)) { // Relay polish1: CRT reply = thread
                 showFieldPanelForReply(messageObject);
             }
             updatePinnedMessageView(true);
@@ -23289,6 +23290,8 @@ public class ChatActivity extends BaseFragment implements
 
                     if (newMsgObj.media instanceof TLRPC.TL_messageMediaGame) {
                         obj.applyNewText();
+                    } else if (org.telegram.relay.bridge.RelayHooks.reapplySentText(obj)) { // Relay polish1: server-rendered text
+                        mediaUpdated = true;
                     }
                 }
                 if (updatedForward) {
@@ -43011,6 +43014,9 @@ public class ChatActivity extends BaseFragment implements
                 message = group.messages.get(0);
             } else {
                 message = cell.getMessageObject();
+            }
+            if (org.telegram.relay.ui.RelayThreadsUi.openFromFooter(ChatActivity.this, message)) {
+                return; // Relay polish1: the thread opens at its first unread reply (thread last_viewed_at), as iOS
             }
             int maxReadId;
             long linkedChatId;
