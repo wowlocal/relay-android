@@ -470,11 +470,12 @@ def main():
         if more:
             d.tap_node(max(more, key=lambda n: n.bounds[0]))
             time.sleep(1.5)
-        leave = wait_until(lambda: next((n for n in d.dump() if n.text in ("Leave channel", "Leave group", "Delete and leave group", "Leave Group", "Leave Channel")), None), timeout=5)
+        leave = wait_until(lambda: next((n for n in d.dump() if n.text in ("Leave group", "Leave Group", "Leave channel", "Leave Channel")), None), timeout=5)
         if leave:
             d.tap_node(leave)
             time.sleep(1.5)
-            confirm = wait_until(lambda: next((n for n in d.dump() if n.text.upper() in ("LEAVE GROUP", "LEAVE CHANNEL", "LEAVE", "DELETE AND LEAVE", "DELETE CHAT")), None), timeout=5)
+            # The alert's title says "Leave Group" too: its button is the last match.
+            confirm = wait_until(lambda: ([n for n in d.dump() if n.text.upper() in ("LEAVE GROUP", "LEAVE CHANNEL", "LEAVE")] or [None])[-1], timeout=5)
             if confirm:
                 t_leave = time.time()
                 d.tap_node(confirm)
