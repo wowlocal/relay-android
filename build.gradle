@@ -30,6 +30,18 @@ if (relayLocalPropsFile.exists()) {
 def relayProp = { String name -> (findProperty(name) ?: relayLocalProps.getProperty(name))?.toString()?.trim() ?: null }
 ext.relayBuildRoot = relayProp('relay.buildRoot')
 ext.relayAbis = relayProp('relay.abis')?.split(',')?.collect { it.trim() }?.findAll { it }
+// relay.signing: path to a keystore.properties (storeFile, storePassword, keyAlias, keyPassword)
+// kept outside the repo; when set, release builds are signed with it instead of upstream's
+// public placeholder keystore.
+ext.relaySigning = null
+def relaySigningPath = relayProp('relay.signing')
+if (relaySigningPath) {
+    def f = new File(relaySigningPath)
+    if (!f.isFile()) throw new GradleException("relay.signing: no such file: " + relaySigningPath)
+    def p = new Properties()
+    f.withInputStream { p.load(it) }
+    ext.relaySigning = p
+}
 if (relayBuildRoot) {
     allprojects { p ->
         def rel = p == rootProject ? '_root' : p.path.substring(1).replace(':', '/')

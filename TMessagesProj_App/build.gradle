@@ -60,10 +60,12 @@ android {
         }
 
         release {
-            storeFile file("../TMessagesProj/config/release.keystore")
-            storePassword RELEASE_STORE_PASSWORD
-            keyAlias RELEASE_KEY_ALIAS
-            keyPassword RELEASE_KEY_PASSWORD
+            // Relay: own release key from relay.signing (root build.gradle), else upstream's placeholder.
+            def s = rootProject.ext.relaySigning
+            storeFile s ? file(s.getProperty('storeFile')) : file("../TMessagesProj/config/release.keystore")
+            storePassword s ? s.getProperty('storePassword') : RELEASE_STORE_PASSWORD
+            keyAlias s ? s.getProperty('keyAlias') : RELEASE_KEY_ALIAS
+            keyPassword s ? s.getProperty('keyPassword') : RELEASE_KEY_PASSWORD
         }
     }
 
@@ -174,7 +176,7 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 36
-        versionName APP_VERSION_NAME
+        versionName RELAY_VERSION_NAME // Relay: Android shows Relay's version; versionCode stays upstream-derived
         ndkVersion "27.2.12479018"
 
         multiDexEnabled true

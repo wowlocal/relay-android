@@ -85,3 +85,9 @@
 # Use -keep to explicitly keep any other classes shrinking would remove
 #-dontoptimize
 #-dontobfuscate
+# Relay: the Mattermost client models are bound by Gson reflection, and the bridge builds
+# TL objects / looks up handlers reflectively — keep Relay's own code unshrunk and unrenamed.
+-keep class org.telegram.relay.** { *; }
+-keep class org.relaychat.** { *; }
+-keepattributes Signature, *Annotation*, InnerClasses, EnclosingMethod
+-dontwarn org.telegram.relay.**
