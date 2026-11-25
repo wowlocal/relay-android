@@ -1297,6 +1297,9 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_WELCOME_REVERT = 116;
     public final static int OPTION_SEND_MONEY = 117;
     public final static int OPTION_STOP_LIVE_LOCATION = 118;
+    /** Relay (A7b): Mattermost saved (flagged) posts. */
+    public final static int OPTION_RELAY_SAVE_POST = 7301;
+    public final static int OPTION_RELAY_UNSAVE_POST = 7302;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -19537,6 +19540,10 @@ public class ChatActivity extends BaseFragment implements
             } else {
                 bottomOverlayText.setText(LocaleController.formatString("SendMessageRestricted", R.string.SendMessageRestricted, LocaleController.formatDateForBan(currentChat.banned_rights.until_date)));
             }
+            if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.bridge.RelayFinding.isArchived(currentChat.id)) {
+                // Relay (A7b): an archived Mattermost channel is read-only.
+                bottomOverlayText.setText(LocaleController.getString(R.string.RelayChannelArchivedNotice));
+            }
             bottomOverlay.setVisibility(View.VISIBLE);
             if (mentionListAnimation != null) {
                 mentionListAnimation.cancel();
@@ -31967,6 +31974,15 @@ public class ChatActivity extends BaseFragment implements
                 icons.add(R.drawable.msg_calendar2);
             }
 
+            if (org.telegram.relay.RelayConfig.ENABLED && selectedObject != null && selectedObject.getId() > 0
+                    && !selectedObject.isSending() && !(selectedObject.messageOwner instanceof TLRPC.TL_messageService)) {
+                // Relay (A7b): save / unsave the post (Mattermost flag, listed in Settings → Saved Posts).
+                final boolean relaySaved = org.telegram.relay.bridge.RelayFinding.isSaved(currentAccount, selectedObject.getDialogId(), selectedObject.getId());
+                items.add(LocaleController.getString(relaySaved ? R.string.RelayUnsavePost : R.string.RelaySavePost));
+                options.add(relaySaved ? OPTION_RELAY_UNSAVE_POST : OPTION_RELAY_SAVE_POST);
+                icons.add(relaySaved ? R.drawable.msg_unfave : R.drawable.msg_fave);
+            }
+
             if (org.telegram.relay.RelayConfig.ENABLED) {
                 // Relay: no Telegram-only message actions (report, translate, stickers/GIFs, gifts, …).
                 org.telegram.relay.RelayFeatures.filterMessageOptions(options, items, icons);
@@ -34824,6 +34840,18 @@ public class ChatActivity extends BaseFragment implements
                 if (user != null) {
                     presentFragment(new WalletSendEnterAmount(user).setAllowOpenChat());
                 }
+                break;
+            }
+            case OPTION_RELAY_SAVE_POST:
+            case OPTION_RELAY_UNSAVE_POST: {
+                final boolean save = option == OPTION_RELAY_SAVE_POST;
+                org.telegram.relay.bridge.RelayFinding.setSaved(currentAccount, selectedObject.getDialogId(), selectedObject.getId(), save, (ok, error) -> {
+                    if (error != null) {
+                        BulletinFactory.of(this).createErrorBulletin(error).show();
+                    } else {
+                        BulletinFactory.of(this).createSimpleBulletin(save ? R.raw.saved_messages : R.raw.chats_infotip, LocaleController.getString(save ? R.string.RelayPostSaved : R.string.RelayPostUnsaved)).show();
+                    }
+                });
                 break;
             }
             case OPTION_PIN: {

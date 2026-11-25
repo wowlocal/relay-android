@@ -621,6 +621,7 @@ final class RelayReadPath {
         full.notify_settings = notifySettings(member);
         full.pts = account.db().pts(RelayDatabase.channelBox(full.id));
         full.can_view_participants = true;
+        RelayFinding.fillFull(account, channel, full); // A7b: pinned message, purpose/header cache
         TLRPC.TL_messages_chatFull res = new TLRPC.TL_messages_chatFull();
         res.full_chat = full;
         res.chats.add(directory.tlChannel(channel));

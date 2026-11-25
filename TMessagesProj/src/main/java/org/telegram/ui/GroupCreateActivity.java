@@ -244,6 +244,9 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
             maxCount = 0;
         } else if (isCall) {
             maxCount = getMessagesController().conferenceCallSizeLimit - 1;
+        } else if (org.telegram.relay.RelayConfig.ENABLED && chatType == ChatObject.CHAT_TYPE_CHAT) {
+            // Relay (A7b): a Mattermost group message has 3–8 members, the user included.
+            maxCount = RELAY_GROUP_MESSAGE_MAX;
         } else {
             maxCount = chatType == ChatObject.CHAT_TYPE_CHAT ? getMessagesController().maxMegagroupCount : getMessagesController().maxBroadcastCount;
         }
@@ -336,6 +339,8 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
             } else {
                 actionBar.setTitle(getString(R.string.NeverShareWithTitle));
             }
+        } else if (org.telegram.relay.RelayConfig.ENABLED && chatType == ChatObject.CHAT_TYPE_CHAT) {
+            actionBar.setTitle(getString(R.string.RelayNewGroupMessage));
         } else {
             actionBar.setTitle(chatType == ChatObject.CHAT_TYPE_CHAT ? getString(R.string.NewGroup) : getString(R.string.NewBroadcastList));
         }
@@ -999,6 +1004,56 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
 
     }
 
+    /** Relay (A7b): others in a Mattermost group message (8 members at most, the user included). */
+    private static final int RELAY_GROUP_MESSAGE_MAX = 7;
+    private boolean relayCreating;
+
+    /** Relay (A7b): New Group Message → a Mattermost GM (a DM for one person); no name screen. */
+    private void relayCreateGroupMessage(ArrayList<Long> userIds) {
+        if (relayCreating || userIds.isEmpty()) {
+            return;
+        }
+        relayCreating = true;
+        long[] ids = new long[userIds.size()];
+        for (int a = 0; a < ids.length; a++) {
+            ids[a] = userIds.get(a);
+        }
+        final AlertDialog progress = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+        progress.setCanCancel(false);
+        showDialog(progress);
+        org.telegram.relay.bridge.RelayFinding.createGroupMessage(currentAccount, ids, (dialogId, error) -> {
+            if (dialogId == null || dialogId == 0) {
+                relayCreating = false;
+                progress.dismiss();
+                if (error != null) {
+                    BulletinFactory.of(this).createErrorBulletin(error).show();
+                }
+                return;
+            }
+            Runnable open = () -> {
+                progress.dismiss();
+                Bundle args = new Bundle();
+                if (dialogId > 0) {
+                    args.putLong("user_id", dialogId);
+                } else {
+                    args.putLong("chat_id", -dialogId);
+                }
+                getNotificationCenter().postNotificationName(NotificationCenter.closeChats);
+                presentFragment(new ChatActivity(args), true);
+            };
+            if (dialogId < 0 && getMessagesController().getChat(-dialogId) == null) {
+                org.telegram.relay.bridge.RelayFinding.loadChat(currentAccount, -dialogId, (chat, e) -> {
+                    if (chat != null) {
+                        getMessagesController().putChat(chat, false);
+                    }
+                    open.run();
+                });
+            } else {
+                open.run();
+            }
+        });
+    }
+
     private boolean onDonePressed(boolean alert) {
         if (selectedContacts.isEmpty() && (chatType != ChatObject.CHAT_TYPE_CHANNEL && addToGroup)) {
             return false;
@@ -1086,6 +1141,8 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                             delegate.didSelectUsers(selectedPremium != null, selectedMiniApps != null, result);
                         }
                         finishFragment();
+                    } else if (org.telegram.relay.RelayConfig.ENABLED && chatType == ChatObject.CHAT_TYPE_CHAT) {
+                        relayCreateGroupMessage(result);
                     } else {
                         Bundle args = new Bundle();
 
@@ -1342,6 +1399,9 @@ public class GroupCreateActivity extends BaseFragment implements NotificationCen
                         inviteViaLink = ChatObject.canUserDoAdminAction(chat, ChatObject.ACTION_INVITE) && !ChatObject.isPublic(chat) ? 2 : 0;
                     } else {
                         inviteViaLink = 0;
+                    }
+                    if (org.telegram.relay.RelayConfig.ENABLED) {
+                        inviteViaLink = 0; // Relay (A7b): no Telegram invite links
                     }
                     if (inviteViaLink != 0) {
                         usersStartRow++;

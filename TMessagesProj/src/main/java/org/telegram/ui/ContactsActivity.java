@@ -565,7 +565,12 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
                             presentFragment(new GroupInviteActivity(chatId != 0 ? chatId : channelId));
                         }
                     } else {
-                        if (row == 0) {
+                        if (listViewAdapter.relayExtraTopRows() > 0 && row == 1) {
+                            // Relay (A7b): Mattermost channel creation and the channel directory.
+                            presentFragment(new org.telegram.relay.ui.RelayNewChannelActivity());
+                        } else if (listViewAdapter.relayExtraTopRows() > 0 && row == 2) {
+                            presentFragment(new org.telegram.relay.ui.RelayBrowseChannelsActivity());
+                        } else if (row == 0) {
                             if (MessagesController.getInstance(currentAccount).isFrozen()) {
                                 AccountFrozenAlert.show(currentAccount);
                                 return;

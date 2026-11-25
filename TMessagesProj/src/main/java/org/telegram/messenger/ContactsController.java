@@ -388,7 +388,11 @@ public class ContactsController extends BaseController {
 
     public void checkAppAccount() {
         if (!org.telegram.relay.RelayFeatures.PHONE_CONTACTS) {
-            // Relay: no Android system account and no phone-book sync.
+            // Relay: no Android system account and no phone-book sync. The contacts are the Mattermost user
+            // directory (contacts.getContacts, A7b): New Message, Add Members, the Contacts tab.
+            if (getUserConfig().isClientActivated()) {
+                readContacts();
+            }
             return;
         }
         systemAccount = null;

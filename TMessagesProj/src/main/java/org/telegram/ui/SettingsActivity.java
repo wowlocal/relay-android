@@ -890,6 +890,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private static final int RELAY_ID_PASSCODE = 43;
     private static final int RELAY_ID_STATUS = 44;
     private static final int RELAY_ID_CUSTOM_STATUS = 45;
+    private static final int RELAY_ID_SAVED_POSTS = 46; // A7b
+    private static final int RELAY_ID_MENTIONS = 47;
 
     /**
      * Relay: the settings list. Mattermost account (server), the local app settings that work
@@ -909,6 +911,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(RELAY_ID_SERVER, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.menu_website, getString(R.string.RelaySettingsServer), org.telegram.relay.auth.RelayAuth.displayHost(session.serverUrl)));
             items.add(UItem.asShadow(null));
         }
+        // A7b: Mattermost's saved (flagged) posts and recent mentions.
+        items.add(SettingCell.Factory.of(RELAY_ID_SAVED_POSTS, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_saved, getString(R.string.RelaySavedPosts)));
+        items.add(SettingCell.Factory.of(RELAY_ID_MENTIONS, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.msg_mention, getString(R.string.RelayRecentMentions)));
+        items.add(UItem.asShadow(null));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
         items.add(SettingCell.Factory.of(5, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.settings_sounds, getString(R.string.SettingsNotifications), getString(R.string.SettingsNotificationsInfo)));
         items.add(SettingCell.Factory.of(6, IconBackgroundColors.BLUE_DEEP.top, IconBackgroundColors.BLUE_DEEP.bottom, R.drawable.settings_data, getString(R.string.SettingsData), getString(R.string.SettingsDataInfo)));
@@ -955,6 +961,12 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             case RELAY_ID_ABOUT:
                 presentSettingFragment(new org.telegram.relay.ui.RelayAboutActivity());
+                break;
+            case RELAY_ID_SAVED_POSTS:
+                presentSettingFragment(org.telegram.relay.ui.RelayPostListActivity.saved());
+                break;
+            case RELAY_ID_MENTIONS:
+                presentSettingFragment(org.telegram.relay.ui.RelayPostListActivity.mentions());
                 break;
             case RELAY_ID_PASSCODE:
                 presentSettingFragment(PasscodeActivity.determineOpenFragment());
@@ -1033,7 +1045,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             }
             return;
         }
-        if (item.id >= RELAY_ID_SERVER && item.id <= RELAY_ID_CUSTOM_STATUS) {
+        if (item.id >= RELAY_ID_SERVER && item.id <= RELAY_ID_MENTIONS) {
             onRelayClick(item.id, view);
             return;
         }
