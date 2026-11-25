@@ -156,6 +156,10 @@ final class RelayStubs {
         Stub emptyMessages = (req, account) -> new TLRPC.TL_messages_messages();
         map.put(TLRPC.TL_messages_search.class, emptyMessages);           // pinned bar, shared media (A7)
         map.put(TLRPC.TL_messages_getScheduledHistory.class, emptyMessages);
+        // Polish 2a: Telegram's saved-messages "chats" view (opening Saved Messages or a GM): nothing to list. As errors
+        // they surfaced with premium.getBoostsStatus as "Unknown error: RELAY_UNSUPPORTED" (QA-07).
+        map.put(TLRPC.TL_messages_getSavedHistory.class, emptyMessages);
+        map.put(TLRPC.TL_messages_getSavedDialogs.class, (req, account) -> new TLRPC.TL_messages_savedDialogs());
         map.put(TLRPC.TL_messages_getSponsoredMessages.class, (req, account) -> new TLRPC.TL_messages_sponsoredMessagesEmpty());
         map.put(TLRPC.TL_messages_getPeerSettings.class, (req, account) -> {
             TLRPC.TL_messages_peerSettings s = new TLRPC.TL_messages_peerSettings();

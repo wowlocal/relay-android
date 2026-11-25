@@ -166,7 +166,12 @@ public final class RelayGroupSession implements RelayGroupCall.Observer {
             }
             RelayLiveKitEngine engine = RelayVoip.engine();
             RelayCall.Kind kind = known != null ? known.kind : RelayCall.Kind.CHANNEL;
-            RelayGroupCall controller = RelayGroupCall.join(manager.client, engine, manager.scheduler, manager.ownUserId, manager.deviceId, channel, callId, kind);
+            // Polish 2a: a group-message call still ringing for this user is accepted (the plugin stops the ring and
+            // records the answer), as iOS's RelayGroupCall.incoming(…).accept(); otherwise a plain join.
+            boolean ringing = known != null && known.kind == RelayCall.Kind.GROUP && known.isRinging(manager.ownUserId);
+            RelayGroupCall controller = ringing
+                    ? RelayGroupCall.incoming(manager.client, engine, manager.scheduler, manager.ownUserId, manager.deviceId, known)
+                    : RelayGroupCall.join(manager.client, engine, manager.scheduler, manager.ownUserId, manager.deviceId, channel, callId, kind);
             session = new RelayGroupSession(manager, channel, chatTlId, controller, engine);
             session.callId = callId;
             session.callTlId = callTlId;
@@ -175,8 +180,11 @@ public final class RelayGroupSession implements RelayGroupCall.Observer {
                 controller.setMuted(true);
             }
             session.begin();
+            if (ringing) {
+                controller.accept();
+            }
             session.answerJoin(answer, req.muted);
-            Log.i(TAG, "joinGroupCall: " + callId + " in " + channel);
+            Log.i(TAG, "joinGroupCall: " + callId + " in " + channel + (ringing ? " (ring accepted)" : ""));
         });
     }
 

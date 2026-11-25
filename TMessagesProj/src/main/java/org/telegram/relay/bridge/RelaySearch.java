@@ -1101,7 +1101,15 @@ final class RelaySearch {
             teams.add(team.id);
         }
         List<Post> posts = searchPosts(teams, terms.toString(), true, null);
-        found = messagesOf(posts, KIND_TEXT, true);
+        // Polish 2a (QA-17): the user's own posts are not mentions (as Mattermost's Recent Mentions); an own reply
+        // that names the user also listed its thread root.
+        List<Post> others = new ArrayList<>();
+        for (Post post : posts) {
+            if (!account.session.userId.equals(post.userId)) {
+                others.add(post);
+            }
+        }
+        found = messagesOf(others, KIND_TEXT, true);
         remember("mentions", found);
         return found;
     }

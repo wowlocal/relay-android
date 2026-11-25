@@ -180,7 +180,9 @@ def main():
         eng = teams["engineering"]
         dm_bob = bob.call("POST", "/channels/direct", [bob.me["id"], alice.me["id"]])
         dm_carol = carol.call("POST", "/channels/direct", [carol.me["id"], alice.me["id"]])
-        gm = next(c for c in channels.values() if c["type"] == "G" and c["display_name"].count(",") == 2)
+        # A GM with posts (one a test created and cleaned up has none, and no dialog).
+        gm = next(c for c in channels.values() if c["type"] == "G" and c["display_name"].count(",") == 2
+                  and alice.get("/channels/%s/posts?per_page=1" % c["id"])["order"])
         sandbox = next(c for c in channels.values() if c["name"] == "sandbox" and c["team_id"] == eng["id"])
         try:
             bob.call("POST", "/channels/%s/members" % sandbox["id"], {"user_id": bob.me["id"]})

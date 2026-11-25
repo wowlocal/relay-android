@@ -1498,6 +1498,21 @@ public class NotificationsController extends BaseController implements Notificat
                     }
                     newCount = currentCount + newCount;
                 }
+                if (org.telegram.relay.RelayConfig.ENABLED && newCount > 0) {
+                    // Relay (polish 2a): a chat counts its notified posts (pushMessages), not its whole unread backlog
+                    // (the summary said "82 new messages from 13 chats" after login and with every later post).
+                    int pending = 0;
+                    for (int i = 0; i < pushMessages.size(); i++) {
+                        MessageObject m = pushMessages.get(i);
+                        if (m.getDialogId() == dialogId && !m.isStoryPush && !m.isStoryReactionPush) {
+                            pending++;
+                        }
+                    }
+                    if (pending == 0) {
+                        continue;
+                    }
+                    newCount = Math.min(newCount, pending);
+                }
                 if (canAddValue || newCount == 0) {
                     if (currentCount != null) {
                         if (getMessagesController().isForum(dialogId)) {
@@ -1612,6 +1627,9 @@ public class NotificationsController extends BaseController implements Notificat
                         continue;
                     }
                     MessageObject messageObject = new MessageObject(currentAccount, message, false, false);
+                    if (org.telegram.relay.RelayConfig.ENABLED && !org.telegram.relay.bridge.RelayNotifications.shouldNotifyStored(currentAccount, messageObject)) {
+                        continue; // Relay (polish 2a): history from before the session, or a post Mattermost would not push
+                    }
                     if (isPersonalMessage(messageObject)) {
                         personalCount++;
                     }
@@ -1649,7 +1667,17 @@ public class NotificationsController extends BaseController implements Notificat
                     }
                 }
             }
-            for (int a = 0; a < dialogs.size(); a++) {
+            if (org.telegram.relay.RelayConfig.ENABLED) {
+                // Relay (polish 2a): the summary counts notified posts only, not each chat's whole unread backlog
+                // ("82 new messages from 13 chats" after login, re-posted with every later notification).
+                for (int a = 0; a < pushMessages.size(); a++) {
+                    long did = pushMessages.get(a).getDialogId();
+                    Integer current = pushDialogs.get(did);
+                    pushDialogs.put(did, current == null ? 1 : current + 1);
+                    total_unread_count++;
+                }
+            }
+            for (int a = 0; a < dialogs.size() && !org.telegram.relay.RelayConfig.ENABLED; a++) {
                 long dialog_id = dialogs.keyAt(a);
                 int index = settingsCache.indexOfKey(dialog_id);
                 boolean value;

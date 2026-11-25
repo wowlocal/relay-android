@@ -45,7 +45,8 @@ FORBIDDEN = a6.FORBIDDEN + [
     (r"add to contacts|share contact|edit contact|delete contact", "Contacts"),
     (r"disable sharing|enable sharing", "Sharing restrictions"),
     (r"statistic", "Statistics"),
-    (r"video chat|voice chat|live stream|start video", "Video chat"),
+    # A8: Relay calls and video chats are features (Video Call, Voice Chat, call records); RTMP streams are not.
+    (r"live stream", "Video chat"),
     (r"saved gifs|save as sticker|add to stickers|add to favorites", "Stickers/GIFs"),
     (r"privacy and security|privacy settings", "Privacy"),
     (r"chat history for new|^chat history", "Chat history"),
@@ -55,7 +56,8 @@ FORBIDDEN = a6.FORBIDDEN + [
 ]
 FORBIDDEN_RX = [(re.compile(p, re.I), label) for p, label in FORBIDDEN]
 # Text on screen that is ours (seeded messages) or legitimately mentions a forbidden word.
-ALLOWED = re.compile(r"^\[relay-e2e a6b\]|Autoplay GIFs|Telegram for Android|GNU General Public License|trademark|Boost\.Regex", re.I)
+ALLOWED = re.compile(r"^\[relay-e2e a6b\]|Autoplay GIFs|Telegram for Android|GNU General Public License|trademark|Boost\.Regex"
+                     r"|^Video Call$|^Voice Call$", re.I)  # A8: Relay calls in DMs
 
 
 def forbidden_hits(texts):
@@ -132,11 +134,13 @@ def seed(user, password):
     dm = alice.call("POST", "/channels/direct", [alice.me["id"], me.me["id"]])
     teams = me.call("GET", "/users/me/teams")
     team = sorted(teams, key=lambda t: t["name"])[0]
+    posts = []  # (client, post id), deleted at the end
     target = alice.call("POST", "/posts", {"channel_id": dm["id"], "message": PROBE + " permalink target"})
+    posts.append((alice, target["id"]))
     permalink = "%s/%s/pl/%s" % (r.MM_URL, team["name"], target["id"])
-    alice.call("POST", "/posts", {"channel_id": dm["id"], "message": permalink})
-    alice.call("POST", "/posts", {"channel_id": dm["id"], "message": "https://t.me/durov"})
-    alice.call("POST", "/posts", {"channel_id": dm["id"], "message": PROBE + " long-press me"})
+    # With a comment: a permalink-only post shows as "Forwarded from …" since polish 1 (no link to tap).
+    for text in ("see " + permalink, "https://t.me/durov", PROBE + " long-press me"):
+        posts.append((alice, alice.call("POST", "/posts", {"channel_id": dm["id"], "message": text})["id"]))
 
     admin_channel = None
     for t in teams:
@@ -151,9 +155,9 @@ def seed(user, password):
             break
     if admin_channel is None:
         admin_channel = me.call("GET", "/teams/%s/channels/name/town-square" % team["id"])
-    me.call("POST", "/posts", {"channel_id": admin_channel["id"], "message": PROBE + " channel message"})
+    posts.append((me, me.call("POST", "/posts", {"channel_id": admin_channel["id"], "message": PROBE + " channel message"})["id"]))
     return {"dm": dm["id"], "team": team["name"], "post": target["id"], "permalink": permalink,
-            "channel": admin_channel["id"], "channel_name": admin_channel["display_name"]}
+            "channel": admin_channel["id"], "channel_name": admin_channel["display_name"], "posts": posts}
 
 
 # MARK: - scenarios
@@ -242,13 +246,17 @@ def scenario_dm(d, check, seeded):
 
     # Links: the permalink stays in the app (RelayLinks hook), t.me goes to the browser.
     d.logcat_clear()
-    if tap_message(d, "/pl/" + seeded["post"], dx=0.12):
+    if tap_message(d, "/pl/" + seeded["post"], dx=0.3):
         m = d.wait_log(r"open POST team=(\S+) value=(\S+)", timeout=8, tags=["RelayLinks"])
         check.ok("tap on a permalink → RelayLinks POST hook", m is not None and m.group(2) == seeded["post"] and m.group(1) == seeded["team"],
                  m.group(0) if m else d.logcat("RelayLinks")[-300:])
         check.ok("permalink: no 'Open this link?' alert", d.find(text="Open") is None)
     else:
         check.ok("permalink message visible", False)
+    # The permalink opened its target post (scrolled the chat): open the DM again at its bottom.
+    back(d)
+    d.broadcast("org.relaychat.DEBUG_OPEN_CHAT", channel=seeded["dm"])
+    time.sleep(3)
     d.logcat_clear()
     if tap_message(d, "t.me/durov", dx=0.1):
         m = d.wait_log(r"browser: t\.me", timeout=8, tags=["RelayLinks"])
@@ -263,7 +271,7 @@ def scenario_dm(d, check, seeded):
         if d.package in focus:
             check.ok("t.me link opened no in-app screen", True, focus.strip())
         else:
-            d.launch()
+            launch_nowait(d)
             time.sleep(2)
     else:
         check.ok("t.me message visible", False)
@@ -322,9 +330,7 @@ def scenario_channel(d, check, seeded):
 
 
 def scenario_settings(d, check):
-    if a6.wait_chat_list(d, timeout=8) is None:
-        d.launch()
-        a6.wait_chat_list(d, timeout=20)
+    go_chat_list(d)
     if a6.tap_text(d, "Settings") is None:
         check.ok("Settings tab opens", False)
         return
@@ -394,14 +400,29 @@ def scenario_links_system(d, check, seeded):
         ("https://telegram.me/durov", r"browser: telegram\.me", "in-app telegram.me link → browser"),
         ("relay://localhost:8065/%s/channels/town-square" % seeded["team"], r"open CHANNEL team=\S+ value=town-square", "in-app relay:// channel link → hook"),
     ):
-        d.launch()
-        time.sleep(1)
+        launch_nowait(d)  # a browser may be in front: `am start -W` would wait for it
+        time.sleep(1.5)
         d.logcat_clear()
         d.broadcast("org.relaychat.DEBUG_OPEN_URL", url=url)
         m = d.wait_log(pattern, timeout=8, tags=["RelayLinks"])
         check.ok(label, m is not None, d.logcat("RelayLinks")[-200:])
-    d.launch()
+    launch_nowait(d)
     time.sleep(1.5)
+
+
+def launch_nowait(d):
+    d.shell("am start -n " + r.LAUNCHER, check=False)
+
+
+def go_chat_list(d, tries=5):
+    """Back to the chat list (phones stack chat → info → edit; tablets show the list beside them)."""
+    for _ in range(tries):
+        if a6.wait_chat_list(d, timeout=2) is not None:
+            return True
+        back(d)
+        time.sleep(0.8)
+    launch_nowait(d)
+    return a6.wait_chat_list(d, timeout=20) is not None
 
 
 def main():
@@ -418,13 +439,25 @@ def main():
         print(d.install().strip().splitlines()[-1])
 
     seeded = seed(args.user, password)
-    print("seeded:", {k: v for k, v in seeded.items() if k != "permalink"})
+    print("seeded:", {k: v for k, v in seeded.items() if k not in ("permalink", "posts")})
+    try:
+        run_scenarios(d, check, args, password, seeded)
+    finally:
+        for client, post_id in seeded["posts"]:
+            try:
+                client.call("DELETE", "/posts/%s" % post_id)
+            except Exception:  # noqa: BLE001
+                pass
+    print(check.summary())
+    sys.exit(0 if check.passed else 1)
+
+
+def run_scenarios(d, check, args, password, seeded):
     nodes = a6.fresh_login(d, check, args.user, password)
     check.ok("chat list after login", nodes is not None)
     if nodes is None:
         shot(d, "no-chatlist")
-        print(check.summary())
-        sys.exit(1)
+        return
     time.sleep(3)
 
     scenario_chat_list(d, check)
@@ -439,8 +472,6 @@ def main():
     blocked = d.logcat("RelayFeatures")
     if blocked.strip():
         print("fragments refused by RelayFeatures.isFragmentAllowed:\n" + blocked)
-    print(check.summary())
-    sys.exit(0 if check.passed else 1)
 
 
 if __name__ == "__main__":

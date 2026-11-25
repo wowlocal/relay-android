@@ -4427,7 +4427,8 @@ public class ChatActivity extends BaseFragment implements
             if (currentUser != null && currentUser.self && getDialogId() != UserObject.VERIFY) {
                 headerItem.lazilyAddSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
             }
-            if (!isTopic && !ChatObject.isMonoForum(currentChat)) {
+            // Relay (polish 2a): Mattermost cannot clear a chat's history (as iOS: the item is hidden).
+            if (!isTopic && !ChatObject.isMonoForum(currentChat) && !org.telegram.relay.RelayConfig.ENABLED) {
                 clearHistoryItem = headerItem.lazilyAddSubItem(clear_history, R.drawable.msg_clear,
                     LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
             }
@@ -4438,7 +4439,7 @@ public class ChatActivity extends BaseFragment implements
                         if (currentChat.monoforum) {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveConversationMenu));
                         } else if (currentChat.megagroup) {
-                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveMegaMenu));
+                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(org.telegram.relay.RelayConfig.ENABLED && !"G".equals(org.telegram.relay.bridge.RelayFinding.kindOf(currentChat.id)) ? R.string.RelayLeaveChannel : R.string.LeaveMegaMenu)); // Relay (polish 2a, QA-20)
                         } else {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveChannelMenu));
                         }
@@ -13694,6 +13695,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void showScheduledHint() {
+        if (org.telegram.relay.RelayConfig.ENABLED) return; // Relay (polish 2a): no scheduling
         boolean disableNoSound = (UserObject.isUserSelf(currentUser) || (chatInfo != null && chatInfo.slowmode_next_send_date > 0) && chatMode == 0);
         if (scheduledHintShown || scheduledOrNoSoundHintShown || disableNoSound || SharedConfig.scheduledHintShows >= 3 || chatActivityEnterView.isEditingMessage()) {
             return;
@@ -13703,6 +13705,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private void showScheduledOrNoSoundHint() {
+        if (org.telegram.relay.RelayConfig.ENABLED) return; // Relay (polish 2a): no scheduling
         boolean disableNoSound = UserObject.isUserSelf(currentUser) || (chatInfo != null && chatInfo.slowmode_next_send_date > 0) && chatMode == 0 || chatMode == MODE_EDIT_BUSINESS_LINK;
         long scheduledOrNoSoundHintTimeFromLastSeen = System.currentTimeMillis() - SharedConfig.scheduledOrNoSoundHintSeenAt;
         long scheduledHintTimeFromLastSeen = System.currentTimeMillis() - SharedConfig.scheduledHintSeenAt;
@@ -36517,6 +36520,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public boolean canScheduleMessage() {
+        if (org.telegram.relay.RelayConfig.ENABLED) return false; // Relay (polish 2a): scheduled posts need a Mattermost license
         if (isQuickRepliesOrWelcomeMessagesMode()) return false;
         if (getMessagesController().isMonoForum(getDialogId())) {
             return false;
@@ -45148,7 +45152,7 @@ public class ChatActivity extends BaseFragment implements
                 if (ChatObject.isChannel(currentChat) && !currentChat.creator) {
                     if (!ChatObject.isNotInChat(currentChat)) {
                         if (currentChat.megagroup) {
-                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveMegaMenu));
+                            headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(org.telegram.relay.RelayConfig.ENABLED && !"G".equals(org.telegram.relay.bridge.RelayFinding.kindOf(currentChat.id)) ? R.string.RelayLeaveChannel : R.string.LeaveMegaMenu)); // Relay (polish 2a, QA-20)
                         } else {
                             headerItem.lazilyAddSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString(R.string.LeaveChannelMenu));
                         }

@@ -163,10 +163,15 @@ public final class RelayCallManager {
         }
         if (event.type == RelayCallsEvent.Type.INCOMING) {
             maybeRing(event.call);
+            RelayGroupRing.maybeRing(this, event.call); // polish 2a: group-message rings
         } else if (event.type == RelayCallsEvent.Type.ACTIVE_CALLS) {
             for (RelayCall call : event.calls) {
                 maybeRing(call);
+                RelayGroupRing.maybeRing(this, call);
+                RelayGroupRing.onCallChanged(this, call);
             }
+        } else if (event.call != null) {
+            RelayGroupRing.onCallChanged(this, event.call);
         }
     }
 

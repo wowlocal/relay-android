@@ -33,7 +33,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import relaye2e  # noqa: E402
-from test_a4_live import Rest, dump_dialogs, dump_messages, find_msg, open_chat, to_chat_list, wait_until  # noqa: E402
+from test_a4_live import Rest, REST_URL, dump_dialogs, dump_messages, find_msg, open_chat, to_chat_list, wait_until  # noqa: E402
 from test_a5_write import composer, tap_send  # noqa: E402
 
 PROBE = "[relay-e2e a7c]"
@@ -104,12 +104,20 @@ def main():
     check = relaye2e.Check("A7c composer/profile")
     d = relaye2e.Device()
     password = relaye2e.mm_password()
-    dave = Rest("dave", password)
+    # The app's user (default dave; RELAY_A7C_USER=alice when dave is busy on another device).
+    app_user = os.environ.get("RELAY_A7C_USER", "dave")
+    dave = Rest(app_user, password)
     bob = Rest("bob", password)
     t0 = int(time.time())
 
     # Originals, restored at the end.
     me0 = dave.get("/users/me")
+    avatar0 = None
+    if me0.get("last_picture_update", 0) > 0:
+        # A custom profile picture: kept and uploaded again at the end (the test sets and deletes one).
+        req = urllib.request.Request(REST_URL + "/api/v4/users/%s/image" % dave.me["id"], headers={"Authorization": "Bearer " + dave.token})
+        with urllib.request.urlopen(req) as res:
+            avatar0 = (res.read(), res.headers.get("Content-Type", "image/png"))
     status0 = dave.get("/users/me/status")
     prefs0 = [p for p in dave.get("/users/me/preferences") if p["category"] == "recent_emojis"]
     bob0 = bob.get("/users/me")
@@ -140,7 +148,7 @@ def main():
             d.launch()
             time.sleep(6)
             d.logcat_clear()
-            d.broadcast("org.relaychat.DEBUG_LOGIN", server=relaye2e.MM_URL, user="dave", password=password)
+            d.broadcast("org.relaychat.DEBUG_LOGIN", server=relaye2e.MM_URL, user=app_user, password=password)
             check.ok("login as dave", d.wait_log(r"DEBUG_LOGIN ok", timeout=40, tags=["RelayDebug"]))
             time.sleep(8)
         set_status(dave, "online")
@@ -446,7 +454,9 @@ def main():
             row = d.find(text="Keep connected in background")
             if row:
                 break
-            d.shell("input swipe 540 1800 540 700 300")
+            sizes = re.findall(r"(\d+)x(\d+)", d.shell("wm size"))
+            sw, sh = (int(sizes[-1][0]), int(sizes[-1][1])) if sizes else (1080, 2400)
+            d.shell("input swipe %d %d %d %d 300" % (sw // 2, int(sh * 0.75), sw // 2, int(sh * 0.3)))  # any screen size
             time.sleep(1)
         check.ok("keep connected: setting in Notifications", row)
         if row:
@@ -477,6 +487,13 @@ def main():
                     dave.call("DELETE", "/users/%s/image" % dave.me["id"])
                 except Exception:  # noqa: BLE001
                     pass
+            elif avatar0:
+                boundary = "relaya7cavatar%d" % t0
+                body = (("--%s\r\nContent-Disposition: form-data; name=\"image\"; filename=\"avatar\"\r\nContent-Type: %s\r\n\r\n"
+                         % (boundary, avatar0[1])).encode() + avatar0[0] + ("\r\n--%s--\r\n" % boundary).encode())
+                req = urllib.request.Request(REST_URL + "/api/v4/users/%s/image" % dave.me["id"], data=body, method="POST",
+                                             headers={"Authorization": "Bearer " + dave.token, "Content-Type": "multipart/form-data; boundary=" + boundary})
+                urllib.request.urlopen(req).read()
         except Exception as e:  # noqa: BLE001
             print("cleanup avatar:", e)
         try:

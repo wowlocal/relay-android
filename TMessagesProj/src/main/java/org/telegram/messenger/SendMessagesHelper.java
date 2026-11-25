@@ -2244,6 +2244,27 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
         long monoForumPeerId,
         MessageSuggestionParams suggestionParams
     ) {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            scheduleDate = 0; // Relay (polish 2a): no scheduled posts, forward now
+            scheduleRepeatPeriod = 0;
+        }
+        return sendMessageForward(messages, peer, forwardFromMyName, hideCaption, notify, scheduleDate, scheduleRepeatPeriod, replyToTopMsg, video_timestamp, payStars, monoForumPeerId, suggestionParams);
+    }
+
+    private int sendMessageForward(
+        ArrayList<MessageObject> messages,
+        final long peer,
+        boolean forwardFromMyName,
+        boolean hideCaption,
+        boolean notify,
+        int scheduleDate,
+        int scheduleRepeatPeriod,
+        MessageObject replyToTopMsg,
+        int video_timestamp,
+        long payStars,
+        long monoForumPeerId,
+        MessageSuggestionParams suggestionParams
+    ) {
         if (messages == null || messages.isEmpty()) {
             return 0;
         }
@@ -4440,6 +4461,12 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        if (org.telegram.relay.RelayConfig.ENABLED && sendMessageParams.scheduleDate != 0) {
+            // Relay (polish 2a): Mattermost has no scheduled posts here; a scheduled message would go out at once but
+            // stay in Telegram's scheduled list and never show in the chat. Send it now as a normal message.
+            sendMessageParams.scheduleDate = 0;
+            sendMessageParams.scheduleRepeatPeriod = 0;
+        }
         if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.ui.RelayComposerUi.interceptSend(currentAccount, sendMessageParams)) {
             return; // Relay (A7c): slash command, or an @channel confirmation first
         }

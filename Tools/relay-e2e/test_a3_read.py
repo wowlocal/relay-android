@@ -206,7 +206,9 @@ def main():
 
         # 1. Chat list vs REST.
         members = {m["channel_id"]: m for m in alice.get("/users/me/channel_members?per_page=200")}
-        channels = {c["id"]: c for c in alice.get("/users/me/channels?per_page=200") if not c.get("delete_at")}
+        # Chats without any post (e.g. a GM another test created and cleaned) have no dialog, by design since A3.
+        channels = {c["id"]: c for c in alice.get("/users/me/channels?per_page=200") if not c.get("delete_at")
+                    and alice.get("/channels/%s/posts?per_page=1" % c["id"])["order"]}
         config = alice.get("/config/client?format=old")
         prefs = alice.get("/users/me/preferences")
         crt_pref = next((p["value"] for p in prefs if p["category"] == "display_settings" and p["name"] == "collapsed_reply_threads"), None)
@@ -270,7 +272,8 @@ def main():
         nodes = d.dump()
         texts = " ".join(t.replace("\n", " ") for t in d.screen_texts(nodes))
         dm_posts = alice.get("/channels/%s/posts?per_page=30" % dm_bob["id"])
-        newest = [dm_posts["posts"][i] for i in dm_posts["order"]][:6]
+        # Plain posts: call records (A8, e.g. A8 run as alice) show as Telegram call bubbles, not their text.
+        newest = [dm_posts["posts"][i] for i in dm_posts["order"] if not dm_posts["posts"][i].get("type")][:6]
         visible = [p for p in newest if strip_md(p["message"])[:20] and strip_md(p["message"])[:20] in texts]
         check.ok("DM shows the newest posts from REST", len(visible) >= 3 and newest[0]["id"] in [p["id"] for p in visible],
                  "%d of %d newest visible" % (len(visible), len(newest)))

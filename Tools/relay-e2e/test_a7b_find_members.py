@@ -575,6 +575,8 @@ def scenario_pin_save(d, check, ctx):
         p = res["posts"][pid]
         if p.get("type", "").startswith("system_"):
             continue
+        if p.get("user_id") == carol.me["id"]:
+            continue  # polish 2a: own posts are not mentions (Mattermost's Recent Mentions)
         rest_mentions.add(p["root_id"] if crt_on and p.get("root_id") and p["channel_id"] not in dm_channels else pid)
     app_mentions = items(lines[-1]) if lines else []
     check.ok("Recent Mentions includes the new mention", posts["mention"] in app_mentions, str(app_mentions[:5]))
@@ -652,13 +654,15 @@ def scenario_dm_gm(d, check, ctx):
     texts = d.screen_texts()
     check.ok("New Group Message: people picker", "Alice Anderson" in texts, str(texts[:8]))
     a6.tap_text(d, "Alice Anderson")
-    a6.tap_text(d, "Bob Brennan")
+    third = ("%s %s" % (bob.me.get("first_name", ""), bob.me.get("last_name", ""))).strip()  # bob, or dave with --user bob
+    a6.tap_text(d, third)
     a6.tap_desc(d, "Next")
     time.sleep(5)
     gm = carol.call("POST", "/channels/group", [carol.me["id"], alice.me["id"], bob.me["id"]])
     texts = d.screen_texts()
     shot(d, "group-message")
-    check.ok("New Group Message → the GM chat opens", any("alice, bob, carol" in t for t in texts), str(texts[:8]))
+    title = ", ".join(sorted([carol.me["username"], alice.me["username"], bob.me["username"]]))
+    check.ok("New Group Message → the GM chat opens", any(title in t for t in texts), str(texts[:8]))
     text = "[relay-e2e a7b] gm %s" % ctx["stamp"]
     a5.send_text(d, text)
     time.sleep(4)
@@ -673,7 +677,9 @@ def scenario_dm_gm(d, check, ctx):
     target = ctx["dm_target"]
     open_new_message(d)
     node = d.find(text=target["name"])
-    if node is None:
+    for _ in range(6):  # the directory is sorted by presence: on a phone the person can be a few screens down
+        if node is not None:
+            break
         a6.swipe(d)
         node = d.find(text=target["name"])
     check.ok("New Message lists %s" % target["name"], node is not None)
@@ -731,7 +737,8 @@ def main():
     carol = Rest(args.user, password)
     alice = Rest("alice", password)
     dave = Rest("dave", password)
-    bob = Rest("bob", password)
+    # The GM's third member: bob, or dave when bob is the app's user (--user bob).
+    bob = Rest("bob" if args.user != "bob" else "dave", password)
     team = next(t for t in carol.call("GET", "/users/me/teams") if t["name"] == "engineering")["id"]
     ctx = {"carol": carol, "alice": alice, "dave": dave, "bob": bob, "team": team, "stamp": stamp, "cleanup_posts": [],
            "title": "Relay E2E A7b %s" % stamp, "name": "relay-e2e-a7b-%s" % stamp,

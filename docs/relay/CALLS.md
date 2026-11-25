@@ -83,11 +83,18 @@ edits the post when the call ends; the edit updates the bubble.
 - `Tools/relay-e2e/test_a8_calls.py` drives the app (dave) against the scripted peer (bob,
   `relay-calls-peer.py` with the `media-probe-venv` Python).
 
+## Group-message rings (polish 2a)
+
+An incoming group ring (`kind: group`, ringing for this user) rings with Telegram's own incoming group call
+(conference) notification and screen (`VoIPGroupNotification`: full-screen intent, Answer / Decline, ringtone) through
+`RelayGroupRing`; the caller's name and photo, the GM's title. Answer loads the GM's call (`chatFull.call`) and joins it
+through Telegram's join path; `joinGroupCall` of a call still ringing for the user accepts the ring on the plugin
+(`RelayGroupCall.incoming(…).accept()`, as iOS) instead of a plain join. Decline declines on the plugin; a ring that
+stops (answered elsewhere, caller gone, expired) is hidden, and an unanswered ring ends as missed on the plugin.
+
 ## Known gaps
 
 - No push wake-up for rings while the process is dead (rings arrive over the WebSocket; the keep-alive service or
   FCM from A7c keeps it alive). The plugin's VoIP push is APNs-only.
-- Group-message rings (`kind: group`) are joinable from the join panel, but an incoming group ring does not show the
-  1:1 ring screen (iOS rings them); unanswered they end as missed.
 - Per-user volume works for the local mix only; "mute for everyone" is not backed (admin features hidden).
 - Telegram's call log tab stays hidden (it needs `messages.search` with the phone-calls filter).

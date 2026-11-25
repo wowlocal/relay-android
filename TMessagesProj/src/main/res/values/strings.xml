@@ -11716,6 +11716,11 @@
     <!-- Relay A7c: reactions, composer, profile and status, notifications -->
     <string name="RelayKeepConnected">Keep connected in background</string>
     <string name="RelayKeepConnectedInfo">Receive new messages while Relay is closed, without push notifications. Shows a permanent notification.</string>
+    <!-- Polish 2a (data/sync) -->
+    <string name="RelayAddMemberNotInTeam">This person is not a member of the channel\'s team. Only team members can be added to a channel.</string>
+    <string name="RelayAddMemberFailed">Could not add this person to the channel.</string>
+    <string name="RelayLeaveChannel">Leave Channel</string>
+    <string name="RelayGroupMessageLabel">Group Message</string>
     <string name="RelayKeepConnectedChannel">Background connection</string>
     <string name="RelayKeepConnectedTitle">Relay is connected</string>
     <string name="RelayKeepConnectedText">Receiving new messages in the background</string>

@@ -696,6 +696,8 @@ public class ProfileSearchCell extends BaseCell implements NotificationCenter.No
                         statusString = getString(R.string.MegaLocation);
                     } else if (ChatObject.isMonoForum(chat)) {
                         statusString = getString(R.string.MonoforumMessages);
+                    } else if (org.telegram.relay.RelayConfig.ENABLED && org.telegram.relay.bridge.RelayFinding.typeLabel(chat.id) != null) {
+                        statusString = org.telegram.relay.bridge.RelayFinding.typeLabel(chat.id); // Relay (polish 2a, QA-20)
                     } else if (!ChatObject.isPublic(chat)) {
                         statusString = getString(R.string.MegaPrivate).toLowerCase();
                     } else {
