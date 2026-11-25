@@ -118,7 +118,14 @@ public final class RelayVoip {
             room.setLocalPreviewSink(RelayRoom.SOURCE_CAMERA, c.preview);
         }
         Log.i(TAG, "capturer " + id + " created (type " + type + ")");
-        apply(c, true);
+        if (!c.isScreen()) {
+            // Telegram's preview (video preview sheets, the call screen's own video): captured, published only once
+            // Telegram turns the video on (setVideoState / setupOutgoingVideoCreated) or the call wants it.
+            Throwable failure = room.setCameraCapture(true);
+            if (failure != null) {
+                Log.w(TAG, "camera preview failed: " + failure);
+            }
+        }
         return id;
     }
 
@@ -150,6 +157,9 @@ public final class RelayVoip {
             engine.room().setLocalPreviewSink(c.isScreen() ? RelayRoom.SOURCE_SCREEN : RelayRoom.SOURCE_CAMERA, null);
         }
         apply(c, false);
+        if (engine != null && !c.isScreen()) {
+            engine.room().setCameraCapture(false);
+        }
         releaseIfIdle();
     }
 
@@ -167,15 +177,11 @@ public final class RelayVoip {
         if (c.isScreen() || engine == null) {
             return;
         }
-        // Preview before the call is connected: the room's camera track (published later by the call).
         if (d != null) {
             d.call.setCameraEnabled(on);
         } else {
-            engine.room().setCameraEnabled(on, error -> {
-                if (error != null) {
-                    Log.w(TAG, "camera preview " + (on ? "on" : "off") + " failed: " + error);
-                }
-            });
+            // Before the call: preview only (the call publishes it once connected when it is a video call).
+            engine.room().setCameraCapture(on);
         }
     }
 }

@@ -31779,7 +31779,7 @@ public class ChatActivity extends BaseFragment implements
                         VoIPHelper.startCall(getMessagesController().getChat(call.chatId), null, null, false, getParentActivity(), ChatActivity.this, getAccountInstance());
                     }
                     return true;
-                } else if (ChatObject.canManageCalls(currentChat)) {
+                } else if (org.telegram.relay.RelayFeatures.canStartGroupCall(currentChat)) {
                     VoIPHelper.showGroupCallAlert(ChatActivity.this, currentChat, null, true, getAccountInstance());
                     return true;
                 }

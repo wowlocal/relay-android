@@ -132,6 +132,17 @@ public final class RelayFeatures {
         ChatActivity.OPTION_SEND_MONEY,
     };
 
+    /**
+     * A8: who may start a video chat in a chat. Relay: any member (the calls plugin checks membership), as iOS's
+     * {@code canStartRelayCall}; Telegram: call admins.
+     */
+    public static boolean canStartGroupCall(org.telegram.tgnet.TLRPC.Chat chat) {
+        if (!RelayConfig.ENABLED) {
+            return org.telegram.messenger.ChatObject.canManageCalls(chat);
+        }
+        return RELAY_GROUP_CALLS && chat != null && !chat.left && !chat.kicked;
+    }
+
     public static boolean isMessageOptionAllowed(int option) {
         if (!RelayConfig.ENABLED) {
             return true;

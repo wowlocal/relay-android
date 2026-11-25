@@ -282,9 +282,13 @@ class RelayRoom(context: Context, private val listener: Listener) {
 
     // region Camera
 
-    fun setCameraEnabled(enabled: Boolean, callback: Callback) {
-        cameraWanted = enabled
+    /**
+     * Starts or stops capturing the camera without publishing it (Telegram's camera preview before "Share Video").
+     * Stopping also unpublishes it.
+     */
+    fun setCameraCapture(enabled: Boolean): Throwable? {
         if (!enabled) {
+            cameraWanted = false
             val track = cameraTrack
             cameraTrack = null
             if (track != null) {
@@ -293,10 +297,9 @@ class RelayRoom(context: Context, private val listener: Listener) {
                 track.dispose()
             }
             publishSnapshot()
-            callback.onResult(null)
-            return
+            return null
         }
-        try {
+        return try {
             if (cameraTrack == null) {
                 val track = room.localParticipant.createVideoTrack(
                     name = "camera",
@@ -306,12 +309,26 @@ class RelayRoom(context: Context, private val listener: Listener) {
                 cameraTrack = track
                 previewSinks[SOURCE_CAMERA]?.let { track.addRenderer(it) }
             }
+            null
         } catch (e: Throwable) {
             log("camera start failed: $e")
-            cameraWanted = false
-            callback.onResult(e)
+            e
+        }
+    }
+
+    /** Captures and publishes the camera (published once connected), or unpublishes and stops it. */
+    fun setCameraEnabled(enabled: Boolean, callback: Callback) {
+        if (!enabled) {
+            setCameraCapture(false)
+            callback.onResult(null)
             return
         }
+        val failure = setCameraCapture(true)
+        if (failure != null) {
+            callback.onResult(failure)
+            return
+        }
+        cameraWanted = true
         if (room.state != Room.State.CONNECTED) {
             callback.onResult(null)
             return

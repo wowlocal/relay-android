@@ -643,7 +643,10 @@ final class RelayReadPath {
         RelayFinding.fillFull(account, channel, full); // A7b: pinned message, purpose/header cache
         TLRPC.TL_messages_chatFull res = new TLRPC.TL_messages_chatFull();
         res.full_chat = full;
-        res.chats.add(directory.tlChannel(channel));
+        TLRPC.TL_channel chat = directory.tlChannel(channel);
+        // A8: the channel's live call (Telegram's join panel and video chat).
+        org.telegram.relay.calls.RelayGroupSession.decorateFullChannel(account.account, channelId, full, chat);
+        res.chats.add(chat);
         return res;
     }
 

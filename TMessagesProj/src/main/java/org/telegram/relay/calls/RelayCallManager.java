@@ -61,6 +61,8 @@ public final class RelayCallManager {
     private static final String DH_PRIME_HEX = "c71caeb9c6b1c9048e6c522f70f13f73980d40238e3e21c14934d037563d930f48198a0aa7c14058229493d22530f4dbfa336f6e0ac925139543aed44cce7c3720fd51f69458705ac68cd4fe6b6b13abdc9746512969328454f18faf8c595f642477fe96bb2a941d5bcd1d4ac8cc49880708fa9b378e3c4f3a9060bee67cf9a4a4a695811051907e162753b56b0f6b410dba74d8a84b2a14b3144e0ef1284754fd17ed950d5965b4b9dd46582db1178d169c6bc465b0d6ff9ca3928fef5b9ae4e418fc15e83ebea0f87fa9ff5eed70050ded2849f47bf959d956850ce929851f0d8115f635b105ee2e4e15d04b2454bf6f4fadf034b10403119cd8e3b92fcc5b";
     static final BigInteger DH_P = new BigInteger(DH_PRIME_HEX, 16);
     static final int DH_G = 3;
+    /** The "library version" of Relay calls in Telegram's protocol objects. */
+    static final String LIBRARY_VERSION = "9.0.0";
 
     public interface Answer {
         void answer(TLObject response);
@@ -96,6 +98,8 @@ public final class RelayCallManager {
     final RelayCallScheduler scheduler = RelayCallScheduler.INSTANCE;
     /** Ringing and active calls in this account's channels (join panel), by call id. */
     final Map<String, RelayCall> live = new ConcurrentHashMap<>();
+    /** {@link #live} was filled from {@code GET /calls/active} at least once. */
+    volatile boolean liveSynced;
 
     /** The 1:1 call the app presents (one call at a time for all accounts), main thread. */
     static DirectSession direct;
@@ -170,6 +174,7 @@ public final class RelayCallManager {
     private void trackLive(RelayCallsEvent event) {
         List<RelayCall> changed = new ArrayList<>();
         if (event.type == RelayCallsEvent.Type.ACTIVE_CALLS) {
+            liveSynced = true;
             java.util.Set<String> ids = new java.util.HashSet<>();
             for (RelayCall call : event.calls) {
                 ids.add(call.id);
@@ -280,8 +285,6 @@ public final class RelayCallManager {
             return;
         }
         final String dm = channelId;
-        String library = req.protocol != null && req.protocol.library_versions != null && !req.protocol.library_versions.isEmpty()
-                ? req.protocol.library_versions.get(0) : "11.0.0";
         scheduler.post(() -> {
             if (hasActiveCall()) {
                 answer.answer(error(400, "CALL_ALREADY_ACTIVE"));
@@ -290,7 +293,6 @@ public final class RelayCallManager {
             RelayLiveKitEngine engine = RelayVoip.engine();
             RelayDirectCall controller = RelayDirectCall.outgoing(client, engine, scheduler, ownUserId, deviceId, dm, peerUserId, req.video);
             DirectSession session = new DirectSession(this, controller, engine, 0, peerTlId, true, req.video);
-            session.library = library;
             session.gAHash = req.g_a_hash;
             // Bridge plays the callee: b, g_b.
             session.secret = new BigInteger(1, randomBytes(256));
@@ -312,9 +314,6 @@ public final class RelayCallManager {
                 return;
             }
             d.clientG = req.g_b;
-            if (req.protocol != null && req.protocol.library_versions != null && !req.protocol.library_versions.isEmpty()) {
-                d.library = req.protocol.library_versions.get(0);
-            }
             d.call.accept();
             TL_phone.TL_phoneCallWaiting waiting = d.waiting(false);
             answer.answer(phoneCall(waiting, d));
@@ -336,9 +335,6 @@ public final class RelayCallManager {
             }
             if (d.gAHash != null && !Arrays.equals(d.gAHash, Utilities.computeSHA256(req.g_a, 0, req.g_a.length))) {
                 Log.w(TAG, "confirmCall: g_a does not match its hash");
-            }
-            if (req.protocol != null && req.protocol.library_versions != null && !req.protocol.library_versions.isEmpty()) {
-                d.library = req.protocol.library_versions.get(0);
             }
             TL_phone.TL_phoneCall call = d.phoneCall(d.gOurs, req.key_fingerprint);
             d.connectedSent = true;
@@ -406,7 +402,7 @@ public final class RelayCallManager {
         protocol.udp_reflector = true;
         protocol.min_layer = 65;
         protocol.max_layer = org.telegram.messenger.voip.Instance.getConnectionMaxLayer();
-        protocol.library_versions.add(library == null ? "11.0.0" : library);
+        protocol.library_versions.add(library == null ? LIBRARY_VERSION : library);
         return protocol;
     }
 
@@ -462,7 +458,8 @@ public final class RelayCallManager {
         final boolean outgoing;
         final boolean video;
         int date;
-        String library = "11.0.0";
+        /** Telegram compares versions as strings ("2.7.7" or later offers video), so not "11.x". */
+        String library = LIBRARY_VERSION;
         byte[] gAHash;
         BigInteger secret;
         byte[] gOurs;
