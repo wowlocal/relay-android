@@ -23,12 +23,15 @@ X5="/Volumes/X5/relay-android"
 export JAVA_HOME="${JAVA_HOME:-/opt/homebrew/opt/openjdk@17}"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
+# The build root: RELAY_BUILD_ROOT, else relay.buildRoot from this checkout's local.properties
+# (worktrees set their own there), else the shared X5 build dir.
+LOCAL_BUILD_ROOT="$(sed -n 's/^relay\.buildRoot=//p' "$ROOT/local.properties" 2>/dev/null | tail -1 | tr -d '[:space:]')"
 if [[ -d "$X5" ]]; then
   export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$X5/gradle-home}"
-  BUILD_ROOT="${RELAY_BUILD_ROOT:-$X5/build}"
+  BUILD_ROOT="${RELAY_BUILD_ROOT:-${LOCAL_BUILD_ROOT:-$X5/build}}"
   LOG_DIR="$X5/logs"
 else
-  BUILD_ROOT="${RELAY_BUILD_ROOT:-}"
+  BUILD_ROOT="${RELAY_BUILD_ROOT:-$LOCAL_BUILD_ROOT}"
   LOG_DIR="$ROOT/build/relay-logs"
 fi
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
@@ -72,6 +75,7 @@ if [[ $BUILD -eq 1 ]]; then
   [[ $CLEAN -eq 1 ]] && TASKS+=(:TMessagesProj_App:clean :TMessagesProj:clean)
   TASKS+=(:TMessagesProj_App:assembleAfatDebug)
   echo "log: $LOG"
+  echo "build root: ${BUILD_ROOT:-<in-tree>}"
   start=$(date +%s)
   set +e
   (cd "$ROOT" && ./gradlew "${GRADLE_ARGS[@]}" "${TASKS[@]}" ${EXTRA[@]+"${EXTRA[@]}"}) 2>&1 | tee "$LOG"

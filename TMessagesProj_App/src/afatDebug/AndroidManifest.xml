@@ -22,5 +22,10 @@
             android:name="org.relaychat.debug.RelayPolish1DebugHooks"
             android:authorities="${applicationId}.relaydebugpolish1"
             android:exported="false" />
+        <!-- A8 test hooks (calls). -->
+        <provider
+            android:name="org.relaychat.debug.RelayA8DebugHooks"
+            android:authorities="${applicationId}.relaydebuga8"
+            android:exported="false" />
     </application>
 </manifest>
