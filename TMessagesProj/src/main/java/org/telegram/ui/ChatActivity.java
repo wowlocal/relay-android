@@ -3430,6 +3430,13 @@ public class ChatActivity extends BaseFragment implements
             progressDialogCurrent.cancel();
             progressDialogCurrent = null;
         }
+        if (progressDialog != null) {
+            // Relay: a delayed "loading" spinner (showDelayed) must not outlive its chat. Messages held back while the
+            // chat loaded are delivered above (removePostponeNotificationsCallback) and can start one; over the chat
+            // list nothing would ever dismiss it.
+            progressDialog.dismiss();
+            progressDialog = null;
+        }
         chatMessagesMetadataController.onFragmentDestroy();
         if (birthdayAssetsFetcher != null) {
             birthdayAssetsFetcher.detach(true);

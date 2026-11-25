@@ -11769,6 +11769,11 @@ public class MessagesController extends BaseController implements NotificationCe
                                 }
 
                                 loadMessagesInternal(dialogId, mergeDialogId, loadInfo, count, max_id, offset_date, false, minDate, classGuid, load_type, dialog.top_message, 0, threadMessageId, loadIndex, first_unread, dialog.unread_count, last_date, queryFromServer, dialog.unread_mentions_count, false, processMessages, isTopic, null, 0L);
+                            } else if (org.telegram.relay.RelayConfig.ENABLED) {
+                                // Relay: a chat without posts has no dialog (a group message or DM just created). Load
+                                // its (empty) history anyway: stopping here left the chat in its first load, which holds
+                                // back its new messages until it closes (A7b: a stray "loading" spinner on the chat list).
+                                loadMessagesInternal(dialogId, mergeDialogId, loadInfo, count, max_id, offset_date, false, minDate, classGuid, load_type, 0, 0, threadMessageId, loadIndex, first_unread, 0, last_date, queryFromServer, 0, false, processMessages, isTopic, null, 0L);
                             }
                         } else {
                             AndroidUtilities.runOnUIThread(() -> {
@@ -14059,6 +14064,11 @@ public class MessagesController extends BaseController implements NotificationCe
                     AndroidUtilities.runOnUIThread(() -> {
                         if (BuildVars.LOGS_ENABLED) {
                             FileLog.d("checkLastDialogMessage for " + dialog.id + " has not message");
+                        }
+                        if (org.telegram.relay.RelayConfig.ENABLED && createdDialogMainThreadIds.contains(dialog.id)) {
+                            // Relay: a chat without posts (a group message just created) is a real Mattermost chat.
+                            // Deleting its dialog while the chat is open closes it under the user (dialogDeleted).
+                            return;
                         }
                         if (getMediaDataController().getDraft(dialog.id, 0) == null) {
                             TLRPC.Dialog currentDialog = dialogs_dict.get(dialog.id);

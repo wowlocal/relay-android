@@ -662,10 +662,14 @@ def scenario_dm_gm(d, check, ctx):
     texts = d.screen_texts()
     shot(d, "group-message")
     title = ", ".join(sorted([carol.me["username"], alice.me["username"], bob.me["username"]]))
-    check.ok("New Group Message → the GM chat opens", any(title in t for t in texts), str(texts[:8]))
+    # The chat itself (its composer), not the chat list behind it (which has the GM's row too).
+    check.ok("New Group Message → the GM chat opens", any(title in t for t in texts) and "Message" in texts, str(texts[:8]))
     text = "[relay-e2e a7b] gm %s" % ctx["stamp"]
     a5.send_text(d, text)
     time.sleep(4)
+    # A post-less GM has no dialog: its first load must still finish, or the chat holds back new messages
+    # (its own bubble included) until it closes, and a stray "loading" spinner stays over the chat list.
+    check.ok("GM: the sent message shows in the open chat", message_node(d, text, tries=2) is not None)
     posts = carol.call("GET", "/channels/%s/posts?per_page=10" % gm["id"])
     hit = [p for p in posts["order"] if posts["posts"][p]["message"] == text]
     check.ok("GM (app) = Mattermost GM with alice and bob, message posted there", bool(hit), str([posts["posts"][p]["message"] for p in posts["order"][:3]]))
