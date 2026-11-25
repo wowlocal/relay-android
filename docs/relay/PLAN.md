@@ -61,17 +61,20 @@ address DM messages by a bare id are made peer-aware in the bridge (see PROGRESS
 
 ## Phases (each ends with integration tests against the local server)
 
-| # | Goal | Test |
-|---|---|---|
-| A0 | Toolchain: SDK/NDK, emulator, debug APK of upstream with Relay applicationId | APK installs and launches |
-| A1 | `relay-mattermost` library: login, me, teams, channels, posts, users, files, WebSocket | JVM tests on fixtures + live mmdev |
-| A2 | Boot without Telegram: Mattermost login screen → fake authorized account; tgnet never connects; bridge intercepts all requests | app opens to an empty chat list, no MTProto traffic |
-| A3 | Read path: dialogs, history (paging, holes, jump), users, avatars, unread/read state | seeded chats render; scroll 11k-post firehose |
-| A4 | Live path: WebSocket → updates (new/edit/delete posts, reactions, typing, read, status) | post from REST as bob → appears in app |
-| A5 | Write path: send/edit/delete/reply, reactions, mark read, files/photos upload+download | sent from app → visible via REST/web |
-| A6 | Fork hygiene: rename/branding, hide Telegram-only UI, settings, logout, multi-account | no Telegram-only entry points reachable |
-| A7 | Parity: threads (CRT), teams as folders, search, channel info/members, create channel/DM, mentions/emoji autocomplete, markdown, pinned/saved, push (FCM via Mattermost push proxy) | per-feature e2e |
-| A8 | Calls (LiveKit plugin `org.relaychat.calls`, same wire contract as iOS) | call between app and scripted peer |
+| # | Goal | Test | Status |
+|---|---|---|---|
+| A0 | Toolchain: SDK/NDK, emulator, debug APK of upstream with Relay applicationId | APK installs and launches | Done (`97d5055`) |
+| A1 | `relay-mattermost` library: login, me, teams, channels, posts, users, files, WebSocket | JVM tests on fixtures + live mmdev | Done (`f6c2e50`): relay-mattermost JVM suite |
+| A2 | Boot without Telegram: Mattermost login screen → fake authorized account; tgnet never connects; bridge intercepts all requests | app opens to an empty chat list, no MTProto traffic | Done (`50ac9e8`); A2 e2e 27/27 |
+| A3 | Read path: dialogs, history (paging, holes, jump), users, avatars, unread/read state | seeded chats render; scroll 11k-post firehose | Done (`7aee61b`); A3 e2e 31/31 |
+| A4 | Live path: WebSocket → updates (new/edit/delete posts, reactions, typing, read, status) | post from REST as bob → appears in app | Done (`8749fb9`, `80df0b8`); A4 e2e 54/54 |
+| A5 | Write path: send/edit/delete/reply, reactions, mark read, files/photos upload+download | sent from app → visible via REST/web | Done (`a274c26`, `808de04`); A5 e2e 34/34 |
+| A6 | Fork hygiene: rename/branding, hide Telegram-only UI, settings, logout, multi-account | no Telegram-only entry points reachable | Merged (`57f2f4b`, A6b `b3bbed0`); A6 41/41, A6b 65/65 |
+| A7 | Parity: threads (CRT), teams as folders, search, channel info/members, create channel/DM, mentions/emoji autocomplete, markdown, pinned/saved, push (FCM via Mattermost push proxy) | per-feature e2e | Merged: A7a `9334c27`, A7b `f795856`/`e603df0`, A7c `dd781ca`; A7a 46/46, A7b 70/70, A7c 52/52. Push: local notifications from the keep-alive WebSocket; FCM via a push proxy is prepared but off (needs the owner's Firebase project, PUSH.md) |
+| A8 | Calls (LiveKit plugin `org.relaychat.calls`, same wire contract as iOS) | call between app and scripted peer | Merged (`337f280`); A8 e2e 52/52 |
+| Polish 1 | Known issues of A3–A7b (own markdown, CRT previews, forwards, renumber migration, video probe, small photos) | `test_polish1.py` | Merged (`f8aa76e`); 33/33 |
+| Polish 2a/2b | Exploratory QA findings (`QA-2026-11-25.md`): sync, notifications, bridge (2a); UI, English only, branding (2b) | `test_polish2a.py`, `test_polish2b.py` | Merged (2a `8ef6951`, 2b `80073d7`); 48/48, 119/119 |
+| Final | Clean-install regression of every suite, twice on emulator-5554, once on a 1080×2400 phone clone | all 13 suites | Done (2026-11-25): two consecutive green passes, phone green after test fixes; Samsung skipped (locked). See PROGRESS "Final regression" |
 
 ## Test bed
 

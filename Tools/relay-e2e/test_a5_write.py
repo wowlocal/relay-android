@@ -163,6 +163,9 @@ def message_menu(d, text, item):
     time.sleep(1.2)
     entry = wait_until(lambda: d.find(text=item), timeout=4)
     if entry is None:
+        if os.environ.get("RELAY_FAIL_SHOTS"):
+            d.screenshot(os.path.join(os.environ["RELAY_FAIL_SHOTS"], "a5-menu-%s-failed.png" % item.lower()))
+        print("message_menu: no %r after tapping %s; screen: %s" % (item, n.bounds, d.screen_texts()[:16]))
         d.key("KEYCODE_BACK")
         return False
     d.tap_node(entry)
@@ -321,7 +324,9 @@ def main():
         r2 = wait_until(lambda: find_post(bob, sandbox["id"], "reply two %d" % t0), timeout=10)
         check.ok("reply to a reply stays in the thread (CRT)", r2 and r2[0]["root_id"] == root["id"])
         shot(d, "thread-reply")
-        # With collapsed threads (A7a) Reply opened the thread view: back to the channel's main history.
+        # With collapsed threads (A7a) Reply opened the thread view: back to the channel's main history. Through the
+        # chat list: a chat presented over the thread while its keyboard is up can be dropped (phone run).
+        to_chat_list(d)
         open_chat(d, sandbox["id"])
 
         # 3. Edit and delete.
@@ -475,13 +480,20 @@ def main():
         to_chat_list(d)
         alice.call("POST", "/channels/members/me/view", {"channel_id": sandbox["id"]})
         time.sleep(1)
-        # Chat list rows have no accessibility nodes: the row is found by its position (debug dump order).
+        # Chat list rows have no accessibility nodes: the row is found by its position (debug dump order), below
+        # the folder tabs, in dp (a row is 70.5 dp; the first row's centre 40.5 dp under the tabs).
         dialogs, order = dump_dialogs(d)
         index = order.index(sandbox["id"]) if sandbox["id"] in order else 99
+        densities = re.findall(r"density: (\d+)", d.shell("wm density"))
+        scale = (int(densities[-1]) if densities else 320) / 160.0
+        tabs = [n for n in d.dump() if (n.text or n.desc).startswith("All Chats")]
+        top = tabs[0].bounds[3] if tabs else 334
+        sizes = re.findall(r"(\d+)x(\d+)", d.shell("wm size"))  # the override (when set) comes last
+        width, height = (int(sizes[-1][0]), int(sizes[-1][1])) if sizes else (1080, 2400)
+        y = int(top + scale * (40.5 + 70.5 * index))
         marked = False
-        if index < 7:
-            y = 345 + 70 + 141 * index
-            d.shell("input swipe 300 %d 300 %d 800" % (y, y))
+        if index < 99 and y < height - scale * 120:
+            d.shell("input swipe %d %d %d %d 800" % (int(width * 0.4), y, int(width * 0.4), y))
             time.sleep(1.2)
             more = d.find(desc="More options")
             if more:

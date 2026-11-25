@@ -288,9 +288,12 @@ def main():
         hook(d, "pin", channel=target["id"], on="1")
         fav = wait_until(lambda: target["id"] in server_favs(), timeout=8)
         check.ok("Pin in the app → favorite_channel preference", bool(fav))
-        cats = alice.get("/users/me/teams/%s/channels/categories" % design["id"])["categories"]
-        favcat = next((c for c in cats if c["type"] == "favorites"), {"channel_ids": []})
-        check.ok("... and the channel is in the team's Favorites category", target["id"] in favcat["channel_ids"])
+        # The server moves the channel into its Favorites category after the preference, asynchronously.
+        def in_favorites():
+            cats = alice.get("/users/me/teams/%s/channels/categories" % design["id"])["categories"]
+            favcat = next((c for c in cats if c["type"] == "favorites"), {"channel_ids": []})
+            return target["id"] in favcat["channel_ids"]
+        check.ok("... and the channel is in the team's Favorites category", bool(wait_until(in_favorites, timeout=8)))
         time.sleep(2)
         f = folders(d)
         did = -relaye2e_tl(d, target["id"])

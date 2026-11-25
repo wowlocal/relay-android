@@ -70,6 +70,11 @@ class Device:
     def adb(self, *args, timeout=120, check=True, binary=False):
         cmd = [ADB, "-s", self.serial] + list(args)
         res = subprocess.run(cmd, capture_output=True, timeout=timeout)
+        if res.returncode != 0 and b"device offline" in res.stderr:
+            # The host's adb transport to an emulator can drop for a moment (seen on a second emulator): wait for the
+            # device to come back (bounded) and send the command once more. App failures never look like this.
+            subprocess.run([ADB, "-s", self.serial, "wait-for-device"], capture_output=True, timeout=60)
+            res = subprocess.run(cmd, capture_output=True, timeout=timeout)
         if check and res.returncode != 0:
             raise RuntimeError("adb %s failed (%d): %s" % (" ".join(args), res.returncode, res.stderr.decode(errors="replace")))
         return res.stdout if binary else res.stdout.decode(errors="replace")
