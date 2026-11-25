@@ -264,6 +264,15 @@ final class RelayHistory {
      *         start-of-history sentinel)
      */
     List<Unit> window(String channelId, int offsetId, int addOffset, int limit, int maxId, int minId) throws MattermostException, MessageIdAllocationException {
+        return window(channelId, offsetId, addOffset, limit, maxId, minId, false);
+    }
+
+    /**
+     * @param rootsOnly A7a: collapsed reply threads hide replies from a megagroup's main history. L is then
+     *                  the chat's root posts only; pages are fetched (and ingested, so the id map stays
+     *                  contiguous over all posts) until the window has enough of them.
+     */
+    List<Unit> window(String channelId, int offsetId, int addOffset, int limit, int maxId, int minId, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
         if (limit <= 0) {
             return new ArrayList<>();
         }
@@ -271,11 +280,46 @@ final class RelayHistory {
         MessageIdEntry anchor = offsetId != 0 ? anchorFor(channelId, offsetId) : null;
         if (anchor == null) {
             int skip = Math.max(0, addOffset);
-            Latest latest = latest(channelId, skip + limit);
-            result = slice(latest.units, skip, limit);
+            result = slice(latestVisible(channelId, skip + limit, rootsOnly), skip, limit);
         } else {
-            result = around(channelId, anchor, offsetId, addOffset, limit);
+            result = around(channelId, anchor, offsetId, addOffset, limit, rootsOnly);
         }
+        return filterIds(result, maxId, minId);
+    }
+
+    /**
+     * A7a, jump to date (load type 4): the window around {@code anchor}, the newest post created before the
+     * date (p = its index), as if {@code offset_id} were just above its last message; null anchor = the date
+     * is before the chat's first post (p = past the oldest message).
+     */
+    List<Unit> windowAtPost(String channelId, Post anchor, Post oldest, int addOffset, int limit, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
+        Post post = anchor != null ? anchor : oldest;
+        if (post == null) {
+            return new ArrayList<>();
+        }
+        if (localIdOf(channelId, post.id) == 0) {
+            mapSingle(channelId, post);
+        }
+        int offsetId = anchor != null ? lastLocalIdOf(channelId, post) + 1 : localIdOf(channelId, post.id);
+        MessageIdEntry entry = account.messageIdStore().entries(channelId, Collections.singletonList(post.id)).get(post.id);
+        if (entry == null || offsetId <= 0) {
+            return new ArrayList<>();
+        }
+        if (anchor == null) {
+            // p = the chat's length: L[size+addOffset, size+addOffset+limit) = the oldest -addOffset messages.
+            List<Unit> window = around(channelId, entry, offsetId, addOffset, limit, rootsOnly);
+            List<Unit> result = new ArrayList<>();
+            for (Unit unit : window) {
+                if (unit.localId >= offsetId) {
+                    result.add(unit);
+                }
+            }
+            return result;
+        }
+        return around(channelId, entry, offsetId, addOffset, limit, rootsOnly);
+    }
+
+    private static List<Unit> filterIds(List<Unit> result, int maxId, int minId) {
         if (maxId != 0 || minId != 0) {
             List<Unit> filtered = new ArrayList<>(result.size());
             for (Unit unit : result) {
@@ -308,21 +352,21 @@ final class RelayHistory {
         return null;
     }
 
-    private List<Unit> around(String channelId, MessageIdEntry anchorEntry, int offsetId, int addOffset, int limit) throws MattermostException, MessageIdAllocationException {
+    private List<Unit> around(String channelId, MessageIdEntry anchorEntry, int offsetId, int addOffset, int limit, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
         String anchorPostId = anchorEntry.serverPostId();
         Post anchorPost = post(anchorPostId);
         if (anchorPost == null) {
             // The anchor is gone on the server (deleted); fall back to the newest messages.
             RelayConfig.log(TAG, "history anchor " + anchorPostId + " is gone, answering the newest page");
             int skip = Math.max(0, addOffset);
-            return slice(latest(channelId, skip + limit).units, skip, limit);
+            return slice(latestVisible(channelId, skip + limit, rootsOnly), skip, limit);
         }
         int newerWanted = addOffset < 0 ? -addOffset : 0;
         int olderSkip = Math.max(0, addOffset);
         int olderWanted = addOffset < 0 ? Math.max(0, limit + addOffset) : olderSkip + limit;
 
         // The anchor post's own parts, split at offset_id.
-        List<Unit> anchorUnits = assignIds(channelId, oldestFirst(Collections.singletonList(anchorPost)));
+        List<Unit> anchorUnits = visibleOnly(assignIds(channelId, oldestFirst(Collections.singletonList(anchorPost))), rootsOnly);
         List<Unit> newer = new ArrayList<>(); // ids >= offset_id, nearest first (ascending)
         List<Unit> older = new ArrayList<>(); // ids < offset_id, nearest first (descending)
         for (Unit unit : anchorUnits) {
@@ -337,16 +381,10 @@ final class RelayHistory {
         }
 
         if (newerWanted > newer.size()) {
-            int count = clamp(newerWanted - newer.size());
-            List<Post> page = fetchAfter(channelId, anchorPostId, count).getOrderedPosts();
-            ingestPage(channelId, page, anchorPostId, HistoryDirection.NEWER, page.size() < count);
-            newer.addAll(assignIds(channelId, oldestFirst(page)));
+            newer.addAll(newerThan(channelId, anchorPostId, newerWanted - newer.size(), rootsOnly));
         }
         if (olderWanted > older.size()) {
-            int count = clamp(olderWanted - older.size());
-            List<Post> page = fetchBefore(channelId, anchorPostId, count).getOrderedPosts();
-            ingestPage(channelId, page, anchorPostId, HistoryDirection.OLDER, page.size() < count);
-            older.addAll(assignIds(channelId, newestFirst(page)));
+            older.addAll(olderThan(channelId, anchorPostId, olderWanted - older.size(), rootsOnly));
         }
 
         // Window positions relative to p (the first message below offset_id): newer.get(k) sits at p-1-k,
@@ -361,6 +399,77 @@ final class RelayHistory {
             result.addAll(slice(older, 0, olderWanted));
         } else {
             result.addAll(slice(older, olderSkip, limit));
+        }
+        return result;
+    }
+
+    // MARK: - Paging with collapsed reply threads (A7a)
+
+    /** Pages fetched per window at most while looking for root posts (5,000 posts with replies only). */
+    private static final int MAX_ROUNDS = 25;
+
+    private static List<Unit> visibleOnly(List<Unit> units, boolean rootsOnly) {
+        if (!rootsOnly) {
+            return units;
+        }
+        List<Unit> result = new ArrayList<>(units.size());
+        for (Unit unit : units) {
+            if (!unit.layout.post.isReply()) {
+                result.add(unit);
+            }
+        }
+        return result;
+    }
+
+    private static int pageSize(int wanted, boolean rootsOnly) {
+        return rootsOnly ? Math.min(MAX_PER_PAGE, Math.max(50, 2 * wanted)) : clamp(wanted);
+    }
+
+    /** The newest {@code wanted} visible messages, newest first (fewer at the channel start). */
+    private List<Unit> latestVisible(String channelId, int wanted, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
+        if (!rootsOnly) {
+            return latest(channelId, wanted).units;
+        }
+        Latest latest = latest(channelId, pageSize(wanted, true));
+        List<Unit> result = visibleOnly(latest.units, true);
+        if (result.size() < wanted && !latest.reachedStart && !latest.posts.isEmpty()) {
+            result.addAll(olderThan(channelId, latest.posts.get(latest.posts.size() - 1).id, wanted - result.size(), true));
+        }
+        return result;
+    }
+
+    /** Visible messages older than a mapped post, nearest first, until {@code wanted} or the channel start. */
+    private List<Unit> olderThan(String channelId, String fromPostId, int wanted, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
+        List<Unit> result = new ArrayList<>();
+        String cursor = fromPostId;
+        for (int round = 0; round < MAX_ROUNDS && result.size() < wanted; round++) {
+            int count = pageSize(wanted - result.size(), rootsOnly);
+            List<Post> page = fetchBefore(channelId, cursor, count).getOrderedPosts();
+            boolean end = page.size() < count;
+            ingestPage(channelId, page, cursor, HistoryDirection.OLDER, end);
+            result.addAll(visibleOnly(assignIds(channelId, newestFirst(page)), rootsOnly));
+            if (end || page.isEmpty()) {
+                break;
+            }
+            cursor = page.get(page.size() - 1).id;
+        }
+        return result;
+    }
+
+    /** Visible messages newer than a mapped post, nearest first, until {@code wanted} or the newest post. */
+    private List<Unit> newerThan(String channelId, String fromPostId, int wanted, boolean rootsOnly) throws MattermostException, MessageIdAllocationException {
+        List<Unit> result = new ArrayList<>();
+        String cursor = fromPostId;
+        for (int round = 0; round < MAX_ROUNDS && result.size() < wanted; round++) {
+            int count = pageSize(wanted - result.size(), rootsOnly);
+            List<Post> page = fetchAfter(channelId, cursor, count).getOrderedPosts();
+            boolean end = page.size() < count;
+            ingestPage(channelId, page, cursor, HistoryDirection.NEWER, end);
+            result.addAll(visibleOnly(assignIds(channelId, oldestFirst(page)), rootsOnly));
+            if (end || page.isEmpty()) {
+                break;
+            }
+            cursor = page.get(0).id;
         }
         return result;
     }

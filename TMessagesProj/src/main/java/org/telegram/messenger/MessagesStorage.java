@@ -12388,7 +12388,8 @@ public class MessagesStorage extends BaseController {
                         }
                     }
 
-                    if (!(message.action instanceof TLRPC.TL_messageActionHistoryClear) && (!MessageObject.isOut(message) || message.from_scheduled || topicId != 0) && (message.id > 0 || MessageObject.isUnread(message)) && !(isForum(message.dialog_id, FORUM_TYPE_CHAT) && topicId == 0)) {
+                    if (!(message.action instanceof TLRPC.TL_messageActionHistoryClear) && (!MessageObject.isOut(message) || message.from_scheduled || topicId != 0) && (message.id > 0 || MessageObject.isUnread(message)) && !(isForum(message.dialog_id, FORUM_TYPE_CHAT) && topicId == 0)
+                            && !org.telegram.relay.bridge.RelayThreadsHooks.notCountedAsUnread(currentAccount, message)) { // Relay A7a: CRT replies are not unread
                         int currentMaxId = dialogsReadMax.get(message.dialog_id, -1);
                         if (currentMaxId == -1) {
                             cursor = database.queryFinalized("SELECT inbox_max FROM dialogs WHERE did = " + message.dialog_id);

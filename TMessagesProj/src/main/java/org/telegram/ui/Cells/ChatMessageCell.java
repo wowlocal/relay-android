@@ -6762,7 +6762,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 linked = messageObject.isLinkedToChat(linkedChatId);
             }
-            if ((hasDiscussion && linked || isRepliesChat && !messageObject.isOutOwner()) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0) && messageObject.searchType == 0 && !messageObject.isEphemeral()) {
+            // Relay A7a: Telegram's comment footer ("N Replies") on Mattermost thread roots (collapsed threads).
+            final boolean relayRepliesFooter = org.telegram.relay.bridge.RelayThreadsHooks.showRepliesFooter(currentAccount,
+                    currentMessagesGroup != null && !currentMessagesGroup.messages.isEmpty() ? currentMessagesGroup.messages.get(0) : messageObject, isThreadChat);
+            if ((hasDiscussion && linked || isRepliesChat && !messageObject.isOutOwner() || relayRepliesFooter) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0) && messageObject.searchType == 0 && !messageObject.isEphemeral()) {
                 int commentCount = getRepliesCount();
                 if (!messageObject.shouldDrawWithoutBackground() && !messageObject.isAnimatedEmoji()) {
                     drawCommentButton = true;
@@ -6775,9 +6778,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         comment = getString("ViewInChat", R.string.ViewInChat);
                     } else {
                         if (LocaleController.isRTL) {
-                            comment = commentCount == 0 ? getString("LeaveAComment", R.string.LeaveAComment) : formatPluralString("CommentsCount", commentCount);
+                            comment = commentCount == 0 ? getString("LeaveAComment", R.string.LeaveAComment) : relayRepliesFooter ? commentCount + " " + LocaleController.getPluralString("RelayRepliesNoNumber", commentCount) : formatPluralString("CommentsCount", commentCount);
                         } else {
-                            comment = commentCount == 0 ? getString("LeaveAComment", R.string.LeaveAComment) : LocaleController.getPluralString("CommentsNoNumber", commentCount);
+                            comment = commentCount == 0 ? getString("LeaveAComment", R.string.LeaveAComment) : LocaleController.getPluralString(relayRepliesFooter ? "RelayRepliesNoNumber" : "CommentsNoNumber", commentCount);
                         }
                         ArrayList<TLRPC.Peer> recentRepliers = getRecentRepliers();
                         if (commentCount != 0 && recentRepliers != null && !recentRepliers.isEmpty()) {
@@ -15715,7 +15718,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentUnlockString = str.length() >= 2 ? str.substring(0, 1).toUpperCase(Locale.ROOT) + str.substring(1).toLowerCase(Locale.ROOT) : str;
             unlockTextWidth = (int) Math.ceil(Theme.chat_unlockExtendedMediaTextPaint.measureText(currentUnlockString));
         }
-        if (isChat && isMegagroup && (!isThreadChat || isMonoForum) && hasReplies) {
+        if (isChat && isMegagroup && (!isThreadChat || isMonoForum) && hasReplies
+                && !org.telegram.relay.bridge.RelayThreadsHooks.showRepliesFooter(currentAccount, currentMessagesGroup != null && !currentMessagesGroup.messages.isEmpty() ? currentMessagesGroup.messages.get(0) : messageObject, isThreadChat)) { // Relay A7a: the footer shows the count
             currentRepliesString = String.format("%s", LocaleController.formatShortNumber(getRepliesCount(), null));
             repliesTextWidth = (int) Math.ceil(Theme.chat_timePaint.measureText(currentRepliesString));
             float drawableWidth = Theme.chat_msgInRepliesDrawable.getIntrinsicWidth() * (Theme.chat_timePaint.getTextSize() - dp(2)) / Theme.chat_msgInRepliesDrawable.getIntrinsicHeight();

@@ -489,7 +489,11 @@ final class RelayReadPath {
         }
         Channel channel = directory.channel(channelId);
         long started = System.currentTimeMillis();
-        List<RelayHistory.Unit> units = history.window(channelId, req.offset_id, req.add_offset, req.limit, req.max_id, req.min_id);
+        // A7a: collapsed reply threads hide replies from a megagroup's main history; load type 4 (jump to date).
+        boolean rootsOnly = !channel.isDirect() && directory.any().collapsedThreads;
+        List<RelayHistory.Unit> units = req.offset_date != 0 && req.offset_id == 0
+                ? RelayJumpDate.window(this, channel, req.offset_date, req.add_offset, req.limit, req.max_id, req.min_id, rootsOnly)
+                : history.window(channelId, req.offset_id, req.add_offset, req.limit, req.max_id, req.min_id, rootsOnly);
         TLObject res = messagesResponse(channel, units);
         RelayConfig.log(TAG, String.format(java.util.Locale.US, "getHistory %s offset=%d add=%d limit=%d -> %d msgs [%d..%d] in %d ms",
                 channel.name, req.offset_id, req.add_offset, req.limit, units.size(),

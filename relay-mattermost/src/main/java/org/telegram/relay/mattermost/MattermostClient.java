@@ -465,6 +465,21 @@ public class MattermostClient {
         return get(UrlCodec.path("channels", channelId, "stats"), ChannelStats.class);
     }
 
+    /** {@code POST /channels/stats/member_count}: member counts by channel id (also public channels the user is not in, A7a). */
+    public java.util.Map<String, Long> channelMemberCounts(List<String> channelIds) throws MattermostException {
+        Response response = execute(new Request("POST", "/channels/stats/member_count").json(Json.stringArray(channelIds)));
+        java.util.Map<String, Long> counts = new java.util.HashMap<String, Long>();
+        JsonObject object = Json.parseObjectOrNull(response.text());
+        if (object != null) {
+            for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : object.entrySet()) {
+                if (entry.getValue().isJsonPrimitive()) {
+                    counts.put(entry.getKey(), entry.getValue().getAsLong());
+                }
+            }
+        }
+        return counts;
+    }
+
     /** {@code POST /channels/direct}. Pass the same id twice for a self-DM. Returns the existing DM if there is one. */
     public Channel createDirectChannel(String userId, String otherUserId) throws MattermostException {
         Response response = execute(new Request("POST", "/channels/direct").json(Json.stringArray(Arrays.asList(userId, otherUserId))));
