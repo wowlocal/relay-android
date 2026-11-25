@@ -418,6 +418,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         instance = this;
         ApplicationLoader.postInitApplication();
         AndroidUtilities.checkDisplaySize(this, getResources().getConfiguration());
+        if (SharedConfig.relayApplySystemFontScale()) { // Relay polish 2b: the system font size changed
+            Theme.createCommonMessageResources();
+        }
         currentAccount = UserConfig.selectedAccount;
         if (BuildVars.DEBUG_VERSION || BuildVars.DEBUG_PRIVATE_VERSION) {
             registerDebugThemeReceiver();

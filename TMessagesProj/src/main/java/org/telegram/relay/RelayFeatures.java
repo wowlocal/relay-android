@@ -91,6 +91,10 @@ public final class RelayFeatures {
     public static final boolean BLOCK_USERS = false;
     /** Telegram's message translation (messages.translateText). */
     public static final boolean TRANSLATE = false;
+    /** Telegram's AI text editor in the composer and caption fields ("Rewrite, translate, or correct …"). */
+    public static final boolean AI_EDITOR = false;
+    /** Creating a sticker from a photo (photo viewer menu). */
+    public static final boolean CREATE_STICKER = false;
     /** Reporting messages and chats to Telegram. */
     public static final boolean REPORT = false;
     /** Forum topics (Mattermost threads are not topics). */
@@ -207,6 +211,9 @@ public final class RelayFeatures {
         "FeaturedStickersActivity",
         "FilterChatlistActivity",
         "GroupStickersActivity",
+        // Polish 2b: English only (no language packs) and no Telegram translation.
+        "LanguageSelectActivity",
+        "RestrictedLanguagesSelectActivity",
     };
 
     /**

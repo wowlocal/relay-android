@@ -1300,6 +1300,8 @@ public class ChatActivity extends BaseFragment implements
     /** Relay (A7b): Mattermost saved (flagged) posts. */
     public final static int OPTION_RELAY_SAVE_POST = 7301;
     public final static int OPTION_RELAY_UNSAVE_POST = 7302;
+    public final static int OPTION_RELAY_SELECT = 7304; // polish 2b: "Select" (multi-select) in the message menu
+    public final static int OPTION_RELAY_COPY_DM_LINK = 7305; // polish 2b: Copy Link in DMs (Mattermost permalink)
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -12091,7 +12093,9 @@ public class ChatActivity extends BaseFragment implements
             if (currentChat != null) {
                 allowPin = ChatObject.canPinMessages(currentChat) && (!currentChat.monoforum /*|| ChatObject.canManageMonoForum(currentAccount, currentChat)*/);
             } else if (currentEncryptedChat == null) {
-                if (userInfo != null) {
+                if (org.telegram.relay.RelayConfig.ENABLED && currentUser != null && !currentUser.bot) {
+                    allowPin = true; // Relay: DM pins (polish 2b)
+                } else if (userInfo != null) {
                     allowPin = userInfo.can_pin_message;
                 } else {
                     allowPin = false;
@@ -28638,7 +28642,9 @@ public class ChatActivity extends BaseFragment implements
             if (currentChat != null) {
                 allowPin = ChatObject.canPinMessages(currentChat) && (!currentChat.monoforum /*|| ChatObject.canManageMonoForum(currentAccount, currentChat)*/);
             } else {
-                if (userInfo != null) {
+                if (org.telegram.relay.RelayConfig.ENABLED && currentUser != null && !currentUser.bot) {
+                    allowPin = true; // Relay: DM pins (polish 2b)
+                } else if (userInfo != null) {
                     allowPin = userInfo.can_pin_message;
                 } else {
                     allowPin = false;
@@ -31823,6 +31829,8 @@ public class ChatActivity extends BaseFragment implements
         } else if (currentEncryptedChat == null) {
             if (UserObject.isDeleted(currentUser)) {
                 allowPin = false;
+            } else if (org.telegram.relay.RelayConfig.ENABLED && currentUser != null && !currentUser.bot) {
+                allowPin = true; // Relay (polish 2b): Mattermost pins DM posts too (iOS H5)
             } else if (userInfo != null) {
                 allowPin = userInfo.can_pin_message;
             } else {
@@ -31984,6 +31992,14 @@ public class ChatActivity extends BaseFragment implements
                 items.add(LocaleController.getString(relaySaved ? R.string.RelayUnsavePost : R.string.RelaySavePost));
                 options.add(relaySaved ? OPTION_RELAY_UNSAVE_POST : OPTION_RELAY_SAVE_POST);
                 icons.add(relaySaved ? R.drawable.msg_unfave : R.drawable.msg_fave);
+            }
+
+            if (org.telegram.relay.RelayConfig.ENABLED && single && type >= 2 && type != 20 && chatMode == 0 && !isInsideContainer
+                    && selectedObject != null && selectedObject.getId() > 0 && !selectedObject.isSending()) {
+                // Relay (polish 2b): "Select" starts multi-select with this message, as a long hold does (iOS J4).
+                items.add(LocaleController.getString(R.string.Select));
+                options.add(OPTION_RELAY_SELECT);
+                icons.add(R.drawable.msg_select);
             }
 
             if (org.telegram.relay.RelayConfig.ENABLED) {
@@ -34322,8 +34338,43 @@ public class ChatActivity extends BaseFragment implements
         MediaController.saveFile(path, getParentActivity(), messageObject.isVideo() ? 1 : 0, null, null);
     }
 
+    /** Relay (polish 2b): enters multi-select with {@code target}'s cell, as a long hold on it does. */
+    private void relayStartSelection(MessageObject target) {
+        if (target == null || chatListView == null || actionBar == null || actionBar.isActionModeShowed()) {
+            return;
+        }
+        for (int i = 0, n = chatListView.getChildCount(); i < n; i++) {
+            View child = chatListView.getChildAt(i);
+            if (child instanceof ChatMessageCell) {
+                MessageObject shown = ((ChatMessageCell) child).getMessageObject();
+                if (shown != null && (shown.getId() == target.getId()
+                        || target.getGroupId() != 0 && shown.getGroupId() == target.getGroupId())) {
+                    createMenu(child, false, false, 0, 0, false, false);
+                    return;
+                }
+            }
+        }
+    }
+
     private void processSelectedOption(int option) {
         if (selectedObject == null || getParentActivity() == null) {
+            return;
+        }
+        if (option == OPTION_RELAY_COPY_DM_LINK) { // Relay polish 2b
+            org.telegram.relay.ui.RelayDmLinks.copyLink(this, selectedObject.getDialogId(), selectedObject.getId());
+            selectedObject = null;
+            selectedObjectGroup = null;
+            selectedObjectToEditCaption = null;
+            closeMenu(true);
+            return;
+        }
+        if (option == OPTION_RELAY_SELECT) { // Relay polish 2b
+            final MessageObject target = selectedObject;
+            selectedObject = null;
+            selectedObjectGroup = null;
+            selectedObjectToEditCaption = null;
+            closeMenu(true);
+            AndroidUtilities.runOnUIThread(() -> relayStartSelection(target), 220);
             return;
         }
         if (org.telegram.relay.ui.RelayThreadsUi.handleMessageOption(this, option, selectedObject)) { // Relay A7a
@@ -34877,8 +34928,9 @@ public class ChatActivity extends BaseFragment implements
                     } else {
                         builder.setMessage(LocaleController.getString(R.string.PinMessageAlertChat));
                     }
-                    checks = new boolean[]{false, false};
-                    if (!UserObject.isUserSelf(currentUser)) {
+                    // Relay (polish 2b): a Mattermost pin is for both people of a DM; no "Pin also for …" choice.
+                    checks = new boolean[]{false, org.telegram.relay.RelayConfig.ENABLED};
+                    if (!UserObject.isUserSelf(currentUser) && !org.telegram.relay.RelayConfig.ENABLED) {
                         FrameLayout frameLayout = new FrameLayout(getParentActivity());
                         CheckBoxCell cell = new CheckBoxCell(getParentActivity(), 1, themeDelegate);
                         cell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
@@ -34903,7 +34955,9 @@ public class ChatActivity extends BaseFragment implements
                         } else {
                             builder.setMessage(LocaleController.getString(R.string.PinMessageAlert));
                         }
-                        checks = new boolean[]{true, true};
+                        // Relay (polish 2b): Mattermost pins don't notify anyone; no "Notify all members" checkbox.
+                        checks = new boolean[]{!org.telegram.relay.RelayConfig.ENABLED, true};
+                        if (!org.telegram.relay.RelayConfig.ENABLED) {
                         FrameLayout frameLayout = new FrameLayout(getParentActivity());
                         CheckBoxCell cell = new CheckBoxCell(getParentActivity(), 1, themeDelegate);
                         cell.setBackgroundDrawable(Theme.getSelectorDrawable(false));
@@ -34917,6 +34971,7 @@ public class ChatActivity extends BaseFragment implements
                         });
                         builder.setCustomViewOffset(9);
                         builder.setView(frameLayout);
+                        }
                     }
                 } else {
                     if (currentPinnedMessageId != 0 && mid < currentPinnedMessageId) {
@@ -46534,6 +46589,8 @@ public class ChatActivity extends BaseFragment implements
         } else if (currentEncryptedChat == null) {
             if (UserObject.isDeleted(currentUser)) {
                 allowPin = false;
+            } else if (org.telegram.relay.RelayConfig.ENABLED && currentUser != null && !currentUser.bot) {
+                allowPin = true; // Relay (polish 2b): Mattermost pins DM posts too (iOS H5)
             } else if (userInfo != null) {
                 allowPin = userInfo.can_pin_message;
             } else {
@@ -46760,6 +46817,12 @@ public class ChatActivity extends BaseFragment implements
                 if (!isEphemeral && !selectedObject.isSponsored() && chatMode != MODE_SCHEDULED && ChatObject.isChannel(currentChat) && (!ChatObject.isMonoForum(currentChat) || ChatObject.canManageMonoForum(currentAccount, currentChat)) && selectedObject.getDialogId() != mergeDialogId) {
                     items.add(LocaleController.getString(R.string.CopyLink));
                     options.add(OPTION_COPY_LINK);
+                    icons.add(R.drawable.msg_link);
+                } else if (org.telegram.relay.RelayConfig.ENABLED && currentUser != null && !isEphemeral && chatMode == 0
+                        && selectedObject.getId() > 0 && !selectedObject.isSending() && !(selectedObject.messageOwner instanceof TLRPC.TL_messageService)) {
+                    // Relay (polish 2b): DM posts have permalinks too (iOS J4); built in RelayDmLinks.
+                    items.add(LocaleController.getString(R.string.CopyLink));
+                    options.add(OPTION_RELAY_COPY_DM_LINK);
                     icons.add(R.drawable.msg_link);
                 }
                 if (selectedObject != null && selectedObject.messageOwner != null && selectedObject.messageOwner.action == null && currentChat != null && currentChat.forum && !isTopic && selectedObject.messageOwner != null && selectedObject.messageOwner.reply_to != null && selectedObject.messageOwner.reply_to.forum_topic) {

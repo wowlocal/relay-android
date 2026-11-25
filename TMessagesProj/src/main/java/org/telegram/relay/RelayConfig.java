@@ -20,6 +20,12 @@ public final class RelayConfig {
         return BuildConfig.DEBUG_VERSION;
     }
 
+    /**
+     * Polish 2b: the folder name in the shared storage (Pictures/, Movies/, Download/, Music/) where saved media
+     * goes, and the title of the app folder in the file picker. Telegram uses "Telegram".
+     */
+    public static final String MEDIA_FOLDER = ENABLED ? "Relay" : "Telegram";
+
     public static final String TAG_BRIDGE = "RelayBridge";
     public static final String TAG_AUTH = "RelayAuth";
 

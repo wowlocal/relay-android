@@ -59,7 +59,11 @@ public class GalleryEmptyView extends LinearLayout {
         subtitleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         ThemeBind.textColor(subtitleTextView, Theme.key_emptyListPlaceholder);
         subtitleTextView.setGravity(Gravity.CENTER_HORIZONTAL);
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            org.telegram.relay.ui.RelayServerLimits.bindGalleryAccessText(subtitleTextView, currentAccount); // the server's MaxFileSize, not 2 GB
+        } else {
         subtitleTextView.setText(LocaleController.getString(UserConfig.getInstance(currentAccount).isPremium() ? R.string.GalleryAccessAllowAccessTextPremium : R.string.GalleryAccessAllowAccessTextNonPremium));
+        }
         subtitleTextView.setMaxWidth(dp(260));
         subtitleTextView.setLineSpacing(AndroidUtilities.dp(2), 1);
         addView(subtitleTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 0, 0, 14));

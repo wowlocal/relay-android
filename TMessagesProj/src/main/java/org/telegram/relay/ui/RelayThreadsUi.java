@@ -295,10 +295,18 @@ public final class RelayThreadsUi {
         @Override
         public void setAlpha(int alpha) {
             icon.setAlpha(alpha);
+            badgePaint.setAlpha(alpha);
+            textPaint.setAlpha(alpha);
+            invalidateSelf();
         }
 
         @Override
         public void setColorFilter(ColorFilter colorFilter) {
+            // Polish 2b: the action bar tints its icons (white in dark mode); the badge keeps its own colours.
+            if (colorFilter != null) {
+                icon.setColorFilter(colorFilter);
+                invalidateSelf();
+            }
         }
 
         @Override

@@ -157,9 +157,13 @@ class Device:
             time.sleep(1)
         return []
 
-    def find(self, text=None, desc=None, contains=False, nodes=None):
+    def find(self, text=None, desc=None, contains=False, nodes=None, rid=None):
+        """First node with this text / content-desc (exact, or substring with contains) or resource id (the
+        name after ":id/")."""
         nodes = nodes if nodes is not None else self.dump()
         for n in nodes:
+            if rid is not None and n.resource_id.endswith(":id/" + rid):
+                return n
             for want, have in ((text, n.text), (desc, n.desc)):
                 if want is None:
                     continue
@@ -167,10 +171,10 @@ class Device:
                     return n
         return None
 
-    def wait_for(self, text=None, desc=None, contains=False, timeout=30):
+    def wait_for(self, text=None, desc=None, contains=False, timeout=30, rid=None):
         deadline = time.time() + timeout
         while time.time() < deadline:
-            n = self.find(text=text, desc=desc, contains=contains)
+            n = self.find(text=text, desc=desc, contains=contains, rid=rid)
             if n:
                 return n
             time.sleep(1)

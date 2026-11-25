@@ -88,7 +88,7 @@ def fresh_login(d, check, user, password):
     d.reverse()
     d.logcat_clear()
     d.launch()
-    d.wait_for(desc="relay_server_field", timeout=40)
+    d.wait_for(rid="relay_server_field", timeout=40)
     d.broadcast("org.relaychat.DEBUG_LOGIN", server=r.MM_URL, user=user, password=password)
     ok = d.wait_log(r"DEBUG_LOGIN (ok|failed)[^\n]*", timeout=40, tags=["RelayDebug"])
     check.ok("debug login as %s" % user, ok is not None and ok.group(1) == "ok", ok.group(0) if ok else "no result")
@@ -218,8 +218,10 @@ def scenario_settings(d, check, user):
     check.ok("settings shows @%s" % user, ("@" + user) in joined, str(texts1[:10]))
     check.ok("settings shows the email", re.search(r"[\w.+-]+@[\w-]+\.[\w.]+", joined) is not None)
     check.ok("settings shows the server row", "Server" in texts and any("localhost:8065" in t for t in texts))
-    for row in ("Chat Settings", "Notifications", "Data and Storage", "Passcode Lock", "Language", "About Relay", "Log Out"):
+    for row in ("Chat Settings", "Notifications", "Data and Storage", "Passcode Lock", "About Relay", "Log Out"):
         check.ok("settings has '%s'" % row, row in texts)
+    # Polish 2b: English only (docs/relay/LOCALIZATION.md), so no Language row.
+    check.ok("settings has no Language row", "Language" not in texts)
     check.ok("settings footer says Relay for Android", any(t.startswith("Relay for Android") for t in texts), str([t for t in texts if "Android" in t]))
     check.ok("no Privacy / Folders rows", "Privacy and Security" not in texts and "Chat Folders" not in texts)
 
