@@ -267,7 +267,9 @@ public final class RelayAccount {
             return null;
         }
         boolean self = mmUserId.equals(session.userId);
-        return RelayUsers.toTlUser(user, userTlId(mmUserId), self, avatarPhotoId(user), status(mmUserId));
+        TLRPC.TL_user u = RelayUsers.toTlUser(user, userTlId(mmUserId), self, avatarPhotoId(user), status(mmUserId));
+        org.telegram.relay.bridge.RelayProfile.applyEmojiStatus(this, user, u); // A7c: custom status → emoji status
+        return u;
     }
 
     /** The TL user for a TL user id that the bridge allocated, or null. */

@@ -509,7 +509,7 @@ final class RelayWrite {
             String postId = unit.layout.post.id;
             Set<String> wanted = new LinkedHashSet<>();
             for (TLRPC.Reaction reaction : r.reaction) {
-                String name = emojiName(reaction);
+                String name = RelayReactions.emojiName(account, reaction); // A7c: custom emoji documents too
                 if (name != null) {
                     wanted.add(name);
                 }
@@ -525,11 +525,14 @@ final class RelayWrite {
                     account.client.removeReaction(postId, name);
                 }
             }
+            java.util.List<String> added = new java.util.ArrayList<>();
             for (String name : wanted) {
                 if (!mine.contains(name)) {
                     account.client.addReaction(account.session.userId, postId, name);
+                    added.add(name);
                 }
             }
+            RelayReactions.noteUsed(account, added); // A7c: Mattermost's recent emoji
             Post post = account.client.post(postId);
             path.history.rememberPost(post);
             int part0 = path.history.localIdOf(channel.id, postId);
@@ -662,7 +665,7 @@ final class RelayWrite {
         }
         String md5 = RelayUploads.md5(upload.file);
         long started = System.currentTimeMillis();
-        final long[] lastLog = {0};
+        final long[] lastLog = {0, 0};
         FileUploadResponse response = account.client.uploadFile(channelId, FileUpload.ofFile(upload.name, upload.mime, upload.file), (sent, total) -> {
             if (job.deferred.isCancelled()) {
                 throw new RuntimeException("upload cancelled");
@@ -671,6 +674,10 @@ final class RelayWrite {
             if (now - lastLog[0] > 500) {
                 lastLog[0] = now;
                 RelayConfig.log(TAG, "upload " + upload.name + ": " + sent + "/" + total);
+            }
+            if (now - lastLog[1] > 100 || sent >= total) {
+                lastLog[1] = now;
+                RelayUploadProgress.serverProgress(account.account, upload.uploadId, sent, total); // A7c: bubble progress
             }
         });
         if (response.fileInfos.isEmpty()) {

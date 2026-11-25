@@ -27,6 +27,11 @@ public class GcmPushListenerService extends FirebaseMessagingService {
             FileLog.d("FCM received data: " + data + " from: " + from);
         }
 
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A7c): a Mattermost push-proxy payload, not Telegram's encrypted "p".
+            org.telegram.relay.bridge.RelayNotifications.onPushMessage(data, time);
+            return;
+        }
         PushListenerController.processRemoteMessage(PushListenerController.PUSH_TYPE_FIREBASE, data.get("p"), time);
     }
 

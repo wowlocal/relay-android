@@ -7341,6 +7341,11 @@ public class ChatActivity extends BaseFragment implements
             Object object = mentionContainer.getAdapter().getItem(position);
             int start = mentionContainer.getAdapter().getResultStartPosition();
             int len = mentionContainer.getAdapter().getResultLength();
+            if (object instanceof org.telegram.relay.bridge.RelayComposer.Suggestion) {
+                // Relay (A7c): @channel/@here/@all, ~channel or a slash command
+                chatActivityEnterView.replaceWithText(start, len, ((org.telegram.relay.bridge.RelayComposer.Suggestion) object).insert + " ", false);
+                return;
+            }
             if (mentionContainer.getAdapter().isLocalHashtagHint(position)) {
                 chatActivityEnterView.replaceWithText(start, len, mentionContainer.getAdapter().getHashtagHint() + "@" + ChatObject.getPublicUsername(currentChat) + " ", false);
                 return;

@@ -465,6 +465,10 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
         if (type == TYPE_MESSAGE_EFFECTS) {
             return SelectAnimatedEmojiDialog.TYPE_EFFECTS;
         }
+        if (org.telegram.relay.RelayConfig.ENABLED && type == TYPE_DEFAULT) {
+            // Relay (A7c): the full picker is every Unicode emoji plus the server's custom emoji.
+            return SelectAnimatedEmojiDialog.TYPE_STICKER_SET_EMOJI;
+        }
         if (showExpandableReactions) {
             return SelectAnimatedEmojiDialog.TYPE_EXPANDABLE_REACTIONS;
         }
@@ -991,7 +995,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
     }
 
     private void invalidateEmojis() {
-        if (type != TYPE_STICKER_SET_EMOJI) return;
+        if (type != TYPE_STICKER_SET_EMOJI && !org.telegram.relay.RelayConfig.ENABLED) return;
         invalidate();
         recyclerListView.invalidate();
         recyclerListView.invalidateViews();
@@ -2071,7 +2075,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             resetAnimation();
             currentReaction = react;
             hasEnterAnimation = currentReaction.isStar || (currentReaction.emojicon != null && (showCustomEmojiReaction() || allReactionsIsDefault)) && LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_REACTIONS);
-            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect) {
+            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect || org.telegram.relay.RelayConfig.ENABLED) {
                 hasEnterAnimation = false;
             }
             if (currentReaction.isStar || currentReaction.emojicon != null) {
@@ -2129,7 +2133,8 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 if (particles == null) {
                     particles = new StarsReactionsSheet.Particles(StarsReactionsSheet.Particles.TYPE_RADIAL, SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH ? 45 : 18);
                 }
-            } else if (type == TYPE_STICKER_SET_EMOJI && react != null && react.emojicon != null) {
+            } else if ((type == TYPE_STICKER_SET_EMOJI || org.telegram.relay.RelayConfig.ENABLED) && react != null && react.emojicon != null) {
+                // Relay (A7c): plain emoji glyphs, as in the sticker editor's emoji bar.
                 enterImageView.getImageReceiver().setImageBitmap(Emoji.getEmojiDrawable(react.emojicon));
                 loopImageView.getImageReceiver().setImageBitmap(Emoji.getEmojiDrawable(react.emojicon));
             } else if (currentReaction.isEffect) {

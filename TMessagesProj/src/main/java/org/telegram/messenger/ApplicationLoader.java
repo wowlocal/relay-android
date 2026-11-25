@@ -376,6 +376,11 @@ public class ApplicationLoader extends Application {
     });
 
     public static void startPushService() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            // Relay (A7c): "Keep connected in background" runs a foreground service of its own.
+            org.telegram.relay.bridge.RelayNotifications.applyKeepConnected();
+            return;
+        }
         SharedPreferences preferences = MessagesController.getGlobalNotificationsSettings();
         boolean enabled;
         if (preferences.contains("pushService")) {
@@ -408,7 +413,7 @@ public class ApplicationLoader extends Application {
     }
 
     private void initPushServices() {
-        if (org.telegram.relay.RelayConfig.ENABLED) {
+        if (org.telegram.relay.RelayConfig.ENABLED && !org.telegram.relay.bridge.RelayNotifications.FCM_PUSH) {
             // Relay: no Firebase token until push goes through the Mattermost push proxy (A7);
             // requesting one opens Google sockets for a dummy Firebase project.
             SharedConfig.pushStringStatus = "__RELAY_PUSH_DISABLED__";
