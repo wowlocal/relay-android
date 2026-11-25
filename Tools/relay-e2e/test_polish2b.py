@@ -447,7 +447,8 @@ def scenario_dm(d, check, bob, carol, dm, posts):
 def scenario_attach(d, check, carol, dm):
     open_chat(d, dm["id"], wait=3)
     if not a6.tap_desc(d, "Attach media"):
-        check.ok("attach menu opens", False)
+        d.screenshot(os.path.join(os.environ.get("RELAY_FAIL_SHOTS", "/tmp"), "polish2b-attach-failed.png"))
+        check.ok("attach menu opens", False, str(texts_of(d)[-14:]))
         return
     time.sleep(1.5)
     check_no_telegram(d, check, "attach")

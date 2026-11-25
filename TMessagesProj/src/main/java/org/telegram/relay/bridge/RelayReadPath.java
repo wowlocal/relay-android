@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,8 @@ final class RelayReadPath {
         TLRPC.TL_dialog dialog;
         TLRPC.Message top;
         boolean pinned;
+        /** The newest page's units, newest first (final regression: mentions of a chat that just appeared). */
+        List<RelayHistory.Unit> units;
     }
 
     private Future<PostList> submit(java.util.concurrent.Callable<PostList> call) {
@@ -188,6 +191,7 @@ final class RelayReadPath {
             row.channel = channel;
             row.member = member;
             row.dialogId = directory.dialogId(channel);
+            row.units = newest.units;
             RelayHistory.Unit newestUnit = newest.units.get(0);
             RelayHistory.Unit topUnit = previewUnit(channel, newest.units); // Polish 1: CRT previews the newest root
             ArrayList<TLRPC.Message> top = messages(channel, Collections.singletonList(topUnit), usersOut);
@@ -485,6 +489,27 @@ final class RelayReadPath {
         return at != null && System.currentTimeMillis() - at < 60_000;
     }
 
+    /** Unread posts of {@code row}'s newest page that mention the user (roots only with collapsed threads), as the badge counts. */
+    private int mappedMentions(DialogRow row, RelayDirectory.Snapshot snapshot) throws Exception {
+        if (row.channel.isDirect() || row.channel.isGroup()) {
+            return 0; // no mention badge for DMs and GMs (RelayDirectory.mentionCount)
+        }
+        List<RelayHistory.Unit> unread = new ArrayList<>();
+        for (RelayHistory.Unit unit : row.units) {
+            if (unit.localId > row.dialog.read_inbox_max_id && !(snapshot.collapsedThreads && unit.layout.post.isReply())) {
+                unread.add(unit);
+            }
+        }
+        Set<String> posts = new HashSet<>();
+        ArrayList<TLRPC.Message> messages = messages(row.channel, unread, new LinkedHashSet<>());
+        for (int i = 0; i < messages.size() && i < unread.size(); i++) {
+            if (messages.get(i).mentioned && !messages.get(i).out) {
+                posts.add(unread.get(i).layout.post.id);
+            }
+        }
+        return posts.size();
+    }
+
     TLObject channelTooLong(Channel channel) throws Exception {
         RelayDirectory.Snapshot snapshot = directory.get(5_000);
         Set<String> users = new LinkedHashSet<>();
@@ -494,9 +519,12 @@ final class RelayReadPath {
         res.timeout = 30;
         res.flags |= TLObject.FLAG_1;
         if (!rows.isEmpty() && consumeAnnouncedLive(channel.id)) {
-            // Polish 2a (QA-16): a chat that just appeared live (joined / added) counts its mentions from the live
-            // posts that follow (mentioned + media_unread); the server's count here would count them twice.
-            rows.get(0).dialog.unread_mentions_count = 0;
+            // Polish 2a (QA-16): a chat that just appeared live (joined / added) counts the mentions of later posts
+            // live (mentioned + media_unread); the server's count here would count those twice. The posts already
+            // mapped now are never sent live again (or were sent before the client knew the chat, and dropped), so
+            // they are counted here: the unread ones that mention the user (final regression: the "added to the
+            // channel" post was lost when its live event came before this answer).
+            rows.get(0).dialog.unread_mentions_count = mappedMentions(rows.get(0), snapshot);
         }
         if (rows.isEmpty()) {
             TLRPC.TL_dialog d = new TLRPC.TL_dialog();

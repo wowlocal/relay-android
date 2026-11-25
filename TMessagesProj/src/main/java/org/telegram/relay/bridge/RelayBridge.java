@@ -112,6 +112,11 @@ public final class RelayBridge {
         final int flags;
         final int connectionType;
         volatile boolean cancelled;
+        /**
+         * Set once by the first {@link #run} or by {@link #failNotRunning}, whichever comes first: native fails only
+         * requests that are not sent yet, so a request the bridge has started is never failed with -2000.
+         */
+        final java.util.concurrent.atomic.AtomicBoolean claimed = new java.util.concurrent.atomic.AtomicBoolean();
         int attempt;
         /** Answered later by {@link Deferred#complete} (write queue). */
         boolean deferred;
@@ -213,6 +218,9 @@ public final class RelayBridge {
     }
 
     private void run(Pending p) {
+        if (p.attempt == 0 && !p.claimed.compareAndSet(false, true)) {
+            return; // failed by failNotRunning before it ran
+        }
         if (p.cancelled) {
             return;
         }
@@ -382,10 +390,15 @@ public final class RelayBridge {
         }
     }
 
-    /** Native failNotRunningRequest: delivers -2000 CANCELLED_REQUEST if the request has not run yet. */
+    /**
+     * Native failNotRunningRequest: delivers -2000 CANCELLED_REQUEST if the request has not started yet. A request
+     * that is running or answered is left alone, as native leaves a sent request: FileLoadOperation (pause) takes
+     * -2000 as "the newest part was never requested", so failing an older part whose newer part was already answered
+     * made it ask for the newer part again and never for the older one (polish 1: a photo that never finished).
+     */
     public void failNotRunning(int token) {
         Pending p = pending.get(token);
-        if (p != null && p.attempt == 0) {
+        if (p != null && p.claimed.compareAndSet(false, true)) {
             pending.remove(token);
             p.cancelled = true;
             Utilities.stageQueue.postRunnable(() -> {

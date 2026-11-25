@@ -202,6 +202,9 @@ class Device:
         self.tap_node(node)
         self.key("KEYCODE_MOVE_END")
         self.shell("input keyevent " + " ".join(["KEYCODE_DEL"] * max_chars))
+        # In a multi-line field MOVE_END only reaches the end of the tapped line: delete what follows it too
+        # (the rest of a wrapped long text stayed in the composer and became the chat's draft).
+        self.shell("input keyevent " + " ".join(["KEYCODE_FORWARD_DEL"] * max_chars))
 
     def hide_keyboard(self):
         self.key("KEYCODE_ESCAPE")
