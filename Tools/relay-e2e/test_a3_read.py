@@ -10,8 +10,8 @@ What it does (alice is logged in through the debug hook, bob writes probe posts 
   1. Chat list: every Mattermost channel/DM/GM of alice is a dialog with the right name, unread
      count (CRT `_root` counters), mention badge (channels only), muted and pinned (favourites) state;
      one folder per team. Compared through the DEBUG_DUMP_DIALOGS dump with REST.
-  2. DM with bob and the iOS channel: visible messages (uiautomator) match REST posts; replies show a
-     reply header.
+  2. DM with bob and the iOS channel: visible messages (uiautomator) match REST posts (root posts only with
+     collapsed threads, DMs included); replies show a reply header.
   3. First unread: a chat with unread posts opens at the "Unread Messages" separator; read marking
      reaches the server (channels/members/me/view), the badge clears.
   4. Firehose (11k+ posts): fling back N times; the bridge's id map and the client's cached message ids
@@ -273,7 +273,10 @@ def main():
         texts = " ".join(t.replace("\n", " ") for t in d.screen_texts(nodes))
         dm_posts = alice.get("/channels/%s/posts?per_page=30" % dm_bob["id"])
         # Plain posts: call records (A8, e.g. A8 run as alice) show as Telegram call bubbles, not their text.
-        newest = [dm_posts["posts"][i] for i in dm_posts["order"] if not dm_posts["posts"][i].get("type")][:6]
+        # DM threads: with collapsed threads (alice: the server default) a DM's main history shows root posts only,
+        # as iOS; replies live in their threads.
+        newest = [dm_posts["posts"][i] for i in dm_posts["order"] if not dm_posts["posts"][i].get("type")
+                  and not dm_posts["posts"][i].get("root_id")][:6]
         visible = [p for p in newest if strip_md(p["message"])[:20] and strip_md(p["message"])[:20] in texts]
         check.ok("DM shows the newest posts from REST", len(visible) >= 3 and newest[0]["id"] in [p["id"] for p in visible],
                  "%d of %d newest visible" % (len(visible), len(newest)))
