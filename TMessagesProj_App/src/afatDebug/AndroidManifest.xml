@@ -32,5 +32,10 @@
             android:name="org.relaychat.debug.RelayA8DebugHooks"
             android:authorities="${applicationId}.relaydebuga8"
             android:exported="false" />
+        <!-- Tab bar test hooks (tab state, threads/mentions rows, day/night theme). -->
+        <provider
+            android:name="org.relaychat.debug.RelayTabsDebugHooks"
+            android:authorities="${applicationId}.relaydebugtabs"
+            android:exported="false" />
     </application>
 </manifest>

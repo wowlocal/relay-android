@@ -11817,6 +11817,11 @@
     <string name="RelayRecentMentions">Recent Mentions</string>
     <string name="RelaySavedPostsEmpty">No saved posts yet. Tap a message and choose Save Post to keep it here.</string>
     <string name="RelayRecentMentionsEmpty">No one has mentioned you yet.</string>
+    <!-- Tab bar: Chats · Threads · Mentions · Settings · Profile -->
+    <string name="RelayMentionsTab">Mentions</string>
+    <string name="RelayThreadsOff">Replies show in their channels because collapsed reply threads are off for your account.</string>
+    <string name="RelayThreadsLoading">Loading threads…</string>
+    <string name="RelayThreadsTabUnread">%1$s, %2$s unread</string>
     <string name="RelaySavePost">Save Post</string>
     <string name="RelayUnsavePost">Remove from Saved</string>
     <string name="RelayPostSaved">Post saved to Saved Posts.</string>

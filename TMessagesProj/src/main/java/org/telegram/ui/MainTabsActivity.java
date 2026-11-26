@@ -95,19 +95,25 @@ import me.vkryl.android.animator.FactorAnimator;
 
 public class MainTabsActivity extends ViewPagerActivity implements NotificationCenter.NotificationCenterDelegate, FactorAnimator.Target {
 
-    public static final int TABS_COUNT = 4;
+    // Relay: Chats · Threads · Mentions · Settings · Profile. Threads takes the Contacts slot, Mentions comes after it.
+    public static final int TABS_COUNT = org.telegram.relay.RelayConfig.ENABLED ? 5 : 4;
     private static final int POSITION_CHATS = 0;
-    private static final int POSITION_CONTACTS = 1;
-    private static final int POSITION_CALLS_OR_SETTINGS = 2;
-    private static final int POSITION_PROFILE = 3;
+    private static final int POSITION_CONTACTS = 1; // Relay: Threads
+    private static final int POSITION_CALLS_OR_SETTINGS = org.telegram.relay.RelayConfig.ENABLED ? 3 : 2; // Relay
+    private static final int POSITION_PROFILE = org.telegram.relay.RelayConfig.ENABLED ? 4 : 3; // Relay
+    private static final int POSITION_RELAY_MENTIONS = 2; // Relay
 
     private static final int INDEX_CHATS = 0;
     private static final int INDEX_CONTACTS = 1;
     private static final int INDEX_SETTINGS = 2;
     private static final int INDEX_CALLS = 3;
     private static final int INDEX_PROFILE = 4;
+    private static final int INDEX_RELAY_MENTIONS = 5; // Relay
 
     private static int indexToPosition(int index) {
+        if (org.telegram.relay.RelayConfig.ENABLED) { // Relay
+            return index == INDEX_RELAY_MENTIONS ? POSITION_RELAY_MENTIONS : index >= INDEX_SETTINGS ? Math.max(index, POSITION_CALLS_OR_SETTINGS) : index;
+        }
         return index > 2 ? index - 1 : index;
     }
 
@@ -295,6 +301,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     }
 
     private void checkContactsTabBadge() {
+        if (org.telegram.relay.RelayConfig.ENABLED) {
+            org.telegram.relay.ui.RelayMainTabs.updateThreadsBadge(tabs != null ? tabs[INDEX_CONTACTS] : null, currentAccount, true); // Relay
+            return;
+        }
         if (tabsView != null && tabs[INDEX_CONTACTS] != null) {
             final boolean hasPermission = Build.VERSION.SDK_INT >= 23 && ContactsController.hasContactsPermission();
             if (hasPermission) {
@@ -326,9 +336,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsView.setPadding(dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4), dp(DialogsActivity.MAIN_TABS_MARGIN + 4));
         tabsView.setMaxWidth(dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
 
-        tabs = new GlassTabView[5];
+        tabs = new GlassTabView[org.telegram.relay.RelayConfig.ENABLED ? 6 : 5]; // Relay: + Mentions
         tabs[INDEX_CHATS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CHATS, R.string.MainTabsChats);
-        tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsContacts);
+        if (org.telegram.relay.RelayConfig.ENABLED) { // Relay: Threads and Mentions instead of Contacts
+            tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.RELAY_THREADS, R.string.RelayThreads);
+            tabs[INDEX_RELAY_MENTIONS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.RELAY_MENTIONS, R.string.RelayMentionsTab);
+        } else {
+            tabs[INDEX_CONTACTS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CONTACTS, R.string.MainTabsContacts);
+        }
         tabs[INDEX_SETTINGS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.SETTINGS, R.string.Settings);
         tabs[INDEX_CALLS] = GlassTabView.createMainTab(context, resourceProvider, GlassTabView.TabAnimation.CALLS, R.string.MainTabsCalls);
         tabs[INDEX_PROFILE] = GlassTabView.createAvatar(context, resourceProvider, currentAccount, R.string.MainTabsProfile);
@@ -344,7 +359,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsView.addTabToIgnoreClick(tabs[INDEX_PROFILE]);
         tabsView.addTabToIgnoreClick(tabs[INDEX_CALLS]);
 
-        for (int index = 0; index < tabs.length; index++) {
+        final int[] relayOrder = org.telegram.relay.RelayConfig.ENABLED ? new int[]{INDEX_CHATS, INDEX_CONTACTS, INDEX_RELAY_MENTIONS, INDEX_SETTINGS, INDEX_CALLS, INDEX_PROFILE} : null; // Relay
+        for (int i = 0; i < tabs.length; i++) {
+            final int index = relayOrder != null ? relayOrder[i] : i; // Relay: the tabs in their bar order
             final GlassTabView view = tabs[index];
 
             final int position = indexToPosition(index);
@@ -414,6 +431,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         updateLayout();
         checkUnreadCount(false);
+        checkContactsTabBadge(); // Relay: the Threads badge
         return contentView;
     }
 
@@ -827,6 +845,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
     @Override
     protected BaseFragment createBaseFragmentAt(int position) {
+        if (org.telegram.relay.RelayConfig.ENABLED && (position == POSITION_CONTACTS || position == POSITION_RELAY_MENTIONS)) {
+            // Relay: the Threads tab follows the chat list's selected team folder.
+            return org.telegram.relay.ui.RelayMainTabs.createTab(position == POSITION_CONTACTS, () -> dialogsActivity != null ? dialogsActivity.relaySelectedFilterId() : 0);
+        }
         if (position == POSITION_CONTACTS) {
             Bundle args = new Bundle();
             args.putBoolean("needPhonebook", true);
@@ -1043,6 +1065,13 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
     }
 
+    // Relay: the Threads tab's badge follows the followed threads (live thread events) of this account.
+    private final org.telegram.relay.bridge.RelayThreads.Listener relayThreadsListener = account -> {
+        if (account == currentAccount) {
+            checkContactsTabBadge();
+        }
+    };
+
     private NotificationCenter.ObserversGroup observersGroup;
     private long shownProfilePhotoId = -1;
 
@@ -1061,6 +1090,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .addGlobal(NotificationCenter.appUpdateAvailable)
             .addGlobal(NotificationCenter.appUpdateLoading)
             .addGlobal(NotificationCenter.needSetDayNightTheme);
+        if (org.telegram.relay.RelayConfig.ENABLED) { // Relay
+            org.telegram.relay.bridge.RelayThreads.addListener(relayThreadsListener);
+            org.telegram.relay.bridge.RelayThreads.prefetch(currentAccount);
+        }
 
         return super.onFragmentCreate();
     }
@@ -1074,6 +1107,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             observersGroup.removeAllObservers();
             observersGroup = null;
         }
+        org.telegram.relay.bridge.RelayThreads.removeListener(relayThreadsListener); // Relay
 
         super.onFragmentDestroy();
     }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Relay: the Threads tab icon (two speech bubbles, outlined like Telegram's tab icons). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="5.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M23,26.5H35.5A14.5,14.5 0,0 1,50 41V43.5A14.5,14.5 0,0 1,35.5 58H23.5C20,61.5 15.5,63.8 10.5,64.5C12.3,62 13.2,59.2 13,56A14.5,14.5 0,0 1,8.5 45.5V41A14.5,14.5 0,0 1,23 26.5Z" />
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="5.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M22.5,19.5A14.5,14.5 0,0 1,36.5 8.5H49A14.5,14.5 0,0 1,63.5 23V25.5A14.5,14.5 0,0 1,59 36C58.8,39.2 59.7,42 61.5,44.5C59.3,44.2 57.2,43.6 55.6,42.8" />
+</vector>

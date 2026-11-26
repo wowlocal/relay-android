@@ -1,16 +1,6 @@
 package org.telegram.relay.ui;
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.Paint;
-import android.graphics.PixelFormat;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
-import android.graphics.RectF;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.text.TextPaint;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
@@ -23,7 +13,6 @@ import org.telegram.relay.bridge.RelayThreadsHooks;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.BulletinFactory;
 
@@ -32,8 +21,9 @@ import java.util.List;
 
 /**
  * A7a: the UI side of Mattermost threads: opening a thread (Telegram's thread view over
- * {@code getDiscussionMessage}), Follow / Unfollow Thread in the message menu, and the chat list's threads
- * button with its unread badge. Hooks call in from {@code ChatActivity} and {@code DialogsActivity}.
+ * {@code getDiscussionMessage}) and Follow / Unfollow Thread in the message menu. Hooks call in from
+ * {@code ChatActivity}. The threads list is the Threads tab ({@link RelayMainTabs}; it replaced the chat list's
+ * threads button).
  */
 public final class RelayThreadsUi {
     private RelayThreadsUi() {
@@ -44,9 +34,6 @@ public final class RelayThreadsUi {
     /** Message menu options (outside Telegram's OPTION_* range). */
     public static final int OPTION_FOLLOW_THREAD = 0x52a7a01;
     public static final int OPTION_UNFOLLOW_THREAD = 0x52a7a02;
-
-    /** Action bar item id of the chat list's threads button. */
-    public static final int MENU_THREADS = 0x52a7a10;
 
     // MARK: - Opening a thread
 
@@ -211,141 +198,10 @@ public final class RelayThreadsUi {
         return true;
     }
 
-    // MARK: - Chat list button
+    // MARK: - Threads tab
 
-    /** The chat list's selected folder (dialog filter id; 0 = "All"). */
+    /** The chat list's selected folder (dialog filter id; 0 = "All"): the Threads tab opens on its team. */
     public interface FolderProvider {
         int currentFilterId();
-    }
-
-    /**
-     * Adds the threads button to the chat list's action bar (left of the overflow menu): opens the Threads
-     * list for the team of the selected folder ({@code currentFilterId}, "All" → the first team); the badge
-     * shows the unread followed threads of all teams and follows {@link RelayThreads.Listener}.
-     */
-    public static org.telegram.ui.ActionBar.ActionBarMenuItem attachChatListButton(BaseFragment fragment, org.telegram.ui.ActionBar.ActionBarMenu menu,
-                                                                                  FolderProvider currentFilterId) {
-        Context context = fragment.getContext() != null ? fragment.getContext() : menu.getContext();
-        ButtonDrawable drawable = new ButtonDrawable(context);
-        org.telegram.ui.ActionBar.ActionBarMenuItem item = menu.addItem(MENU_THREADS, drawable);
-        item.setContentDescription(LocaleController.getString(R.string.RelayThreads));
-        final int account = fragment.getCurrentAccount();
-        item.setOnClickListener(v -> {
-            Bundle args = new Bundle();
-            String teamId = RelayThreads.teamIdOfFolder(account, currentFilterId.currentFilterId());
-            if (teamId != null) {
-                args.putString("team_id", teamId);
-            }
-            fragment.presentFragment(new RelayThreadsActivity(args));
-        });
-        RelayThreads.Listener listener = changed -> {
-            RelayThreads.Totals totals = RelayThreads.totals(account);
-            drawable.setCount(totals.unreadThreads, totals.unreadMentions);
-            String badge = drawable.badge();
-            item.setContentDescription(LocaleController.getString(R.string.RelayThreads) + (badge != null ? " " + badge : ""));
-        };
-        item.addOnAttachStateChangeListener(new android.view.View.OnAttachStateChangeListener() {
-            @Override
-            public void onViewAttachedToWindow(android.view.View v) {
-                RelayThreads.addListener(listener);
-                listener.onThreadsChanged(account);
-                RelayThreads.prefetch(account);
-            }
-
-            @Override
-            public void onViewDetachedFromWindow(android.view.View v) {
-                RelayThreads.removeListener(listener);
-            }
-        });
-        return item;
-    }
-
-    /** The chat list's threads button icon: Telegram's replies glyph with the unread followed-threads badge. */
-    public static final class ButtonDrawable extends Drawable {
-        private final Drawable icon;
-        private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF rect = new RectF();
-        private String badge;
-
-        public ButtonDrawable(Context context) {
-            icon = context.getResources().getDrawable(R.drawable.msg_discussion).mutate();
-            textPaint.setTextSize(AndroidUtilities.dp(10));
-            textPaint.setTypeface(AndroidUtilities.bold());
-            textPaint.setColor(0xffffffff);
-            updateColors();
-        }
-
-        public void updateColors() {
-            icon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_actionBarDefaultIcon), PorterDuff.Mode.MULTIPLY));
-            badgePaint.setColor(Theme.getColor(Theme.key_chats_unreadCounter));
-            invalidateSelf();
-        }
-
-        /** {@code count} unread threads ({@code mentions} > 0 → an "@" in front). */
-        public void setCount(int count, int mentions) {
-            String value = count <= 0 ? null : (mentions > 0 ? "@" : "") + (count > 99 ? "99+" : String.valueOf(count));
-            if (value == null ? badge != null : !value.equals(badge)) {
-                badge = value;
-                invalidateSelf();
-            }
-        }
-
-        public String badge() {
-            return badge;
-        }
-
-        @Override
-        public void draw(Canvas canvas) {
-            android.graphics.Rect b = getBounds();
-            int w = icon.getIntrinsicWidth();
-            int h = icon.getIntrinsicHeight();
-            int cx = b.centerX();
-            int cy = b.centerY();
-            icon.setBounds(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2);
-            icon.draw(canvas);
-            if (badge != null) {
-                float textWidth = textPaint.measureText(badge);
-                float height = AndroidUtilities.dp(16);
-                float width = Math.max(height, textWidth + AndroidUtilities.dp(8));
-                float left = cx + w / 2f - AndroidUtilities.dp(6);
-                float top = cy - h / 2f - AndroidUtilities.dp(4);
-                rect.set(left, top, left + width, top + height);
-                canvas.drawRoundRect(rect, height / 2, height / 2, badgePaint);
-                canvas.drawText(badge, rect.centerX() - textWidth / 2, rect.centerY() + AndroidUtilities.dp(3.5f), textPaint);
-            }
-        }
-
-        @Override
-        public void setAlpha(int alpha) {
-            icon.setAlpha(alpha);
-            badgePaint.setAlpha(alpha);
-            textPaint.setAlpha(alpha);
-            invalidateSelf();
-        }
-
-        @Override
-        public void setColorFilter(ColorFilter colorFilter) {
-            // Polish 2b: the action bar tints its icons (white in dark mode); the badge keeps its own colours.
-            if (colorFilter != null) {
-                icon.setColorFilter(colorFilter);
-                invalidateSelf();
-            }
-        }
-
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSLUCENT;
-        }
-
-        @Override
-        public int getIntrinsicWidth() {
-            return AndroidUtilities.dp(48);
-        }
-
-        @Override
-        public int getIntrinsicHeight() {
-            return AndroidUtilities.dp(48);
-        }
     }
 }

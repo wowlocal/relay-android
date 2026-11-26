@@ -507,7 +507,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private boolean downloadsItemVisible;
     public ActionBarMenuItem searchItem;
     private ActionBarMenuItem optionsItem;
-    private ActionBarMenuItem relayThreadsItem; // Relay A7a; hidden with the other items while searching (polish 2b)
     private ActionBarMenuItem speedItem;
     public static boolean switchingTheme;
     private ActionBarMenuItem doneItem;
@@ -2741,6 +2740,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     private MainTabsActivityController mainTabsActivityController;
 
+    /** Relay: the selected folder (dialog filter id; 0 = "All"), for the Threads tab, which opens on its team. */
+    public int relaySelectedFilterId() {
+        int tab = filterTabsView != null ? filterTabsView.getCurrentTabId() : -1;
+        java.util.ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
+        return tab >= 0 && tab < filters.size() ? filters.get(tab).id : 0;
+    }
+
     public void setMainTabsActivityController(MainTabsActivityController controller) {
         mainTabsActivityController = controller;
     }
@@ -3362,14 +3368,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         });
         fragmentSearchFieldWatcher.setDoNotCloseAfterFieldEmpty();
 
-        if (initialDialogsType == DIALOGS_TYPE_DEFAULT && org.telegram.relay.RelayConfig.ENABLED && folderId == 0) {
-            // Relay A7a: Threads (collapsed reply threads), with the unread followed-threads badge.
-            relayThreadsItem = org.telegram.relay.ui.RelayThreadsUi.attachChatListButton(this, menu, () -> {
-                int tab = filterTabsView != null ? filterTabsView.getCurrentTabId() : -1;
-                java.util.ArrayList<MessagesController.DialogFilter> filters = getMessagesController().getDialogFilters();
-                return tab >= 0 && tab < filters.size() ? filters.get(tab).id : 0;
-            });
-        }
         if (initialDialogsType == DIALOGS_TYPE_DEFAULT) {
             optionsItem = menu.addItem(4, R.drawable.ic_ab_other);
             optionsItem.setContentDescription(LocaleController.getString(R.string.AccDescrMoreOptions));
@@ -13790,7 +13788,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final float factor3 = 1f - animatorDoneButtonVisible.getFloatValue();
         final float factor = factor1 * factor2 * factor3;
         FragmentFloatingButton.setAnimatedVisibility(optionsItem, factor);
-        FragmentFloatingButton.setAnimatedVisibility(relayThreadsItem, factor);
     }
 
     private void checkUi_itemPasscodeVisibility() {

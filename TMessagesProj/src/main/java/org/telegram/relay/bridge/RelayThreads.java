@@ -40,8 +40,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       {@code direction=down}), every reply mapped into the chat's one id space (late inserts or islands,
  *       so ids keep the time order), answered with the §5.3 window rules.</li>
  *   <li>{@code messages.readDiscussion}: {@code PUT …/threads/{root}/read/{create_at of the reply read}}.</li>
- *   <li>Threads list (UI {@code RelayThreadsActivity}), followed threads, unread totals (the chat list's
- *       threads button) and the live {@code thread_*} events.</li>
+ *   <li>Threads list (UI {@code RelayThreadsActivity}, the Threads tab), followed threads, unread totals (the
+ *       Threads tab badge) and the live {@code thread_*} events.</li>
  * </ul>
  *
  * Request handlers run on the account's bridge executor; the public static API below posts there and

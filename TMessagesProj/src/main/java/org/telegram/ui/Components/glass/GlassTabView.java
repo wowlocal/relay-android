@@ -586,7 +586,11 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         BOOSTS(R.raw.boosts, 25, 49),
         MONETIZATION(R.raw.monetize, 19, 45),
         STORIES_SAVED(R.raw.msg_stories_saved, 20, 40),
-        STORIES_ARCHIVE(R.raw.msg_stories_archive);
+        STORIES_ARCHIVE(R.raw.msg_stories_archive),
+
+        // Relay: the Threads and Mentions main tabs (static icons, tinted like the other tabs).
+        RELAY_THREADS(TabAnimationType.STATIC, R.drawable.relay_tab_threads),
+        RELAY_MENTIONS(TabAnimationType.STATIC, R.drawable.filled_chatlist_mention);
 
         public final @RawRes int iconToFilled;
         public final @RawRes int iconToOutline;

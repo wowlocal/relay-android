@@ -891,7 +891,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private static final int RELAY_ID_STATUS = 44;
     private static final int RELAY_ID_CUSTOM_STATUS = 45;
     private static final int RELAY_ID_SAVED_POSTS = 46; // A7b
-    private static final int RELAY_ID_MENTIONS = 47;
+    private static final int RELAY_ID_MENTIONS = 47; // A7b; Recent Mentions is a main tab now (Relay tab bar), the id stays the range end
 
     /**
      * Relay: the settings list. Mattermost account (server), the local app settings that work
@@ -911,9 +911,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             items.add(SettingCell.Factory.of(RELAY_ID_SERVER, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.menu_website, getString(R.string.RelaySettingsServer), org.telegram.relay.auth.RelayAuth.displayHost(session.serverUrl)));
             items.add(UItem.asShadow(null));
         }
-        // A7b: Mattermost's saved (flagged) posts and recent mentions.
+        // A7b: Mattermost's saved (flagged) posts. Recent Mentions is the Mentions tab (Relay tab bar), as on iOS.
         items.add(SettingCell.Factory.of(RELAY_ID_SAVED_POSTS, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.msg_saved, getString(R.string.RelaySavedPosts)));
-        items.add(SettingCell.Factory.of(RELAY_ID_MENTIONS, IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom, R.drawable.msg_mention, getString(R.string.RelayRecentMentions)));
         items.add(UItem.asShadow(null));
         items.add(SettingCell.Factory.of(2, IconBackgroundColors.ORANGE.top, IconBackgroundColors.ORANGE.bottom, R.drawable.settings_chat, getString(R.string.SettingsChat), getString(R.string.SettingsChatInfo)));
         items.add(SettingCell.Factory.of(5, IconBackgroundColors.RED.top, IconBackgroundColors.RED.bottom, R.drawable.settings_sounds, getString(R.string.SettingsNotifications), getString(R.string.SettingsNotificationsInfo)));
@@ -964,9 +963,6 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 break;
             case RELAY_ID_SAVED_POSTS:
                 presentSettingFragment(org.telegram.relay.ui.RelayPostListActivity.saved());
-                break;
-            case RELAY_ID_MENTIONS:
-                presentSettingFragment(org.telegram.relay.ui.RelayPostListActivity.mentions());
                 break;
             case RELAY_ID_PASSCODE:
                 presentSettingFragment(PasscodeActivity.determineOpenFragment());
