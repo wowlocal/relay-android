@@ -30,6 +30,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import relaye2e as r  # noqa: E402
 import test_a6_hygiene as a6  # noqa: E402
 
+
+def relay_version():
+    """RELAY_VERSION_NAME (RELAY_VERSION_CODE) from gradle.properties, as the app shows it ("1.0.1 (2)")."""
+    props = {}
+    with open(os.path.join(r.REPO, "gradle.properties")) as f:
+        for line in f:
+            if "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                props[key.strip()] = value.strip()
+    return "%s (%s)" % (props.get("RELAY_VERSION_NAME", "?"), props.get("RELAY_VERSION_CODE", "?"))
+
 PROBE = "[relay-e2e a6b]"
 REST_URL = "http://localhost:%d" % r.MM_PORT
 
@@ -340,7 +351,8 @@ def scenario_settings(d, check):
         texts += d.screen_texts()
         a6.scroll_down(d)
     footer = [t for t in texts if t.startswith("Relay for Android")]
-    check.ok("settings footer: Relay for Android v1.0.0 (1)", any(t.startswith("Relay for Android v1.0.0 (1)") for t in footer), str(footer))
+    version = relay_version()
+    check.ok("settings footer: Relay for Android v%s" % version, any(t.startswith("Relay for Android v" + version) for t in footer), str(footer))
     check.ok("settings footer: not upstream's 13.2.2", not any("13.2.2" in t for t in footer), str(footer))
     shot(d, "settings-footer")
 
@@ -371,7 +383,7 @@ def scenario_settings(d, check):
         time.sleep(1.5)
         about = d.screen_texts()
         shot(d, "about")
-        check.ok("About: Relay version 1.0.0 (1)", "1.0.0 (1)" in about, str(about[:12]))
+        check.ok("About: Relay version %s" % version, version in about, str(about[:12]))
         based = [t for t in about if t.startswith("Based on Telegram for Android")]
         check.ok("About: based on Telegram for Android 13.2.2", any("13.2.2" in t for t in based), str(based))
         back(d)
