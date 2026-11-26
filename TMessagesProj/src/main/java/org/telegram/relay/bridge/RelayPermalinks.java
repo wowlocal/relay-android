@@ -351,8 +351,10 @@ public final class RelayPermalinks {
         if (!snapshot.channels.containsKey(channel.id)) {
             return channelDestination(account, path, channel, 0);
         }
-        boolean collapsed = snapshot.collapsedThreads && !channel.isDirect();
-        if (post.isReply() && collapsed || threadLink && !channel.isDirect()) {
+        // DM threads: a DM reply hidden by collapsed threads opens its thread too (not the self-DM).
+        boolean collapsed = RelayThreads.collapses(account, channel, snapshot.collapsedThreads);
+        boolean threads = RelayThreads.threadsIn(account, channel);
+        if (post.isReply() && collapsed || threadLink && threads) {
             Post root = post.isReply() ? path.history.post(post.rootId) : post;
             if (root != null && (collapsed || threadLink && !post.isReply())) {
                 int rootId = path.history.localIdOf(channel.id, root.id);

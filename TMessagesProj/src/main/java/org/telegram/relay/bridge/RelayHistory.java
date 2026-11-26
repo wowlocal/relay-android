@@ -79,6 +79,9 @@ final class RelayHistory {
     }
 
     synchronized void rememberPost(Post post) {
+        if (!post.isReply() && post.replyCount > 0) {
+            replyCounts.put(post.id, (int) post.replyCount); // a real count (plain channel pages say 0 for every root)
+        }
         posts.put(post.id, post);
         if (posts.size() > POST_CACHE) {
             java.util.Iterator<String> it = posts.keySet().iterator();
@@ -89,8 +92,40 @@ final class RelayHistory {
         }
     }
 
+    /**
+     * DM threads: a root fetched on its own ({@code GET /posts/{id}}, a thread, a live refresh) has the server's reply
+     * count, 0 included; later answers use it instead of the first count fetched (it went stale: "3 Replies" after a
+     * reload when the thread had 6).
+     */
+    synchronized void noteReplyCount(Post root) {
+        if (root != null && !root.isReply()) {
+            replyCounts.put(root.id, (int) root.replyCount);
+        }
+    }
+
     synchronized Post cachedPost(String postId) {
         return posts.get(postId);
+    }
+
+    /** DM threads + replier avatars: the authors of the root's replies in the post cache, newest first, distinct, at most {@code max}. */
+    synchronized List<String> cachedReplyAuthors(String rootId, int max) {
+        List<Post> replies = new ArrayList<>();
+        for (Post post : posts.values()) {
+            if (rootId.equals(post.rootId) && !post.isDeleted()) {
+                replies.add(post);
+            }
+        }
+        java.util.Collections.sort(replies, (a, b) -> Long.compare(b.createAt, a.createAt));
+        List<String> users = new ArrayList<>();
+        for (Post post : replies) {
+            if (post.userId != null && !users.contains(post.userId)) {
+                users.add(post.userId);
+                if (users.size() == max) {
+                    break;
+                }
+            }
+        }
+        return users;
     }
 
     /** The post from the cache, else {@code GET /posts/{id}}; null when it is gone. */
@@ -108,6 +143,7 @@ final class RelayHistory {
             throw e;
         }
         rememberPost(post);
+        noteReplyCount(post);
         return post;
     }
 
@@ -555,16 +591,15 @@ final class RelayHistory {
             if (unit.part != 0 || post.isReply()) {
                 continue;
             }
-            if (post.replyCount > 0) {
-                counts.put(post.id, (int) post.replyCount);
-                continue;
-            }
-            if (!roots.contains(post.id)) {
-                continue;
-            }
             Integer known;
             synchronized (this) {
                 known = replyCounts.get(post.id);
+            }
+            if (known == null && post.replyCount > 0) {
+                known = (int) post.replyCount;
+            }
+            if (known == null && !roots.contains(post.id)) {
+                continue;
             }
             if (known == null) {
                 try {

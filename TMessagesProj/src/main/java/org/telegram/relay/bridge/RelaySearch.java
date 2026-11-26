@@ -295,9 +295,9 @@ final class RelaySearch {
             }
             List<RelayHistory.Unit> wanted = new ArrayList<>();
             List<Post> channelPosts = entry.getValue();
-            if (kind == KIND_TEXT && !channel.isDirect() && path.directory.any().collapsedThreads) {
-                // With collapsed reply threads a megagroup's main history shows thread roots only (A7a): a
-                // reply that matches is listed as its thread's root, which the chat can jump to.
+            if (kind == KIND_TEXT && RelayThreads.collapses(account, channel, path.directory.any().collapsedThreads)) {
+                // With collapsed reply threads a main history shows thread roots only (A7a; DMs too since the DM
+                // threads change): a reply that matches is listed as its thread's root, which the chat can jump to.
                 List<Post> roots = new ArrayList<>();
                 Set<String> seen = new HashSet<>();
                 for (Post post : channelPosts) {

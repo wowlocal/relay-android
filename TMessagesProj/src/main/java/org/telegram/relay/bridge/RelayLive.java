@@ -632,8 +632,18 @@ final class RelayLive implements WebSocketListener {
         if (post == null || post.isEphemeral()) {
             return;
         }
+        if (post.isReply()) {
+            path.repliers.onReply(post.rootId, post.userId, post.createAt); // DM threads + replier avatars: the newest replier first
+        }
         if (post.pendingPostId != null && !post.pendingPostId.isEmpty() && pendingPostIds.contains(post.pendingPostId)) {
-            return; // our own send, answered by the write path
+            // Our own send, answered by the write path. DM threads: a DM root's "N Replies" follows our own reply
+            // too (megagroups count it client-side, SendMessagesHelper's channelReplies; private chats do not).
+            Channel own = post.isReply() ? channel(post.channelId) : null;
+            if (own != null && own.isDirect() && RelayThreads.collapses(account, own, path.directory.any().collapsedThreads)) {
+                path.history.rememberPost(post);
+                refreshRoot(own, post.rootId);
+            }
+            return;
         }
         Channel channel = channel(post.channelId);
         if (channel == null) {
@@ -646,6 +656,11 @@ final class RelayLive implements WebSocketListener {
         }
         List<RelayHistory.Unit> units = mapNew(channel.id, post);
         if (units.isEmpty()) {
+            if (post.isReply()) {
+                // Already mapped (e.g. a getPeerDialogs answer took the newest page first): its root's "N Replies" and
+                // latest repliers still follow (DM threads + replier avatars).
+                refreshRoot(channel, post.rootId);
+            }
             return;
         }
         emitNew(channel, units);
@@ -687,9 +702,9 @@ final class RelayLive implements WebSocketListener {
         }
     }
 
-    /** Re-sends a thread root with its current reply count ("N replies"). */
+    /** Re-sends a thread root with its current reply count ("N replies") and latest repliers; DMs too while their threads collapse. */
     void refreshRoot(Channel channel, String rootId) throws Exception {
-        if (channel.isDirect()) {
+        if (channel.isDirect() && !RelayThreads.collapses(account, channel, path.directory.any().collapsedThreads)) {
             return;
         }
         Post root;
@@ -702,6 +717,7 @@ final class RelayLive implements WebSocketListener {
             throw e;
         }
         path.history.rememberPost(root);
+        path.history.noteReplyCount(root);
         List<RelayHistory.Unit> units = mappedUnits(channel.id, root);
         if (units.isEmpty()) {
             return;
@@ -1215,6 +1231,7 @@ final class RelayLive implements WebSocketListener {
                     fresh.addAll(units);
                     if (!units.isEmpty() && post.isReply()) {
                         roots.add(post.rootId);
+                        path.repliers.onReply(post.rootId, post.userId, post.createAt); // oldest first: the newest replier ends in front
                     }
                 }
             }
@@ -1251,12 +1268,13 @@ final class RelayLive implements WebSocketListener {
                     try {
                         root = account.client.post(rootId);
                         path.history.rememberPost(root);
+                        path.history.noteReplyCount(root);
                     } catch (MattermostException e) {
                         continue;
                     }
                 }
                 List<RelayHistory.Unit> units = mappedUnits(channel.id, root);
-                if (!units.isEmpty() && !channel.isDirect()) {
+                if (!units.isEmpty() && (!channel.isDirect() || RelayThreads.collapses(account, channel, snapshot.collapsedThreads))) { // DM threads
                     for (TLRPC.Message message : path.messages(channel, units, users)) {
                         updates.stamp(editUpdate(channel, message), 0);
                     }

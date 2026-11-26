@@ -121,6 +121,10 @@ public final class RelayDatabase extends SQLiteOpenHelper {
         getWritableDatabase().insertWithOnConflict("kv", null, row, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
+    public void deleteKv(String key) {
+        getWritableDatabase().delete("kv", "k = ?", new String[]{key});
+    }
+
     // MARK: - Id map
 
     /** The TL id of a Mattermost id, allocating the next one of its kind when it has none. */

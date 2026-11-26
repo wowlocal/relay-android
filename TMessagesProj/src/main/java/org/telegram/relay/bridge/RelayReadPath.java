@@ -60,6 +60,8 @@ final class RelayReadPath {
     final RelayFiles files;
     final RelayHistory history;
     final RelayConvert convert;
+    /** DM threads + replier avatars: the latest repliers of thread roots ("N Replies" avatars). */
+    final RelayRepliers repliers;
     /** Chats this device marked read just now: their {@code channel_viewed} echo is not a read on another device. */
     final java.util.concurrent.ConcurrentHashMap<String, Long> viewedHere = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -80,6 +82,7 @@ final class RelayReadPath {
         this.files = new RelayFiles(account);
         this.history = new RelayHistory(account);
         this.convert = new RelayConvert(account, files);
+        this.repliers = new RelayRepliers(account);
     }
 
     // MARK: - Users and chats
@@ -108,13 +111,23 @@ final class RelayReadPath {
         Map<String, Integer> replyCounts = history.replyCounts(units);
         TLRPC.Peer peer = directory.peer(channel);
         boolean dm = channel.isDirect();
+        boolean collapsed = RelayThreads.collapses(account, channel, RelayThreadsHooks.collapsedThreads(account.account));
+        // DM threads + replier avatars: the latest repliers of the roots with replies (Telegram's recent_repliers).
+        Map<String, List<String>> repliersByRoot = Collections.emptyMap();
+        if (collapsed && !replyCounts.isEmpty()) {
+            repliersByRoot = repliers.resolve(replyCounts.keySet(), http, history);
+        }
         ArrayList<TLRPC.Message> result = new ArrayList<>(units.size());
         for (RelayHistory.Unit unit : units) {
             Post post = unit.layout.post;
             Integer rootId = post.isReply() ? roots.get(post.rootId) : null;
             Integer replies = replyCounts.get(post.id);
-            result.add(convert.message(unit.layout, unit.part, unit.localId, peer, dm,
-                    rootId != null ? rootId : 0, replies != null ? replies : 0, usersOut));
+            List<String> latest = unit.part == 0 ? repliersByRoot.get(post.id) : null;
+            if (latest != null) {
+                usersOut.addAll(latest);
+            }
+            result.add(convert.message(unit.layout, unit.part, unit.localId, peer, dm, collapsed,
+                    rootId != null ? rootId : 0, replies != null ? replies : 0, latest, usersOut));
         }
         return result;
     }
@@ -243,14 +256,30 @@ final class RelayReadPath {
         return rows;
     }
 
+    /** DM threads: the bridge's dialog rows (dialog + preview message, users) of these chats, as {@code getDialogs} answers them. */
+    TLRPC.TL_messages_dialogs dialogsOf(Collection<Channel> channels) throws Exception {
+        RelayDirectory.Snapshot snapshot = directory.get(5_000);
+        Set<String> users = new LinkedHashSet<>();
+        List<DialogRow> rows = rows(snapshot, channels, users);
+        TLRPC.TL_messages_dialogs res = new TLRPC.TL_messages_dialogs();
+        for (DialogRow row : rows) {
+            row.dialog.id = row.dialogId;
+            res.dialogs.add(row.dialog);
+            res.messages.add(row.top);
+        }
+        res.users.addAll(users(users));
+        res.count = res.dialogs.size();
+        return res;
+    }
+
     /**
-     * Polish 1: the chat list's preview (dialog {@code top_message}). With collapsed threads a megagroup previews its
-     * newest root post, as iOS does (replies live in their threads); DMs keep replies inline, so their newest post.
-     * Falls back to the newest message when the page has no root.
+     * Polish 1: the chat list's preview (dialog {@code top_message}). With collapsed threads a chat previews its
+     * newest root post, as iOS does (replies live in their threads): megagroups and, since the DM threads change, DMs
+     * (the self-DM keeps replies inline, so its newest post). Falls back to the newest message when the page has no root.
      */
     RelayHistory.Unit previewUnit(Channel channel, List<RelayHistory.Unit> newestFirst) {
         RelayHistory.Unit newest = newestFirst.get(0);
-        if (channel.isDirect() || !RelayThreadsHooks.collapsedThreads(account.account)) {
+        if (!RelayThreads.collapses(account, channel, RelayThreadsHooks.collapsedThreads(account.account))) {
             return newest;
         }
         for (RelayHistory.Unit unit : newestFirst) {
@@ -553,8 +582,8 @@ final class RelayReadPath {
         }
         Channel channel = directory.channel(channelId);
         long started = System.currentTimeMillis();
-        // A7a: collapsed reply threads hide replies from a megagroup's main history; load type 4 (jump to date).
-        boolean rootsOnly = !channel.isDirect() && directory.any().collapsedThreads;
+        // A7a: collapsed reply threads hide replies from a main history (megagroups and DMs); load type 4 (jump to date).
+        boolean rootsOnly = RelayThreads.collapses(account, channel, directory.any().collapsedThreads);
         List<RelayHistory.Unit> units = req.offset_date != 0 && req.offset_id == 0
                 ? RelayJumpDate.window(this, channel, req.offset_date, req.add_offset, req.limit, req.max_id, req.min_id, rootsOnly)
                 : history.window(channelId, req.offset_id, req.add_offset, req.limit, req.max_id, req.min_id, rootsOnly);

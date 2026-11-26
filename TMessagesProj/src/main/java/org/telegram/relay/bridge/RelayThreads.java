@@ -107,6 +107,23 @@ public final class RelayThreads {
         map.put(TLRPC.TL_messages_readDiscussion.class, (bridge, account, req) -> of(account).readDiscussion(bridge, (TLRPC.TL_messages_readDiscussion) req));
     }
 
+    /**
+     * DM threads: true when collapsed reply threads apply to the chat — megagroups (channels, GMs) and DMs with another
+     * user; the self-DM (Saved Messages) keeps replies inline, as iOS does.
+     */
+    static boolean collapses(RelayAccount account, Channel channel, boolean collapsedThreads) {
+        return collapsedThreads && channel != null && threadsIn(account, channel);
+    }
+
+    /** True when the chat can have thread views (not the self-DM). */
+    static boolean threadsIn(RelayAccount account, Channel channel) {
+        if (!channel.isDirect()) {
+            return true;
+        }
+        String other = channel.getDirectMessageTeammateId(account.session.userId);
+        return other != null && !other.equals(account.session.userId);
+    }
+
     // MARK: - Thread contents
 
     /** The thread root for a message of the chat (a reply → its root), or null. */
@@ -171,6 +188,7 @@ public final class RelayThreads {
         synchronized (threadCache) {
             threadCache.put(rootId, data);
         }
+        path.repliers.fromThread(rootId, sorted); // DM threads + replier avatars: the exact latest repliers
         return data;
     }
 
@@ -212,7 +230,7 @@ public final class RelayThreads {
             return RelayTl.error(400, "MSG_ID_INVALID");
         }
         Channel channel = path.directory.channel(channelId);
-        if (channel == null || channel.isDirect()) {
+        if (channel == null || !threadsIn(account, channel)) { // DM threads: DMs have thread views too (not the self-DM)
             return RelayTl.error(400, "MSG_ID_INVALID");
         }
         Post root = rootOf(channelId, req.msg_id);
@@ -263,7 +281,12 @@ public final class RelayThreads {
             res.flags |= TLObject.FLAG_1;
         }
         res.unread_count = unread;
-        res.chats.add(path.directory.tlChannel(channel));
+        String dmUser = path.directory.dmUser(channel);
+        if (dmUser != null) {
+            users.add(dmUser); // DM threads: the chat is the other user
+        } else {
+            res.chats.add(path.directory.tlChannel(channel));
+        }
         res.users.addAll(path.users(users));
         RelayConfig.log(TAG, "discussion " + root.id + " in " + channel.name + ": root=" + (rootUnits.isEmpty() ? 0 : rootUnits.get(0).localId)
                 + " replies=" + replies.size() + " max=" + res.max_id + " read=" + readInbox + " unread=" + unread);
@@ -275,10 +298,11 @@ public final class RelayThreads {
         Channel channel = channelId != null ? path.directory.channel(channelId) : null;
         Post root = channel != null ? rootOf(channelId, req.msg_id) : null;
         if (root == null) {
-            TLRPC.TL_messages_channelMessages empty = new TLRPC.TL_messages_channelMessages();
-            if (req.peer instanceof TLRPC.TL_inputPeerChannel) {
-                empty.pts = account.db().pts(RelayDatabase.channelBox(req.peer.channel_id));
+            if (!(req.peer instanceof TLRPC.TL_inputPeerChannel)) {
+                return new TLRPC.TL_messages_messages(); // DM threads: a private chat answers messages.messages
             }
+            TLRPC.TL_messages_channelMessages empty = new TLRPC.TL_messages_channelMessages();
+            empty.pts = account.db().pts(RelayDatabase.channelBox(req.peer.channel_id));
             return empty;
         }
         long started = System.currentTimeMillis();
@@ -315,6 +339,14 @@ public final class RelayThreads {
         TLRPC.messages_Messages res = path.messagesResponse(channel, window);
         if (res instanceof TLRPC.TL_messages_channelMessages) {
             ((TLRPC.TL_messages_channelMessages) res).count = list.size();
+        } else {
+            // DM threads: a private chat's thread page is a slice with the thread's reply count.
+            TLRPC.TL_messages_messagesSlice slice = new TLRPC.TL_messages_messagesSlice();
+            slice.messages = res.messages;
+            slice.users = res.users;
+            slice.chats = res.chats;
+            slice.count = list.size();
+            res = slice;
         }
         RelayConfig.log(TAG, String.format(java.util.Locale.US, "getReplies %s root=%s offset=%d add=%d limit=%d -> %d of %d in %d ms",
                 channel.name, root.id, req.offset_id, req.add_offset, req.limit, window.size(), list.size(), System.currentTimeMillis() - started));
@@ -358,6 +390,7 @@ public final class RelayThreads {
             for (UserThread thread : list.threads) {
                 if (thread.deleteAt == 0 && thread.post != null) {
                     fresh.put(thread.id, thread);
+                    path.repliers.fromParticipants(thread.id, thread.participants, false); // replier avatars
                 }
             }
         }
@@ -407,12 +440,16 @@ public final class RelayThreads {
                             : event.type == WebSocketEventType.POST_EDITED ? event.getEditedPost() : event.getDeletedPost();
                     if (post != null) {
                         invalidate(post.isReply() ? post.rootId : post.id);
+                        if (post.isReply() && event.type == WebSocketEventType.POST_DELETED) {
+                            path.repliers.forget(post.rootId); // the server's participants again
+                        }
                     }
                     break;
                 }
                 case THREAD_UPDATED: {
                     UserThread thread = event.getThread();
                     if (thread != null && thread.id != null) {
+                        path.repliers.fromParticipants(thread.id, thread.participants, false); // replier avatars
                         UserThread previous = followed.get(thread.id);
                         if (previous == null) {
                             // Not (or no longer) followed: the server's list decides (an unfollow also sends thread_updated).
@@ -485,7 +522,10 @@ public final class RelayThreads {
         }
     }
 
-    /** Collapsed threads switched: every megagroup's history is reloaded (replies appear in or leave the main history). */
+    /**
+     * Collapsed threads switched: every chat's history is reloaded (replies appear in or leave the main history):
+     * megagroups through {@code updateChannelTooLong}, DMs through {@link RelayDmCache} (DM threads).
+     */
     static void onCollapsedThreadsChanged(RelayAccount account) {
         RelayBridge bridge = RelayBridge.get(account.account);
         bridge.post(() -> {
@@ -502,7 +542,46 @@ public final class RelayThreads {
             } catch (Throwable t) {
                 RelayConfig.logError(TAG, "reload after the collapsed threads switch", t);
             }
+            reloadDirectChats(account, "collapsed threads switched");
         });
+    }
+
+    private static final String KV_DM_THREADS = "dm_threads_v1";
+
+    /**
+     * DM threads: on the first start of a build that collapses DM threads, the DMs cached by an older build (replies
+     * inline, roots without "N Replies") are reloaded once. Bridge executor, after the directory is known.
+     */
+    static void migrateDirectChats(RelayAccount account, boolean reload) {
+        if (account.db().kv(KV_DM_THREADS) != null) {
+            return;
+        }
+        account.db().putKv(KV_DM_THREADS, "1");
+        if (reload) {
+            RelayBridge.get(account.account).post(() -> reloadDirectChats(account, "DM threads: first start"));
+        }
+    }
+
+    /** Drops the client's cached history of every DM (not the self-DM) and gives each the bridge's dialog row. Bridge executor. */
+    private static void reloadDirectChats(RelayAccount account, String reason) {
+        try {
+            RelayReadPath path = RelayReadPath.of(account);
+            List<Channel> dms = new ArrayList<>();
+            for (Channel channel : path.directory.any().channels.values()) {
+                if (channel.isDirect() && threadsIn(account, channel)) {
+                    dms.add(channel);
+                }
+            }
+            if (dms.isEmpty()) {
+                return;
+            }
+            path.repliers.clear();
+            TLRPC.TL_messages_dialogs dialogs = path.dialogsOf(dms);
+            RelayDmCache.overwrite(account.account, dialogs);
+            RelayConfig.log(TAG, reason + ": " + dialogs.dialogs.size() + " DM histories reloaded");
+        } catch (Throwable t) {
+            RelayConfig.logError(TAG, "DM reload (" + reason + ")", t);
+        }
     }
 
     // MARK: - Public API for the UI (answers on the UI thread)
@@ -672,6 +751,7 @@ public final class RelayThreads {
             row.unreadReplies = thread.unreadReplies;
             row.unreadMentions = thread.unreadMentions;
             row.lastReplyAt = thread.lastReplyAt;
+            path.repliers.fromParticipants(thread.id, thread.participants, false); // replier avatars
             for (org.telegram.relay.mattermost.model.User user : thread.participants) {
                 if (user != null && user.id != null && !user.id.isEmpty() && row.participants.size() < 3) {
                     userIds.add(user.id);
@@ -763,11 +843,11 @@ public final class RelayThreads {
      */
     public static String rootPostIdOf(int account, long dialogId, int messageId) {
         RelayAccount relayAccount = RelayAccount.get(account);
-        if (relayAccount == null || dialogId >= 0 || messageId <= 0) {
+        if (relayAccount == null || !RelayThreadsHooks.threadsIn(account, dialogId) || messageId <= 0) {
             return null;
         }
         try {
-            String channelId = relayAccount.db().mmId(RelayDatabase.KIND_CHANNEL, -dialogId);
+            String channelId = cachedChannelIdOf(relayAccount, dialogId);
             if (channelId == null) {
                 return null;
             }
@@ -783,6 +863,16 @@ public final class RelayThreads {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /** The Mattermost channel of a dialog without network access (UI thread): megagroups from the id map, DMs from the directory snapshot. */
+    private static String cachedChannelIdOf(RelayAccount account, long dialogId) {
+        if (dialogId < 0) {
+            return account.db().mmId(RelayDatabase.KIND_CHANNEL, -dialogId);
+        }
+        String userId = account.db().mmId(RelayDatabase.KIND_USER, dialogId);
+        RelayDirectory.Snapshot snapshot = RelayReadPath.of(account).directory.peek();
+        return userId != null && snapshot != null ? snapshot.dmByUser.get(userId) : null;
     }
 
     /** The Mattermost team of a chat-list folder (teams are folders, A3), or null ("All"). */

@@ -191,6 +191,20 @@ public class RelayDebugHooks extends ContentProvider {
         }
     }
 
+    /** The root's latest repliers ({@code replies.recent_repliers}) as comma-separated TL user ids; "" for none. */
+    static String repliers(TLRPC.Message m) {
+        StringBuilder ids = new StringBuilder();
+        if (m.replies != null && m.replies.recent_repliers != null) {
+            for (TLRPC.Peer peer : m.replies.recent_repliers) {
+                if (ids.length() > 0) {
+                    ids.append(',');
+                }
+                ids.append(peer.user_id);
+            }
+        }
+        return ids.toString();
+    }
+
     private static void dumpDialog(int account, String channelId, long dialogId) {
         new Thread(() -> {
             long did = dialogId;
@@ -222,7 +236,8 @@ public class RelayDebugHooks extends ContentProvider {
                                             .append('\t').append(m.replies != null ? m.replies.replies : 0)
                                             .append('\t').append(m.reply_to != null ? (m.reply_to.reply_to_msg_id != 0 ? m.reply_to.reply_to_msg_id : m.reply_to.reply_to_top_id) : 0) // with CRT a reply carries only its thread root (top id)
                                             .append('\t').append(m.media != null ? m.media.getClass().getSimpleName() : "")
-                                            .append('\t').append(m.out ? 1 : 0).append('\n');
+                                            .append('\t').append(m.out ? 1 : 0)
+                                            .append('\t').append(repliers(m)).append('\n'); // DM threads: recent_repliers (TL user ids)
                                 }
                             } catch (Throwable ignore) {
                             }

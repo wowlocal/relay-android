@@ -13,12 +13,14 @@ import java.util.ArrayList;
  * client calls from a few marked hooks (search {@code RelayThreadsHooks} in {@code MessagesController},
  * {@code MessagesStorage}, {@code ChatActivity} and {@code ChatMessageCell}).
  *
- * <p>Model (iOS 3B, "root post tag"): every Mattermost reply stays a normal megagroup message in the
- * chat's one id space (the id map remains contiguous over all posts), but while CRT is on for the account
- * the chat's <em>main</em> history of a megagroup (channels and GMs) does not show replies; they live in the
- * thread view ({@code getDiscussionMessage} / {@code getReplies}), and roots with replies get Telegram's
- * "N Replies" footer. DMs keep replies inline (Telegram has no thread view for private chats), but with
- * CRT no reply raises an unread badge, DMs included (as Mattermost's {@code _root} counters).
+ * <p>Model (iOS 3B, "root post tag"): every Mattermost reply stays a normal message in the chat's one id
+ * space (the id map remains contiguous over all posts), but while CRT is on for the account the chat's
+ * <em>main</em> history does not show replies; they live in the thread view ({@code getDiscussionMessage} /
+ * {@code getReplies}), and roots with replies get Telegram's "N Replies" footer with the latest repliers'
+ * avatars. This holds for megagroups (channels and GMs) and, since the DM threads change, for DMs too
+ * (Telegram's thread view runs for a private chat as it does for bot forum topics: {@code ChatActivity} with
+ * {@code user_id} and {@code setThreadMessages}); only the self-DM (Saved Messages) keeps replies inline, as
+ * iOS does. With CRT no reply raises an unread badge (Mattermost's {@code _root} counters).
  * With CRT off everything is inline, as before A7a.
  */
 public final class RelayThreadsHooks {
@@ -34,6 +36,8 @@ public final class RelayThreadsHooks {
         if (slot < 0 || slot >= collapsed.length) {
             return;
         }
+        // DM threads: an install that ran an older build (it has the flag) reloads its cached DMs once.
+        boolean existingInstall = account.db().kv(KV_CRT) != null;
         if (collapsed[slot] == null || collapsed[slot] != on) {
             boolean switched = collapsed[slot] != null || account.db().kv(KV_CRT) != null && !(on ? "1" : "0").equals(account.db().kv(KV_CRT));
             collapsed[slot] = on;
@@ -42,6 +46,19 @@ public final class RelayThreadsHooks {
             }
             account.db().putKv(KV_CRT, on ? "1" : "0");
             RelayConfig.log(RelayConfig.TAG_BRIDGE, "collapsed reply threads " + (on ? "on" : "off") + " for account " + slot);
+        }
+        RelayThreads.migrateDirectChats(account, existingInstall && on);
+    }
+
+    /**
+     * Debug (e2e, {@code DEBUG_A7A op=legacy_dm}): makes the next start behave as the first start after an update from a
+     * build that kept DM replies inline — collapsed threads were on ("1"), the DM migration has not run.
+     */
+    public static void debugLegacyDmCache(int account) {
+        org.telegram.relay.account.RelayAccount relayAccount = org.telegram.relay.account.RelayAccount.get(account);
+        if (relayAccount != null) {
+            relayAccount.db().putKv(KV_CRT, "1");
+            relayAccount.db().deleteKv("dm_threads_v1");
         }
     }
 
@@ -80,12 +97,24 @@ public final class RelayThreadsHooks {
         return message.reply_to.reply_to_top_id != 0 || message.reply_to.reply_to_msg_id != 0;
     }
 
-    /** True when the main history of {@code dialogId} hides thread replies (CRT on, megagroup). */
+    /** True when the main history of {@code dialogId} hides thread replies (CRT on; a megagroup or a DM, not the self-DM). */
     public static boolean hidesReplies(int account, long dialogId) {
-        return collapsedThreads(account) && dialogId < 0;
+        return collapsedThreads(account) && threadsIn(account, dialogId);
     }
 
-    /** {@code MessagesController.processLoadedMessages}: drops thread replies from a megagroup's main history (cache pages). */
+    /**
+     * True when the chat can have Mattermost thread views: megagroups (channels, GMs) and DMs with another user. The
+     * self-DM (Saved Messages) keeps replies inline, as iOS does; encrypted chats do not exist in Relay.
+     */
+    public static boolean threadsIn(int account, long dialogId) {
+        if (dialogId < 0) {
+            return true;
+        }
+        return dialogId > 0 && org.telegram.messenger.DialogObject.isUserDialog(dialogId)
+                && dialogId != UserConfig.getInstance(account).getClientUserId();
+    }
+
+    /** {@code MessagesController.processLoadedMessages}: drops thread replies from a main history (cache pages; megagroups and DMs). */
     public static void filterMainHistory(int account, long dialogId, int mode, long threadMessageId, ArrayList<TLRPC.Message> messages) {
         if (messages == null || mode != 0 || threadMessageId != 0 || !hidesReplies(account, dialogId)) {
             return;
@@ -97,7 +126,7 @@ public final class RelayThreadsHooks {
         }
     }
 
-    /** {@code ChatActivity} (new messages): the messages the open chat shows; replies stay out of a megagroup's main history. */
+    /** {@code ChatActivity} (new messages): the messages the open chat shows; replies stay out of a main history (megagroups and DMs). */
     public static ArrayList<MessageObject> visibleNewMessages(int account, long dialogId, boolean threadChat, ArrayList<MessageObject> messages) {
         if (threadChat || messages == null || !hidesReplies(account, dialogId)) {
             return messages;
@@ -122,7 +151,8 @@ public final class RelayThreadsHooks {
     }
 
     /**
-     * Polish 1: with collapsed threads a megagroup's chat-list preview is its newest root post (iOS); a thread reply
+     * Polish 1: with collapsed threads a chat-list preview is the chat's newest root post (iOS; megagroups, DMs since the
+     * DM threads change); a thread reply
      * never becomes the dialog's top message ({@code MessagesController.updateInterfaceWithMessages},
      * {@code MessagesStorage.putMessages}). The bridge's dialogs follow the same rule ({@code RelayReadPath.previewUnit}).
      */
@@ -131,7 +161,7 @@ public final class RelayThreadsHooks {
     }
 
     /**
-     * {@code MessagesController.markDialogAsRead}: reading a megagroup's main history reads its hidden replies
+     * {@code MessagesController.markDialogAsRead}: reading a main history (megagroup or DM) reads its hidden replies
      * too (Mattermost marks the whole channel viewed), so the local read mark covers the chat's top message.
      */
     public static int readMaxId(int account, long dialogId, int maxPositiveId) {
@@ -148,10 +178,10 @@ public final class RelayThreadsHooks {
         return Math.max(max, newest);
     }
 
-    /** {@code ChatMessageCell}: Telegram's comment footer ("N Replies") on thread roots of a megagroup's main history. */
+    /** {@code ChatMessageCell}: Telegram's comment footer ("N Replies", the latest repliers' avatars) on thread roots of a main history. */
     public static boolean showRepliesFooter(int account, MessageObject message, boolean threadChat) {
-        return message != null && !threadChat && message.messageOwner != null && message.getDialogId() < 0
-                && collapsedThreads(account) && message.hasReplies() && !message.messageOwner.isThreadMessage
+        return message != null && !threadChat && message.messageOwner != null && hidesReplies(account, message.getDialogId())
+                && message.hasReplies() && !message.messageOwner.isThreadMessage
                 && !isThreadReply(message.messageOwner) && !message.scheduled;
     }
 }

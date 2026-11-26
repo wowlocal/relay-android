@@ -16,10 +16,14 @@ import org.telegram.ui.LaunchActivity;
  *
  * <ul>
  *   <li>{@code ui_state}: the top fragment to {@code files/relay-ui.txt}: {@code fragment <class>},
- *       {@code chat <dialog> <thread root> <title>}, {@code visible <id> <reply_to> <fwd> <replies> <date> <text>} per message
- *       cell on screen, {@code highlight <id>}.</li>
+ *       {@code chat <dialog> <thread root> <title>}, {@code visible <id> <reply_to> <fwd> <replies> <date> <text> <repliers>
+ *       <footer> <known>} per message cell on screen (DM threads: {@code repliers} = the root's {@code recent_repliers} as
+ *       comma-separated TL user ids, {@code footer} = 1 when the cell draws the "N Replies" footer, {@code known} = how
+ *       many repliers the client has as users, i.e. avatars it can draw), {@code highlight <id>}.</li>
  *   <li>{@code jump_date --ei date <unix>}: Telegram's {@code ChatActivity.jumpToDate} (the calendar's action).</li>
  *   <li>{@code clipboard}: logs the primary clip (Copy Link check).</li>
+ *   <li>{@code legacy_dm}: the next start behaves as the first start after an update from a build with inline DM
+ *       replies (DM threads migration; force-stop and launch after it).</li>
  * </ul>
  */
 public final class RelayDebugA7a {
@@ -37,6 +41,12 @@ public final class RelayDebugA7a {
             } else {
                 Log.w(TAG, "DEBUG_A7A jump_date: no open chat");
             }
+            return;
+        }
+        if ("legacy_dm".equals(op)) {
+            // DM threads: the next start acts as the first start after updating from a build with inline DM replies.
+            org.telegram.relay.bridge.RelayThreadsHooks.debugLegacyDmCache(account);
+            Log.i(TAG, "DEBUG_A7A legacy_dm ok");
             return;
         }
         if ("clipboard".equals(op)) {
@@ -70,8 +80,23 @@ public final class RelayDebugA7a {
                             int replyTo = m.messageOwner.reply_to != null ? m.messageOwner.reply_to.reply_to_msg_id : 0;
                             String fwd = m.messageOwner.fwd_from != null && m.messageOwner.fwd_from.from_id != null ? String.valueOf(m.messageOwner.fwd_from.from_id.user_id) : "0";
                             int replies = m.messageOwner.replies != null ? m.messageOwner.replies.replies : 0;
+                            StringBuilder repliers = new StringBuilder();
+                            int known = 0;
+                            if (m.messageOwner.replies != null && m.messageOwner.replies.recent_repliers != null) {
+                                for (org.telegram.tgnet.TLRPC.Peer peer : m.messageOwner.replies.recent_repliers) {
+                                    if (repliers.length() > 0) {
+                                        repliers.append(',');
+                                    }
+                                    repliers.append(peer.user_id);
+                                    if (org.telegram.messenger.MessagesController.getInstance(account).getUser(peer.user_id) != null) {
+                                        known++;
+                                    }
+                                }
+                            }
+                            boolean footer = org.telegram.relay.bridge.RelayThreadsHooks.showRepliesFooter(account, m, chat.isThreadChat());
                             out.append("visible\t").append(m.getId()).append('\t').append(replyTo).append('\t').append(fwd).append('\t')
-                                    .append(replies).append('\t').append(m.messageOwner.date).append('\t').append(clean(m.messageOwner.message)).append('\n');
+                                    .append(replies).append('\t').append(m.messageOwner.date).append('\t').append(clean(m.messageOwner.message))
+                                    .append('\t').append(repliers).append('\t').append(footer ? 1 : 0).append('\t').append(known).append('\n');
                         }
                     }
                 }

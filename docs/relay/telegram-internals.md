@@ -598,6 +598,14 @@ DM id allocation: an account-wide counter in the bridge (`next_dm_msg_id`), with
   - The client follows with `getReplies(offset_id = read_inbox_max_id or 1, add_offset=−20, limit=30)` (CA:36921-36933).
   - It drops the result if the first reply's `reply_to_top_id`/`reply_to_msg_id` isn't the root id (CA:36746-36752).
 - Channel messages need `replies: TL_messageReplies{replies, replies_pts, max_id, read_max_id, comments=false}` (flag 23) for the "N replies" UI.
+  `recent_repliers` (flag 1, peers; the bridge sends the newest first, at most 3) are the avatars in front of "N Replies"; the users must be
+  in the response's `users`.
+- **Private chats (DM threads).** The thread view also runs for a user peer: `ChatActivity` with `user_id` + `setThreadMessages(objects, null,
+  root, …, null)` (Telegram 13 does the same for bot forum topics, there with a topic). `loadMessagesInternal` sends `getReplies` with
+  `inputPeerUser` (no cache path for non-topic threads), reads go through `readDiscussion` with the user peer (`completeReadTask`), and
+  new messages are filtered by `getReplyTopMsgId()/getReplyMsgId() == threadMessageId` as for megagroups. Answer a DM's `getReplies` with
+  `messages.messagesSlice{count}`, not `channelMessages`. Telegram has no private-chat "too long": dropping a DM's cached history is
+  done client-side (`RelayDmCache`, the DM counterpart of `MessagesStorage.overwriteChannel`).
 
 ### 5.9 Bridge rules for history
 

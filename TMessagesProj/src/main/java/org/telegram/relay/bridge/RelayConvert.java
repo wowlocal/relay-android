@@ -126,10 +126,13 @@ final class RelayConvert {
      * One message of a post.
      *
      * @param peer        the chat ({@code peerUser} for DMs, {@code peerChannel} otherwise)
+     * @param collapsed   collapsed reply threads apply to the chat (megagroups and DMs, not the self-DM)
      * @param replyToId   local id of the thread root (part 0), or 0
      * @param replyCount  replies of a root post (0: none / unknown)
+     * @param repliers    the root's latest repliers (Mattermost user ids, newest first), or null
      */
-    TLRPC.Message message(Layout layout, int part, int localId, TLRPC.Peer peer, boolean directMessage, int replyToId, int replyCount, Collection<String> usersOut) {
+    TLRPC.Message message(Layout layout, int part, int localId, TLRPC.Peer peer, boolean directMessage, boolean collapsed, int replyToId, int replyCount,
+                          List<String> repliers, Collection<String> usersOut) {
         Post post = layout.post;
         String sender = senderOf(post, directMessage);
         usersOut.add(sender);
@@ -210,14 +213,14 @@ final class RelayConvert {
         }
         if (replyToId != 0) {
             TLRPC.TL_messageReplyHeader reply = new TLRPC.TL_messageReplyHeader();
-            boolean collapsed = !directMessage && RelayThreadsHooks.collapsedThreads(account.account);
             if (!collapsed) {
                 reply.reply_to_msg_id = replyToId;
                 reply.flags |= TLObject.FLAG_4;
             }
-            if (!directMessage) {
+            if (!directMessage || collapsed) {
                 // A7a: the thread root is the reply's top message (Telegram's thread view keys on it). With
-                // collapsed threads the reply shows only in its thread, so it quotes nothing (as iOS).
+                // collapsed threads the reply shows only in its thread, so it quotes nothing (as iOS); DMs too
+                // since the DM threads change (with CRT off a DM reply quotes its root, as before).
                 reply.reply_to_top_id = replyToId;
                 reply.flags |= TLObject.FLAG_1;
             }
@@ -226,11 +229,20 @@ final class RelayConvert {
         }
         if (part == 0) {
             m.pinned = post.isPinned;
-            if (replyCount > 0 && !directMessage) {
+            if (replyCount > 0 && (!directMessage || collapsed)) {
                 TLRPC.TL_messageReplies replies = new TLRPC.TL_messageReplies();
                 replies.replies = replyCount;
                 replies.replies_pts = 0;
                 replies.comments = false;
+                // DM threads + replier avatars: the latest repliers' avatars in front of "N Replies" (flag 1).
+                if (collapsed && repliers != null && !repliers.isEmpty()) {
+                    for (String userId : repliers) {
+                        TLRPC.TL_peerUser replier = new TLRPC.TL_peerUser();
+                        replier.user_id = account.userTlId(userId);
+                        replies.recent_repliers.add(replier);
+                    }
+                    replies.flags |= TLObject.FLAG_1;
+                }
                 m.replies = replies;
                 m.flags |= TLObject.FLAG_23;
             }
