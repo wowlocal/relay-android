@@ -13,7 +13,7 @@ preference); bob, carol and dave post over REST.
   2. Thread view: "View N Replies" opens the thread (root + replies); a reply typed there is a Mattermost reply
      (root_id); bob's next reply appears live in the open thread and stays out of the main history.
   3. Follow / Unfollow Thread from the message menu (followed-threads list on the server).
-  4. Threads list: chat list button with the unread badge, rows of the team, "new reply", open from the list
+  4. Threads list: the Threads tab with the unread badge, rows of the team, "new reply", open from the list
      marks the thread read on the server.
   5. Copy Link == <server>/<team>/pl/<post>.
   6. Links (DEBUG_OPEN_URL, Browser.openUrl like a tap): post permalink lands on the message in its chat, a reply
@@ -287,14 +287,15 @@ def main():
         to_chat_list(d)
         time.sleep(1)
         post(bob, sandbox["id"], "unread reply %d" % t0, root["id"])
-        btn = wait_until(lambda: next((n for n in d.dump() if n.desc.startswith("Threads") and n.desc != "Threads"), None), timeout=15)
-        check.ok("chat list threads button shows the unread badge", btn is not None, btn.desc if btn else str([n.desc for n in d.dump() if n.desc][:10]))
-        shot(d, "chatlist-threads-button")
-        btn = btn or d.find(desc="Threads", contains=True)
+        # The Threads tab (it replaced the chat list's threads button) reads its badge: "Threads, N unread".
+        btn = wait_until(lambda: next((n for n in d.dump() if n.desc.startswith("Threads,")), None), timeout=15)
+        check.ok("Threads tab shows the unread badge", btn is not None, btn.desc if btn else str([n.desc for n in d.dump() if n.desc][:10]))
+        shot(d, "threads-tab")
+        btn = btn or d.find(text="Threads")
         if btn:
             d.tap_node(btn)
         time.sleep(3)
-        tab = d.find(text="Engineering")  # the list opens on the selected folder's team ("All" → the first team)
+        tab = d.find(desc="Engineering")  # the team tabs; the list opens on the selected folder's team ("All" keeps it)
         if tab:
             d.tap_node(tab)
         rows_ok = wait_until(lambda: d.find(text="thread root %d" % t0, contains=True), timeout=10)

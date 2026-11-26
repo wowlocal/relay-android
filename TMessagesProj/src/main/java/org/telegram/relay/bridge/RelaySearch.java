@@ -122,6 +122,11 @@ final class RelaySearch {
         return found;
     }
 
+    /** Drops one cached list (the Mentions tab reloads live). */
+    synchronized void forget(String key) {
+        cache.remove(key);
+    }
+
     private synchronized void remember(String key, Found found) {
         cache.put(key, found);
     }

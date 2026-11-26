@@ -124,17 +124,21 @@ public class RelayPostListActivity extends UniversalFragment implements MainTabs
         if (loading) {
             reloadQueued = true;
         } else {
-            load();
+            load(true);
         }
     };
 
     private void load() {
+        load(false);
+    }
+
+    private void load(boolean fresh) {
         loading = true;
         RelayFinding.Callback<TLRPC.messages_Messages> done = (res, err) -> {
             loading = false;
             if (reloadQueued) {
                 reloadQueued = false;
-                AndroidUtilities.runOnUIThread(this::load);
+                AndroidUtilities.runOnUIThread(() -> load(true));
             }
             error = err;
             messages.clear();
@@ -154,11 +158,18 @@ public class RelayPostListActivity extends UniversalFragment implements MainTabs
                 org.telegram.relay.RelayConfig.log("RelayA7b", "A7B list " + (mode == MODE_SAVED ? "saved" : "mentions") + " n=" + messages.size() + " items=[" + ids + "]");
             }
             if (listView != null) {
+                // A list at its top stays there: a new mention (live) shows instead of being inserted above the screen.
+                boolean atTop = listView.layoutManager == null || listView.layoutManager.findFirstVisibleItemPosition() <= 0;
                 listView.adapter.update(true);
+                if (atTop) {
+                    listView.scrollToPosition(0);
+                }
             }
         };
         if (mode == MODE_SAVED) {
             RelayFinding.loadSaved(currentAccount, done);
+        } else if (fresh) {
+            RelayFinding.reloadMentions(currentAccount, done);
         } else {
             RelayFinding.loadMentions(currentAccount, done);
         }

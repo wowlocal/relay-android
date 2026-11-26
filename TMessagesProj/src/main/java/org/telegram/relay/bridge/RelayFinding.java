@@ -209,6 +209,15 @@ public final class RelayFinding {
         async(account, "recent mentions", (bridge, a) -> found(a, RelaySearch.of(a).mentions()), callback);
     }
 
+    /** Recent Mentions from the server, not the minute-long cache (the Mentions tab, after a new mention arrived). */
+    public static void reloadMentions(int account, Callback<TLRPC.messages_Messages> callback) {
+        async(account, "recent mentions", (bridge, a) -> {
+            RelaySearch search = RelaySearch.of(a);
+            search.forget("mentions");
+            return found(a, search.mentions());
+        }, callback);
+    }
+
     private static TLRPC.messages_Messages found(RelayAccount account, RelaySearch.Found found) throws MattermostException {
         TLRPC.TL_messages_messages res = new TLRPC.TL_messages_messages();
         res.messages.addAll(found.messages);

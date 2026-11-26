@@ -320,11 +320,11 @@ def main():
                  "%s unread=%s" % (row.get("preview"), row.get("unread")))
 
         # MARK: 7. Threads list → DM thread.
-        btn = d.wait_for(desc="Threads", contains=True, timeout=10)
+        btn = d.wait_for(text="Threads", timeout=10)  # the Threads tab
         if btn:
             d.tap_node(btn)
         time.sleep(3)
-        tab = d.find(text="Engineering")
+        tab = d.find(desc="Engineering")  # its team tabs
         if tab:
             d.tap_node(tab)
         row_node = wait_until(lambda: d.find(text="dm root %d" % t0, contains=True), timeout=10)

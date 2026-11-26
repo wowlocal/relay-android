@@ -19,7 +19,7 @@ carol (default) uses the app; bob acts over REST.
   4. Saved photo path: Save to gallery writes to Pictures/Relay (not Pictures/Telegram).
   5. DM message menu: Pin (→ REST is_pinned), Copy Link (Mattermost permalink on the clipboard), Select (→ selection).
   6. Reactions are all read out (accessibility text names 👍 and ❤️).
-  7. Chat-list search hides the Threads button and its badge.
+  7. The chat-list header has no Threads button (it is a tab), also while searching.
 
 Probe posts start with "[relay-e2e polish2b]" and are deleted; the pin, passcode, per-app locale, permissions and
 the saved file are undone. Screens: docs/relay/screens/polish2b-*.png.
@@ -82,7 +82,7 @@ def check_no_telegram(d, check, name, nodes=None, take_shot=True):
 
 
 def to_tab(d, label):
-    """Taps a bottom tab (Chats / Contacts / Settings / Profile)."""
+    """Taps a bottom tab (Chats / Threads / Mentions / Settings / Profile)."""
     w, h = a6.screen_size(d)
     for _ in range(4):
         nodes = d.dump()
@@ -345,7 +345,9 @@ def scenario_languages(d, check, channel_id, photo_dm):
 
 def scenario_chat_list_search(d, check):
     to_tab(d, "Chats")
-    before = [n for n in d.dump() if n.desc.startswith("Threads")]
+    # The chat list's Threads button became the Threads tab: nothing named Threads in the header, before or during search.
+    w, h = a6.screen_size(d)
+    before = [n for n in d.dump() if (n.desc.startswith("Threads") or n.text == "Threads") and n.bounds[3] < h * 0.8]
     search = d.wait_for(text="Search Chats", timeout=10)
     if search is None:
         check.ok("chat-list search opens", False)
@@ -354,8 +356,8 @@ def scenario_chat_list_search(d, check):
     time.sleep(1.5)
     nodes = d.dump()
     shot(d, "search")
-    threads = [n for n in nodes if n.desc.startswith("Threads")]
-    check.ok("chat-list search hides the Threads button (and its badge)", before and not threads, "before %d, during %d" % (len(before), len(threads)))
+    threads = [n for n in nodes if (n.desc.startswith("Threads") or n.text == "Threads") and n.bounds[3] < h * 0.8]
+    check.ok("chat-list header has no Threads button (a tab now), also while searching", not before and not threads, "before %d, during %d" % (len(before), len(threads)))
     check_no_telegram(d, check, "search", nodes, take_shot=False)
     ime_off(d)
     back(d)

@@ -527,6 +527,7 @@ public final class RelayThreads {
      * megagroups through {@code updateChannelTooLong}, DMs through {@link RelayDmCache} (DM threads).
      */
     static void onCollapsedThreadsChanged(RelayAccount account) {
+        notifyListeners(account.account); // the Threads tab and its badge say whether threads are on
         RelayBridge bridge = RelayBridge.get(account.account);
         bridge.post(() -> {
             RelayLive live = bridge.live();

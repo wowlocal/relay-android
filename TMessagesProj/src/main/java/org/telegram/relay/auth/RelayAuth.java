@@ -293,11 +293,13 @@ public final class RelayAuth {
     }
 
     /**
-     * Logs the selected account in without typing (debug test hooks): server check, login, then the
+     * Logs the selected account (or an open login screen's) in without typing (debug test hooks): server check, login, then the
      * same completion as the login screen. Callback on the UI thread with the account or an error text.
      */
     public static void loginWithoutUi(String serverInput, String loginId, String password, String mfa, Callback<Integer> callback) {
-        int account = UserConfig.selectedAccount;
+        // An open login screen (Add Account) logs in its own slot, as typing there would.
+        org.telegram.relay.ui.RelayLoginActivity open = org.telegram.relay.ui.RelayLoginActivity.visibleInstance();
+        int account = open != null ? open.getAccount() : UserConfig.selectedAccount;
         if (UserConfig.getInstance(account).isClientActivated()) {
             callback.onResult(null, new Error(Failure.SERVER_ERROR, "account " + account + " is already logged in"));
             return;

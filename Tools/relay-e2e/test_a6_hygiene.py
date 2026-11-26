@@ -6,7 +6,7 @@
 Logs in with the debug broadcast (org.relaychat.DEBUG_LOGIN), then walks the reachable screens and
 uiautomator-dumps each one:
   chat list, chat-list overflow menu, Saved Messages chat, its header menu, attach menu, emoji panel,
-  Contacts tab, Settings (whole list, search, About), own profile and its menu, the APK label.
+  Threads and Mentions tabs (no Contacts tab), Settings (whole list, search, About), own profile and its menu, the APK label.
 Every dump is checked against FORBIDDEN (Premium, Stars, Stories, Stickers, Telegram FAQ, phone
 numbers, secret chats, gifts, wallet, boosts, "Telegram" anywhere …).
 Screenshots: docs/relay/screens/a6-*.png.
@@ -195,12 +195,15 @@ def scenario_saved_chat(d, check):
     back(d)
 
 
-def scenario_contacts(d, check):
-    if tap_text(d, "Contacts") is None:
-        check.ok("Contacts tab opens", False)
-        return
-    time.sleep(1.5)
-    check_screen(d, check, "contacts")
+def scenario_relay_tabs(d, check):
+    """The Threads and Mentions tabs (they replaced Telegram's Contacts tab; New Message lists people)."""
+    check.ok("no Contacts tab", d.find(text="Contacts") is None)
+    for label, name in (("Threads", "threads-tab"), ("Mentions", "mentions-tab")):
+        if tap_text(d, label) is None:
+            check.ok("%s tab opens" % label, False)
+            continue
+        time.sleep(2.5)
+        check_screen(d, check, name)
 
 
 def scenario_settings(d, check, user):
@@ -317,7 +320,7 @@ def main():
     if wait_chat_list(d, timeout=8) is None:
         d.launch()
         wait_chat_list(d, timeout=20)
-    scenario_contacts(d, check)
+    scenario_relay_tabs(d, check)
     scenario_settings(d, check, args.user)
     scenario_profile(d, check)
 

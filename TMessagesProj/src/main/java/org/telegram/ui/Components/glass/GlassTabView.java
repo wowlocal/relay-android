@@ -220,6 +220,13 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
 
     private Drawable premiumStarDrawable;
 
+    // Relay: the counter animates its text through its callback; without this the view ignored those invalidations and
+    // could keep the old count (the Threads badge stayed "@1" after it became "@2").
+    @Override
+    protected boolean verifyDrawable(@NonNull Drawable who) {
+        return who == counter || super.verifyDrawable(who);
+    }
+
     public void setCounter(String text, boolean isError, boolean animated) {
         counter.setText(text, animated);
         isHasCounterAnimator.setValue(!TextUtils.isEmpty(text), animated);

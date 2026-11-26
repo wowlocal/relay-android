@@ -551,7 +551,7 @@ def scenario_pin_save(d, check, ctx):
     # Saved Posts screen (Settings row).
     a6.tap_text(d, "Settings")
     texts = d.screen_texts()
-    check.ok("Settings: Saved Posts and Recent Mentions rows", "Saved Posts" in texts and "Recent Mentions" in texts, str(texts[:16]))
+    check.ok("Settings: Saved Posts row (Recent Mentions is the Mentions tab)", "Saved Posts" in texts and "Recent Mentions" not in texts, str(texts[:16]))
     before = len(d.logcat(TAG).splitlines())
     a6.tap_text(d, "Saved Posts")
     time.sleep(4)
@@ -561,7 +561,7 @@ def scenario_pin_save(d, check, ctx):
     check.ok("Saved Posts list = REST flagged posts", lines and items(lines[-1]) == rest_flagged, "app=%s rest=%s" % (items(lines[-1]) if lines else None, rest_flagged))
     a6.back(d)
     before = len(d.logcat(TAG).splitlines())
-    a6.tap_text(d, "Recent Mentions")
+    a6.tap_text(d, "Mentions")  # the Mentions tab
     time.sleep(5)
     shot(d, "recent-mentions")
     lines = [l for l in d.logcat(TAG).splitlines()[before:] if "A7B list mentions" in l]
