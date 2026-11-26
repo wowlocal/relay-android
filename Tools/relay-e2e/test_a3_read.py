@@ -272,12 +272,15 @@ def main():
         nodes = d.dump()
         texts = " ".join(t.replace("\n", " ") for t in d.screen_texts(nodes))
         dm_posts = alice.get("/channels/%s/posts?per_page=30" % dm_bob["id"])
-        # Plain posts: call records (A8, e.g. A8 run as alice) show as Telegram call bubbles, not their text.
+        # Call records (A8's custom_relay_call, e.g. A8 run as alice) show as Telegram call bubbles, not their text: they
+        # count as shown when a call bubble is (the Final regression's A8 passes left 8 at the bottom of this DM).
         # DM threads: with collapsed threads (alice: the server default) a DM's main history shows root posts only,
-        # as iOS; replies live in their threads.
-        newest = [dm_posts["posts"][i] for i in dm_posts["order"] if not dm_posts["posts"][i].get("type")
+        # as iOS; replies live in their threads. Other system posts are skipped.
+        newest = [dm_posts["posts"][i] for i in dm_posts["order"] if dm_posts["posts"][i].get("type") in ("", None, "custom_relay_call")
                   and not dm_posts["posts"][i].get("root_id")][:6]
-        visible = [p for p in newest if strip_md(p["message"])[:20] and strip_md(p["message"])[:20] in texts]
+        call_shown = any(w in texts for w in ("Outgoing Call", "Incoming Call", "Missed Call", "Declined Call", "Cancelled Call"))
+        visible = [p for p in newest if (p.get("type") == "custom_relay_call" and call_shown)
+                   or strip_md(p["message"])[:20] and strip_md(p["message"])[:20] in texts]
         check.ok("DM shows the newest posts from REST", len(visible) >= 3 and newest[0]["id"] in [p["id"] for p in visible],
                  "%d of %d newest visible" % (len(visible), len(newest)))
         # No separator check here: upstream ChatActivity only inserts "Unread Messages" when the first page

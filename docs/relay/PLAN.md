@@ -74,6 +74,7 @@ address DM messages by a bare id are made peer-aware in the bridge (see PROGRESS
 | A8 | Calls (LiveKit plugin `org.relaychat.calls`, same wire contract as iOS) | call between app and scripted peer | Merged (`337f280`); A8 e2e 52/52 |
 | Polish 1 | Known issues of A3–A7b (own markdown, CRT previews, forwards, renumber migration, video probe, small photos) | `test_polish1.py` | Merged (`f8aa76e`); 33/33 |
 | Polish 2a/2b | Exploratory QA findings (`QA-2026-11-25.md`): sync, notifications, bridge (2a); UI, English only, branding (2b) | `test_polish2a.py`, `test_polish2b.py` | Merged (2a `8ef6951`, 2b `80073d7`); 48/48, 119/119 |
+| DM threads | DMs collapse threads as on iOS (thread view of a private chat) + replier avatars on "N Replies" | `test_dm_threads.py` | Branch `relay-dm-threads`; 43/43, A3 31, A4 54, A5 34, A7a 46, Polish 1 33 |
 | Final | Clean-install regression of every suite, twice on emulator-5554, once on a 1080×2400 phone clone | all 13 suites | Done (2026-11-25): two consecutive green passes, phone green after test fixes; Samsung skipped (locked). See PROGRESS "Final regression" |
 
 ## Test bed
